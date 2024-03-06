@@ -1,25 +1,12 @@
-# Webalizer V2.23-08 Incremental Data - 12/13/2023 19:41:57
-2023 12 13 19 41 57
-124 33 22 4 5 19 881272 91 18 0
-22 3 53 13 13
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-124 33 881272 22 91 18
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
+# Webalizer V2.23-08 Incremental Data - 03/05/2024 21:28:39
+2024 3 5 21 28 39
+242 202 19 15 18 12 2947454 237 27 0
+4 26 63 1 5
+9 6 153369 7 8 7
+1 0 669 1 0 0
+5 0 6479 3 5 3
+39 30 491721 6 38 9
+188 166 2295216 4 186 8
 0 0 0 0 0 0
 0 0 0 0 0 0
 0 0 0 0 0 0
@@ -33,34 +20,56 @@
 0 0 0 0 0 0
 0 0 0 0 0 0
 0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+3 3 32757 3
+1 1 40356 1
+2 2 14129 1
 0 0 0 0
-0 0 0 0
-53 20 677611 30
-2 1 18368 1
-0 0 0 0
-6 4 67376 4
-0 0 0 0
-0 0 0 0
-0 0 0 0
-0 0 0 0
-1 1 16837 1
-0 0 0 0
-1 0 1522 1
-0 0 0 0
-43 1 53391 36
-15 5 37762 15
+1 1 40533 1
 0 0 0 0
 0 0 0 0
 0 0 0 0
-3 1 8405 3
+2 1 41024 1
+5 0 6479 5
 0 0 0 0
 0 0 0 0
+1 1 40278 1
+17 16 201463 17
+64 61 819280 64
+41 40 522741 41
+13 10 126977 12
+13 10 156055 13
+9 1 23055 7
+5 2 28251 5
+37 33 465241 37
+27 19 348301 27
 0 0 0 0
-0 0 0 0
+1 1 40534 1
 0
 0
 0
-33
+202
+0
+0
+0
+0
+0
+0
+0
+9
+0
 0
 0
 0
@@ -69,7 +78,7 @@
 0
 0
 1
-0
+10
 0
 1
 0
@@ -77,224 +86,186 @@
 0
 0
 0
-8
-81
 0
 0
 0
 0
 0
 0
-0
-0
-0
-0
-0
-0
-0
-0
+19
 0
 0
 0
 0
 0
 # -urls- 
-/.well-known/acme-challenge/letsencrypt_1702450148_0a2702a1935554a4
-0 1 0 287 0 0
-/.well-known/acme-challenge/qCG_nhXy8NGUWXeN9Wp5cxW2qiUy1FR-25IRJDJyIeQ
-0 3 0 995 0 0
-/.well-known/acme-challenge/letsencrypt_1702450148_e902ff12875f59f3
-0 1 0 287 0 0
+/pelicula/show/late
+0 1 20 6144 0 0
+/pelicula/edit/1
+0 4 0 25864 1 0
+/favicon.ico
+0 1 0 452 0 0
+/pelicula/show/1
+0 6 4 37474 1 0
+/pelicula/show
+0 6 1 36915 0 0
+/pelicula/update/2
+0 1 0 6167 0 0
+/peliculas
+0 8 0 50703 3 0
+/pelicula/show/2
+0 3 0 18461 0 0
 /
-0 29 0 760274 17 2
+0 109 0 2153081 14 8
+/pelicula/create
+0 7 0 54160 0 1
+/pelicula/new
+0 19 0 122033 0 0
+/pelicula
+0 28 0 178545 1 0
+/pelicula/edit/2
+0 5 0 32026 0 0
+/robots.txt
+0 1 0 293 0 0
+/pelicula/delete/4
+0 3 0 18504 0 0
 # End Of Table - urls
 # -sites- (monthly)
-149.102.246.13
-0 2 1 17056 1 1702435843
+65.154.226.170
+0 3 3 32757 1 1709510696
 /
-23.178.112.202
-0 1 1 328 0 0
+181.199.60.109
+0 1 0 1052 1 1709318218
 -
-154.28.229.186
-0 1 1 15525 1 1702435780
-/
-5.164.29.116
-0 2 1 18368 1 1702437264
-/
-195.211.77.142
-0 1 1 16837 1 1702435804
-/
-47.242.224.70
-0 1 1 16837 1 1702464574
-/
-133.242.174.119
-0 2 1 18368 1 1702446590
-/
-146.190.98.165
-0 17 3 270905 1 1702435784
-/
-187.190.154.80
-0 7 3 54773 1 1702435544
-/
-67.217.58.138
-0 2 2 574 0 0
+156.217.29.38
+0 1 0 1052 1 1709457742
 -
-47.254.74.59
-0 1 0 1709 0 0
+154.26.136.165
+0 6 1 19111 1 1709663868
 -
-35.163.186.198
-0 1 1 328 0 0
+205.210.31.75
+0 1 1 40533 1 1709267497
+/
+45.162.66.47
+0 2 0 2892 1 1709318215
 -
-65.21.65.198
-0 1 1 16837 1 1702435889
+35.215.71.95
+0 2 2 14129 1 1709260614
 /
-104.164.173.214
-0 1 1 15525 1 1702435790
+95.217.18.177
+0 1 1 14052 1 1709303747
 /
-195.211.77.140
-0 1 1 527 1 1702435795
-/
-3.21.234.254
-0 1 1 339 0 0
+150.107.179.190
+0 2 0 2535 1 1709457748
 -
-47.88.94.159
-0 1 0 1709 0 0
--
-54.220.101.137
-0 4 3 49008 1 1702444992
+198.235.24.134
+0 1 1 40356 1 1709329540
 /
+201.137.141.37
+0 96 86 1163248 4 1709673997
+/
+205.210.31.224
+0 1 1 40355 1 1709280761
+/
+34.251.130.173
+0 1 1 40479 1 1709648982
+/
+223.206.132.14
+0 2 0 2892 1 1709457736
+-
+205.210.31.136
+0 1 1 40356 1 1709515483
+/
+103.200.23.222
+0 1 0 669 0 0
+-
 187.251.241.163
-0 58 7 94431 3 1702496517
+0 118 102 1410174 7 1709674119
 /
-138.68.163.10
-0 17 3 268057 1 1702435768
+198.235.24.223
+0 1 1 40534 1 1709593672
 /
-145.220.91.19
-0 1 0 1522 1 1702469640
-/
-47.251.13.32
-0 1 0 1709 1 1702479212
+34.254.161.187
+0 1 1 40278 1 1709555759
 /
 # End Of Table - sites (monthly)
 # -sites- (daily)
-149.102.246.13
-0 2 1 17056 1 1702435843
-/
-23.178.112.202
-0 1 1 328 0 0
+154.26.136.165
+0 6 1 19111 1 1709663868
 -
-154.28.229.186
-0 1 1 15525 1 1702435780
+201.137.141.37
+0 91 82 1102927 3 1709673997
 /
-5.164.29.116
-0 2 1 18368 1 1702437264
-/
-195.211.77.142
-0 1 1 16837 1 1702435804
-/
-47.242.224.70
-0 1 1 16837 1 1702464574
-/
-133.242.174.119
-0 2 1 18368 1 1702446590
-/
-146.190.98.165
-0 17 3 270905 1 1702435784
-/
-187.190.154.80
-0 7 3 54773 1 1702435544
-/
-67.217.58.138
-0 2 2 574 0 0
--
-47.254.74.59
-0 1 0 1709 0 0
--
-35.163.186.198
-0 1 1 328 0 0
--
-65.21.65.198
-0 1 1 16837 1 1702435889
-/
-104.164.173.214
-0 1 1 15525 1 1702435790
-/
-195.211.77.140
-0 1 1 527 1 1702435795
-/
-3.21.234.254
-0 1 1 339 0 0
--
-47.88.94.159
-0 1 0 1709 0 0
--
-54.220.101.137
-0 4 3 49008 1 1702444992
+34.251.130.173
+0 1 1 40479 1 1709648982
 /
 187.251.241.163
-0 58 7 94431 3 1702496517
-/
-138.68.163.10
-0 17 3 268057 1 1702435768
-/
-145.220.91.19
-0 1 0 1522 1 1702469640
-/
-47.251.13.32
-0 1 0 1709 1 1702479212
+0 90 82 1132699 3 1709674119
 /
 # End Of Table - sites (daily)
 # -referrers- 
+https://sandbox.especialistashosting.com/pelicula/edit/2
+0 6
+https://sandbox.especialistashosting.com/pelicula/new
+0 26
 http://sandbox.especialistashosting.com/
-0 3
-https://sandbox.especialistashosting.com/siap
+0 2
+https://sandbox.especialistashosting.com:443/v2/
 0 1
-https://sandbox.especialistashosting.com/index.php
+https://sandbox.especialistashosting.com/wp-json/
 0 2
+https://sandbox.especialistashosting.com/pelicula/edit/1
+0 4
+https://sandbox.especialistashosting.com/pelicula/update/2
+0 1
+https://sandbox.especialistashosting.com/pelicula/show/1
+0 7
+https://sandbox.especialistashosting.com/pelicula/show/2
+0 3
 - (Direct Request)
-0 116
+0 85
+https://sandbox.especialistashosting.com/pelicula/create
+0 7
+https://sandbox.especialistashosting.com/peliculas
+0 8
+https://sandbox.especialistashosting.com/pelicula/delete/4
+0 3
+https://sandbox.especialistashosting.com/pelicula
+0 74
 https://sandbox.especialistashosting.com/
-0 2
+0 5
+https://sandbox.especialistashosting.com/pelicula/show
+0 6
+https://sandbox.especialistashosting.com/pelicula/show/late
+0 1
+http://sandbox.especialistashosting.com/wp-json/
+0 1
 # End Of Table - referrers
 # -agents- 
-Mozilla/5.0 (compatible; Let's Encrypt validation server; +https://www.letsencrypt.org)
-0 3
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 (scanner.duck
-0 2
-Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0
-0 65
-curl/7.68.0
+Mozilla/5.0 (compatible; NetcraftSurveyAgent/1.0; +info@netcraft.com)
 0 2
 Go-http-client/1.1
-0 28
-Python/3.9 aiohttp/3.9.1
-0 1
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.152 Safari/537.36
+0 6
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BW/1.1; bit.ly/3eZNDnO; 482a6ea1
 0 2
-Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36
-0 2
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36
-0 2
-Mozilla/5.0 zgrab/0.x
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36
 0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
-0 2
-Mozilla/5.0 (Linux; Android 6.0; HTC One M9 Build/MRA313204) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.1138.98 Mobil
-0 2
-Mozilla/5.0 (X11; Linux x86_64; rv:83.0) Gecko/20100101 Firefox/83.0
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36
 0 1
-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36
-0 1
-Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/118.0
-0 1
-Mozilla/5.0 (Linux; Android 11; M2004J15SC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Mobile Safari/537.36
+Expanse, a Palo Alto Networks company, searches across the global IPv4 space multiple times per day to identify customers&#39
 0 3
-Mozilla/5.0 (l9scan/2.0.833313e28353e2731323e27363; +https://leakix.net)
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.128 Safari/537.36 Edg/89.0.
+0 4
+Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0
+0 1
+Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36
 0 2
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0
+0 214
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.132 Safari/537.36
+0 3
 # End Of Table - agents
 # -search strings- 
 # End Of Table - search strings
