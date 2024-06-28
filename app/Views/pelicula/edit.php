@@ -7,7 +7,7 @@
 </head>
 <body>
 
-  <form action="/pelicula/update/<?php echo $pelicula['id']; ?>" method="post">
+  <form action="/dashboard/pelicula/update/<?php echo $pelicula['id']; ?>" method="post">
     <?php echo view('pelicula/_form',['op'=>'Actualizar']); ?>
   </form>  
 

@@ -25,6 +25,7 @@ class Filters extends BaseConfig
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
+        'AdminFilter'   => \App\Filters\AdminFilter::class
     ];
 
     /**
@@ -67,5 +68,10 @@ class Filters extends BaseConfig
      * Example:
      * 'isLoggedIn' => ['before' => ['account/*', 'profiles/*']]
      */
-    public array $filters = [];
+    public array $filters = [
+      //agregamos un except para admin/login y admin/login_post para que no se aplique el filtro
+      'AdminFilter' => [
+        'before' => ['dashboard', 'dashboard/*','usuario','usuario/*']
+      ]     
+    ];
 }

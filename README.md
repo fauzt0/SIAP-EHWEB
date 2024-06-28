@@ -1,4 +1,33 @@
+
 # CodeIgniter 4 Application Starter
+
+## Notas del desarrollo
+
+- El archivo .htaccess debe permitir la redirección para prevenir que el archivo index.php sea necesario en la ruta de la aplicación
+
+- Para el desarrollo se establecen los parámetros en el archivo .env, para subir a producción el archivo será omitido y se utilizará la configuración propia de CI4.
+
+- La ruta de desarrollo es mediante el sandbox, cada desarrollador debe contar con una subcarpeta o space para desarrollar los cambios, deberá trabajar con una rama de git especifica y una copia de la base de datos la cual debe tener el mismo nombre que su carpeta de sandbox y el desarrollo se establecera mediante seeders y migrations de codeigniter. Para poner en produccion, los migrations o seeders utilizados seran de la rama maestra
+
+Ej: Desarrollador Fausto Solano
+Nombre de espacio virtual: fasol
+Ruta del sandbox: sandbox.especialistashosting.com/fasol - fasol.sandbox.especialistashosting.com
+Base de datos: username_fasol
+Usuario: username_fasol
+Password: xxxxxxx
+
+- En case de requerir agregar una nueva funcionalidad, es necesario clonar la rama main a una nueva rama y trabajar en un namespace, nunca se deben manejar nuevas funcionalidades en produccion o rama maestra sin previa autorización
+
+- Para el desarrollo de nuevos proyectos, el desarrollo y producción se ejecutaran de la misma manera.
+
+-Es necesario que todos los desarrolladores cuenten con una cuenta activa de GITHUB
+
+
+
+
+
+
+
 
 ## What is CodeIgniter?
 

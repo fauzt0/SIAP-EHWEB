@@ -1,74 +1,66 @@
-# Webalizer V2.23-08 Incremental Data - 03/05/2024 21:28:39
-2024 3 5 21 28 39
-242 202 19 15 18 12 2947454 237 27 0
-4 26 63 1 5
-9 6 153369 7 8 7
-1 0 669 1 0 0
-5 0 6479 3 5 3
-39 30 491721 6 38 9
-188 166 2295216 4 186 8
+# Webalizer V2.23-08 Incremental Data - 06/27/2024 21:31:41
+2024 6 27 21 31 41
+886 537 78 31 14 56 18511293 588 81 0
+3 2 154 1 27
+1 0 797 1 1 1
+0 0 0 0 0 0
+0 0 0 0 0 0
+1 0 2709 1 1 1
+0 0 0 0 0 0
+1 0 975 1 1 1
+1 0 975 1 1 1
+0 0 0 0 0 0
+0 0 0 0 0 0
+3 0 3127 2 2 2
+1 0 10980 1 1 1
+70 11 180132 29 44 22
+63 3 92291 17 21 14
+110 64 2445450 5 72 7
+5 0 25196 3 4 3
+2 0 5314 2 2 2
+388 307 9118144 6 273 7
+0 0 0 0 0 0
+1 0 2746 1 1 1
+0 0 0 0 0 0
+7 0 12542 4 5 5
+0 0 0 0 0 0
+2 0 5136 2 2 2
+194 127 5261652 4 133 5
+0 0 0 0 0 0
+22 17 1187734 3 12 3
+14 8 155393 3 12 3
 0 0 0 0 0 0
 0 0 0 0 0 0
 0 0 0 0 0 0
 0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-0 0 0 0 0 0
-3 3 32757 3
-1 1 40356 1
-2 2 14129 1
 0 0 0 0
-1 1 40533 1
+4 0 3682 3
+3 0 2797 1
+13 8 920529 8
+127 89 2971769 105
+35 0 42780 5
+4 0 4660 2
 0 0 0 0
-0 0 0 0
-0 0 0 0
-2 1 41024 1
-5 0 6479 5
-0 0 0 0
-0 0 0 0
-1 1 40278 1
-17 16 201463 17
-64 61 819280 64
-41 40 522741 41
-13 10 126977 12
-13 10 156055 13
-9 1 23055 7
-5 2 28251 5
-37 33 465241 37
-27 19 348301 27
-0 0 0 0
-1 1 40534 1
+2 0 21570 2
+10 0 11119 4
+2 0 2152 1
+1 0 2568 1
+33 20 451853 27
+75 19 310786 47
+112 66 2014245 61
+30 20 302618 30
+41 12 218122 28
+44 27 1743058 31
+161 109 3378960 84
+149 145 4774378 120
+5 1 25498 4
+29 21 1279157 19
+1 0 2746 1
+5 0 26246 4
 0
 0
 0
-202
-0
-0
-0
-0
-0
-0
-0
-9
+537
 0
 0
 0
@@ -76,12 +68,19 @@
 0
 0
 0
+8
+24
+27
+7
 0
-1
-10
 0
-1
 0
+0
+0
+31
+156
+0
+7
 0
 0
 0
@@ -92,179 +91,466 @@
 0
 0
 0
-19
+0
+89
 0
 0
 0
 0
 0
 # -urls- 
-/pelicula/show/late
-0 1 20 6144 0 0
-/pelicula/edit/1
-0 4 0 25864 1 0
+/admin/dashboard
+0 102 0 1045528 2 0
+/usuario
+0 10 0 99570 1 0
+/bootstrap/css/app.css
+0 11 0 1018589 0 0
+/bootstrap/fonts/fa-regular-400.woff2
+0 6 0 152472 0 0
+/acceso/login
+0 34 0 247996 0 0
+/admin/cliente
+0 1 0 6150 0 0
+/bootstrap/js/app.js
+0 13 0 8806136 0 0
+/bootstrap/img/avatars/avatar-3.jpg
+0 10 0 349760 0 0
 /favicon.ico
-0 1 0 452 0 0
-/pelicula/show/1
-0 6 4 37474 1 0
-/pelicula/show
-0 6 1 36915 0 0
-/pelicula/update/2
-0 1 0 6167 0 0
-/peliculas
-0 8 0 50703 3 0
-/pelicula/show/2
-0 3 0 18461 0 0
+0 20 0 11284 0 0
+/bootstrap/img/avatars/avatar-4.jpg
+0 10 0 330240 0 0
+/.well-known/acme-challenge/zoqltFn0UPAiwsuHJSZhrfFUVC65p5yUlvr1dta0dWY
+0 5 0 1651 0 0
+/dashboard
+0 2 0 22702 0 0
+/bootstrap/img/avatars/avatar-5.jpg
+0 11 0 395505 0 0
+/acceso
+0 20 0 146407 2 0
+/bootstrap/img/flags/de.png
+0 3 0 321 0 0
+/bootstrap/img/brands/logo-eh-horizontal.svg
+0 8 0 56520 0 0
+/bootstrap/css/light.css
+0 4 0 175304 0 0
+/.well-known/acme-challenge/letsencrypt_3cfd17850b96dfe2f6cca81e005e3556
+0 1 0 287 0 0
+/bootstrap/img/flags/nl.png
+0 3 0 477 0 0
+/panel
+0 1 0 7274 0 0
 /
-0 109 0 2153081 14 8
-/pelicula/create
-0 7 0 54160 0 1
-/pelicula/new
-0 19 0 122033 0 0
-/pelicula
-0 28 0 178545 1 0
-/pelicula/edit/2
-0 5 0 32026 0 0
+0 213 0 3840749 25 10
+/bootstrap/img/brands/logo.png
+0 9 0 86976 0 0
+/bootstrap/img/avatars/avatar-2.jpg
+0 10 0 385000 0 0
+/bootstrap/img/avatars/avatar.jpg
+0 12 0 365688 0 0
+/.well-known/acme-challenge/letsencrypt_bf7df05d5c82051bc4997d998a8ff53e
+0 1 0 287 0 0
+/bootstrap/img/flags/es.png
+0 3 0 5646 0 0
+/bootstrap/img/flags/us.png
+0 3 0 2325 0 0
+/panel/login
+0 5 0 36493 1 1
+/admin
+0 3 0 30794 3 0
 /robots.txt
-0 1 0 293 0 0
-/pelicula/delete/4
-0 3 0 18504 0 0
+0 1 0 330 0 0
+/dashboard/dashboard
+0 9 0 102154 0 0
 # End Of Table - urls
 # -sites- (monthly)
 65.154.226.170
-0 3 3 32757 1 1709510696
-/
-181.199.60.109
-0 1 0 1052 1 1709318218
+0 1 0 834 1 1718209971
 -
-156.217.29.38
-0 1 0 1052 1 1709457742
+154.28.229.235
+0 1 0 9321 1 1718198366
 -
-154.26.136.165
-0 6 1 19111 1 1709663868
+194.55.186.107
+0 2 0 3316 0 0
 -
-205.210.31.75
-0 1 1 40533 1 1709267497
+165.232.42.155
+0 2 0 21588 1 1718482767
 /
-45.162.66.47
-0 2 0 2892 1 1709318215
+179.43.188.122
+0 2 0 3316 0 0
 -
-35.215.71.95
-0 2 2 14129 1 1709260614
-/
-95.217.18.177
-0 1 1 14052 1 1709303747
-/
-150.107.179.190
-0 2 0 2535 1 1709457748
+2.57.122.122
+0 4 2 3658 1 1718304267
 -
-198.235.24.134
-0 1 1 40356 1 1709329540
-/
-201.137.141.37
-0 96 86 1163248 4 1709673997
-/
-205.210.31.224
-0 1 1 40355 1 1709280761
-/
-34.251.130.173
-0 1 1 40479 1 1709648982
-/
-223.206.132.14
-0 2 0 2892 1 1709457736
+179.43.167.18
+0 7 0 6059 1 1718270074
 -
-205.210.31.136
-0 1 1 40356 1 1709515483
+194.55.186.251
+0 2 0 5492 2 1718316423
+-
+84.239.54.49
+0 2 0 2152 1 1718015266
+-
+104.164.173.49
+0 1 0 9303 1 1718198369
+-
+104.164.173.123
+0 1 0 9277 1 1718213583
+-
+87.236.176.180
+0 1 0 975 1 1717690945
+-
+87.236.176.205
+0 1 0 975 1 1718028903
+-
+3.223.3.63
+0 2 0 2024 2 1718243756
+-
+205.210.31.70
+0 1 0 2568 1 1718985846
 /
-103.200.23.222
-0 1 0 669 0 0
+5.164.29.116
+0 6 3 5754 3 1718248043
+-
+93.123.39.131
+0 1 0 1242 0 0
+-
+47.89.193.239
+0 1 0 1012 1 1718245078
+-
+104.193.135.126
+0 2 1 10423 1 1718198413
+-
+195.211.77.142
+0 1 0 453 1 1719272643
+/
+47.242.224.70
+0 2 0 2024 2 1718251969
+-
+167.172.59.13
+0 2 0 21567 1 1718319764
+-
+139.162.141.82
+0 18 0 22295 1 1718198349
+-
+35.93.198.75
+0 1 1 328 0 0
+-
+87.236.176.161
+0 1 0 797 1 1717255185
+-
+205.210.31.241
+0 1 0 2746 1 1718993828
+/
+133.242.174.119
+0 1 0 1012 1 1718209285
+-
+154.28.229.161
+0 1 0 9303 1 1718198369
+-
+104.164.173.143
+0 1 0 9288 1 1718213586
+-
+51.20.138.21
+0 1 1 328 0 0
+-
+23.178.112.206
+0 1 1 328 0 0
+-
+167.99.79.202
+0 3 0 2602 1 1718204630
+-
+198.235.24.17
+0 1 0 2568 1 1719261986
+/
+67.217.58.138
+0 2 2 574 0 0
+-
+179.43.152.66
+0 1 0 2746 1 1718555881
+/
+147.185.132.46
+0 1 0 2746 1 1718376146
+/
+87.236.176.173
+0 1 0 975 1 1717784988
+-
+205.210.31.156
+0 1 0 2568 1 1718667364
+/
+104.164.173.161
+0 1 0 9302 1 1718198364
+-
+45.148.10.232
+0 4 0 4660 2 1718952712
+-
+206.81.24.227
+0 18 0 19269 1 1718198346
+-
+198.235.24.116
+0 1 0 2746 1 1719420914
+/
+18.140.58.113
+0 1 0 975 1 1718589357
+/
+135.148.100.196
+0 1 0 2568 1 1719115932
+/
+198.235.24.132
+0 1 0 2568 1 1718543249
+/
+34.72.176.129
+0 1 0 10652 1 1718198361
+-
+205.210.31.242
+0 1 0 2568 1 1719417586
+/
+64.227.5.66
+0 2 0 21570 1 1718352472
+-
+18.222.152.246
+0 1 1 339 0 0
+-
+34.221.113.1
+0 2 0 1594 1 1718297157
+-
+205.210.31.22
+0 1 0 2746 1 1718805547
+/
+205.169.39.70
+0 1 0 9026 1 1718198372
+-
+198.235.24.46
+0 1 0 2568 1 1719142317
+/
+45.148.10.59
+0 2 0 1950 2 1718461895
+/
+93.123.39.11
+0 1 0 1242 0 0
+-
+206.168.34.181
+0 1 0 1012 1 1718397663
+/
+171.244.43.14
+0 1 0 1012 1 1718249432
+-
+104.164.173.65
+0 1 0 9305 1 1718198364
+-
+195.211.77.140
+0 1 0 453 1 1718243741
+-
+198.235.24.110
+0 1 0 2568 1 1718643442
+/
+154.28.229.231
+0 1 0 9301 1 1718198366
+-
+83.147.52.49
+0 2 0 3316 0 0
+-
+162.243.171.10
+0 2 0 21596 1 1719523901
+/
+18.201.194.35
+0 1 0 2709 1 1717525698
+-
+47.254.25.10
+0 1 0 889 0 0
+-
+51.81.46.212
+0 1 0 2568 1 1718960562
+/
+187.189.93.61
+0 133 96 3882030 1 1719204217
+/
+159.65.94.225
+0 2 0 21590 1 1718659481
+/
+45.134.26.11
+0 1 0 10980 1 1718112965
+-
+213.232.87.228
+0 33 0 40147 1 1718258058
+-
+35.95.78.65
+0 1 1 330 0 0
+-
+104.164.173.180
+0 1 0 9310 1 1718213583
 -
 187.251.241.163
-0 118 102 1410174 7 1709674119
+0 576 427 14197575 11 1719494564
 /
-198.235.24.223
-0 1 1 40534 1 1709593672
+65.154.226.171
+0 1 0 10652 1 1718208644
+-
+199.45.155.32
+0 1 0 1012 1 1718254524
+-
+18.142.139.98
+0 1 1 328 0 0
+-
+145.220.91.19
+0 1 0 834 1 1719481779
 /
-34.254.161.187
-0 1 1 40278 1 1709555759
-/
+47.88.90.156
+0 1 0 896 0 0
+-
 # End Of Table - sites (monthly)
 # -sites- (daily)
-154.26.136.165
-0 6 1 19111 1 1709663868
--
-201.137.141.37
-0 91 82 1102927 3 1709673997
-/
-34.251.130.173
-0 1 1 40479 1 1709648982
+162.243.171.10
+0 2 0 21596 1 1719523901
 /
 187.251.241.163
-0 90 82 1132699 3 1709674119
+0 11 8 132963 1 1719494564
+/
+145.220.91.19
+0 1 0 834 1 1719481779
 /
 # End Of Table - sites (daily)
 # -referrers- 
-https://sandbox.especialistashosting.com/pelicula/edit/2
-0 6
-https://sandbox.especialistashosting.com/pelicula/new
-0 26
-http://sandbox.especialistashosting.com/
-0 2
-https://sandbox.especialistashosting.com:443/v2/
+https://sandbox.especialistashosting.com/admin/cliente
 0 1
-https://sandbox.especialistashosting.com/wp-json/
-0 2
-https://sandbox.especialistashosting.com/pelicula/edit/1
-0 4
-https://sandbox.especialistashosting.com/pelicula/update/2
-0 1
-https://sandbox.especialistashosting.com/pelicula/show/1
-0 7
-https://sandbox.especialistashosting.com/pelicula/show/2
-0 3
+https://sandbox.especialistashosting.com/panel/login
+0 23
 - (Direct Request)
-0 85
-https://sandbox.especialistashosting.com/pelicula/create
-0 7
-https://sandbox.especialistashosting.com/peliculas
-0 8
-https://sandbox.especialistashosting.com/pelicula/delete/4
+0 271
+https://sandbox.especialistashosting.com/dashboard/dashboard
+0 33
+https://sandbox.especialistashosting.com/admin
+0 9
+https://sandbox.especialistashosting.com/panel
+0 2
+https://sandbox.especialistashosting.com/dashboard
+0 2
+https://sandbox.especialistashosting.com/bootstrap/css/light.css
+0 4
+https://sandbox.especialistashosting.com/acceso/login
+0 158
+http://sandbox.especialistashosting.com/wordpress/
+0 1
+https://sandbox.especialistashosting.com/admin/dashboard
+0 236
+https://sandbox.especialistashosting.com/usuario
+0 38
+https://sandbox.especialistashosting.com/bootstrap/css/app.css
 0 3
-https://sandbox.especialistashosting.com/pelicula
-0 74
-https://sandbox.especialistashosting.com/
-0 5
-https://sandbox.especialistashosting.com/pelicula/show
-0 6
-https://sandbox.especialistashosting.com/pelicula/show/late
-0 1
-http://sandbox.especialistashosting.com/wp-json/
-0 1
+https://sandbox.especialistashosting.com/acceso
+0 105
 # End Of Table - referrers
 # -agents- 
-Mozilla/5.0 (compatible; NetcraftSurveyAgent/1.0; +info@netcraft.com)
-0 2
-Go-http-client/1.1
-0 6
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko; compatible; BW/1.1; bit.ly/3eZNDnO; 482a6ea1
-0 2
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36
+Mozilla/5.0 (Linux; Android 8.1.0; Nexus 6P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.111 Mobile Safari/537.36
 0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36
+Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Sa
 0 1
-Expanse, a Palo Alto Networks company, searches across the global IPv4 space multiple times per day to identify customers&#39
-0 3
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.128 Safari/537.36 Edg/89.0.
+Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36
+0 1
+Mozilla/5.0 (compatible; InternetMeasurement/1.0; +https://internet-measurement.com/)
 0 4
-Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0
-0 1
-Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36
+python-httpx/0.27.0
 0 2
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0
-0 214
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36
+Mozilla/5.0 (compatible; NetcraftSurveyAgent/1.0; +info@netcraft.com)
 0 1
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
+0 3
+Mozilla/5.0 (compatible; Let's Encrypt validation server; +https://www.letsencrypt.org)
+0 5
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
+0 1
+Mozilla/5.0 (compatible; wpbot/1.1; +https://forms.gle/ajBaxygz9jSR8p8G9)
+0 1
+Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36 OPR/62.0.3
+0 1
+Opera/9.51 Beta (Microsoft Windows; PPC; Opera Mobi/1718; U; en)
+0 1
+Mozilla/5.0 (Linux; Android 8.0.0; d-02K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.105 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 (scanner.duck
+0 6
+Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)
+0 2
+curl/7.68.0
+0 2
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0 / \"java.lang.Thread.sleep\"(15000)
+0 1
+P3P Validator
+0 1
+Mozilla/4.8 [en] (Windows NT 5.1; U)
+0 1
+Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0
+0 1
+Go-http-client/1.1
+0 63
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML like Gecko) Maxthon/4.0.0.2000 Chrome/22.0.1229.79 Safari/537.1
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 AVG/122.0.0.0
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
+0 1
+Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0
+0 1
+Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36
+0 2
+Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36
+0 2
+Mozilla/5.0 (iPhone; CPU iPhone OS 7_1_2 like Mac OS X) AppleWebKit/537.51.2 (KHTML like Gecko) Version/7.0 Mobile/11D257 Saf
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36
+0 2
+Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+0 2
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
+0 2
+Baiduspider ( http://www.baidu.com/search/spider.htm)
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0
+0 137
+Expanse, a Palo Alto Networks company, searches across the global IPv4 space multiple times per day to identify customers&#39
+0 7
+Mozilla/5.0 (Linux; Android 6.0; HTC One M9 Build/MRA313204) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.1138.98 Mobil
+0 2
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
+0 1
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
+0 10
+Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
+0 2
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36
+0 2
+Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/92.0.4515.159 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.146
+0 1
+Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.3319.102 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0
+0 572
+Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36
+0 2
+Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+0 6
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36
+0 1
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
+0 3
+Mozilla/5.0 (iPad; U; CPU OS 4_3 like Mac OS X; en-us) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8F190 Sa
+0 1
+Mozilla/5.0 (Linux; Android 11; M2004J15SC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Mobile Safari/537.36
+0 3
 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.132 Safari/537.36
+0 1
+Opera/9.80 (Windows NT 6.1; WOW64; U; pt) Presto/2.10.229 Version/11.62
+0 1
+Mozilla/5.0 (l9scan/2.0.833313e28353e2731323e27363; +https://leakix.net)
+0 2
+Mozlila/5.0 (Linux; Android 7.0; SM-G892A Bulid/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/60.0.31
 0 3
 # End Of Table - agents
 # -search strings- 

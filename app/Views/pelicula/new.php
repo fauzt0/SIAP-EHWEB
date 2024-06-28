@@ -7,7 +7,7 @@
 </head>
 <body>
 
-  <form action="/pelicula/create" method="post">
+  <form action="/dashboard/pelicula/create" method="post">
     <?php 
       echo view('pelicula/_form',['op'=>'Crear']); ?>
   </form>  

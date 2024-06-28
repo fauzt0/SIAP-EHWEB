@@ -8,7 +8,7 @@
 <body>
   <h1><?php echo $pelicula['titulo'] ?></h1>
   <p><?php echo $pelicula['descripcion'] ?></p>
-  <a href="/pelicula">Volver al listado</a>
+  <a href="/dashboard/pelicula">Volver al listado</a>
   
 </body>
 </html>

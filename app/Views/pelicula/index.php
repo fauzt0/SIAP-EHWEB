@@ -41,9 +41,9 @@
         echo "<tr>";
         echo "<td>".$pelicula['titulo']."</td>";
         echo "<td>".$pelicula['descripcion']."</td>";        
-        echo "<td><a href='/pelicula/show/".$pelicula['id']."'>Show</a> ";
-        echo "<a href='/pelicula/edit/".$pelicula['id']."'>Edit</a> ";
-        echo "<form action='/pelicula/delete/".$pelicula['id']."' method='post'> <button type='submit'value='Delete'>Delete</button></td></form>";
+        echo "<td><a href='/dashboard/pelicula/show/".$pelicula['id']."'>Show</a> ";
+        echo "<a href='/dashboard/pelicula/edit/".$pelicula['id']."'>Edit</a> ";
+        echo "<form action='/dashboard/pelicula/delete/".$pelicula['id']."' method='post'> <button type='submit'value='Delete'>Delete</button></td></form>";
 
         echo "</tr>";
       }

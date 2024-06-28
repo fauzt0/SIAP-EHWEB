@@ -89,6 +89,9 @@ class Pelicula extends ResourceController
         ]); 
 
         echo "Se actualizo la pelicula con el id: ".$id;        
+        //return redirect()->back();
+        //return redirect()->to('/dashboard/pelicula');
+        return redirect()->route('pelicula.test');
 
     }
 
@@ -106,4 +109,9 @@ class Pelicula extends ResourceController
 
         echo "Deleted".$id;
     }
+
+    public function test(){
+      echo "test";
+    }
+
 }

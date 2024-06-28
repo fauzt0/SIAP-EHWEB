@@ -6,7 +6,7 @@ class Home extends BaseController
 {
     public function index(): string
     {
-        echo 'Hello World!';
+        echo 'Formulario de inicio de sesion';
         return view('welcome_message');
     }    
 
