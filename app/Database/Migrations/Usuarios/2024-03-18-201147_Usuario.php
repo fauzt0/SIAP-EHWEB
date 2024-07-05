@@ -59,6 +59,11 @@ class Usuario extends Migration
           'constraint' => ['activo','baja'],
           'default' => 'activo',
       ],
+      'rol' => [
+          'type' => 'VARCHAR',
+          'constraint' => 50,
+          'null' => true,
+      ],
       'creado_en' => [
           'type' => 'DATETIME',
           'null' => true,      

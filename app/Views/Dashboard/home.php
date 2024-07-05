@@ -16,5 +16,11 @@
       console.log("jquery ok");
       
     });
+
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log("Dom content loaded");
+
+    });
+
   </script>
 <?php $this->endSection(); ?>   

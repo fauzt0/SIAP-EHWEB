@@ -13,7 +13,7 @@ if (! function_exists('setUserData')) {
     $user_data['email'] = $session->get('email');
     $user_data['id_rol'] = $session->get('id_rol');
 
-    //aplicamos operaciones adicionales en caso de ser necesario              
+    //aplicamos operaciones adicionales en caso de ser necesario, filtros, formato, etc         
 
     return $user_data;
   }

@@ -36,10 +36,9 @@ class UsuarioSeccion extends Migration
                 'null' => false,
                 'default' => 0
             ],
-            'tipo_acceso' => [
-                'type' => 'VARCHAR',
-                'constraint' => 10,
-                'null' => true
+            'acceso' => [
+                'type' => 'BOOLEAN',
+                'null' => false,             
             ],
             'id_seccion' => [
                 'type' => 'INT',

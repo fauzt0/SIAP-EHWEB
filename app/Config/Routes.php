@@ -20,20 +20,37 @@ use CodeIgniter\Router\RouteCollection;
   $routes->group('dashboard', function($routes)
   {
     $routes->get('/', 'Dashboard\Home::index');//ruta para el dashboard del admin
-    $routes->get('dashboard', 'Dashboard\Home::index', ['as'  => 'usuario.dashboard']);//ruta para el dashboard del admin        
+    $routes->get('dashboard', 'Dashboard\Home::index', ['as'  => 'usuario.dashboard']);//ruta para el dashboard del admin      
+    //ruta para errores 
+    $routes->get('error', 'Dashboard\Home::error', ['as'  => 'usuario.error']);  
   });
+  
+  //presenter de rutas de usuario para consumir desde el navegador. Cuenta con el filtro 'AdminFilter' para que solo el admin pueda acceder y el filtro 'PermissionFilter' para que solo el usuario pueda acceder dependiendo de sus permisos
+  //$routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter']] );  
+  $routes->group('usuario', function($routes)
+  {  
+    $routes->post('ajaxList', 'Usuarios\Usuario::ajaxList');
+  });
+  $routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter:usuario']] );
 
+  /*
   $routes->group('usuario', function($routes)
   {
-    $routes->get('/', 'Usuarios\Usuario::index');
-    $routes->presenter('accion', ['controller' => 'Usuarios\Usuario' ]);    
-  });
+    //generamos todas las rutas equivalentes al presenter de usuario con el controlador 'Usuarios\Usuario' y el filtro 'PermissionFilter' con 2 parametros, para que solo el usuario pueda acceder dependiendo de sus permisos
+    $routes->get('/','Usuarios\Usuario::index', ['filter' => ['PermissionFilter:usuario,consultar']]);
+    $routes->get('show/(.*)', 'Usuarios\Usuario::show/$1', ['filter' => ['PermissionFilter:usuario,consultar']]);//ruta para el dashboard del admin
+    $routes->get('new', 'Usuarios\Usuario::new', ['filter' => ['PermissionFilter:usuario,agregar']]);
+    $routes->get('edit/(.*)', 'Usuarios\Usuario::edit/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
+    $routes->get('remove/(.*)', 'Usuarios\Usuario::remove/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
+    $routes->get('/(.*)', 'Usuarios\Usuario::show/$1', ['filter' => ['PermissionFilter:usuario,consultar']]);
 
+    $routes->post('create', 'Usuarios\Usuario::create', ['filter' => ['PermissionFilter:usuario,agregar']]);
+    $routes->post('update/(.*)', 'Usuarios\Usuario::update/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
+    $routes->post('delete/(.*)', 'Usuarios\Usuario::delete/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
+    $routes->post('/', 'Usuarios\Usuario::create', ['filter' => ['PermissionFilter:usuario,agregar']]);   
   
-
-
-
-
+  }); */
+  
 
 
  //nos permite organizar nuestras rutas en grupos

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Database\Seeds;
+namespace App\Database\Seeds\Usuarios;
 
 use CodeIgniter\Database\Seeder;
 
@@ -16,6 +16,7 @@ class UsuarioSeeder extends Seeder
         'password' => password_hash('Prueba1', PASSWORD_DEFAULT),
         'telefono' => '1234567890',
         'estatus' => 'activo',
+        'rol' => 'Administrador',
         'creado_en' => date('Y-m-d H:i:s'),          
       ];
       

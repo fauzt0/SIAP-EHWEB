@@ -1,86 +1,84 @@
-# Webalizer V2.23-08 Incremental Data - 06/27/2024 21:31:41
-2024 6 27 21 31 41
-886 537 78 31 14 56 18511293 588 81 0
-3 2 154 1 27
-1 0 797 1 1 1
-0 0 0 0 0 0
-0 0 0 0 0 0
-1 0 2709 1 1 1
-0 0 0 0 0 0
-1 0 975 1 1 1
-1 0 975 1 1 1
-0 0 0 0 0 0
-0 0 0 0 0 0
-3 0 3127 2 2 2
-1 0 10980 1 1 1
-70 11 180132 29 44 22
-63 3 92291 17 21 14
-110 64 2445450 5 72 7
-5 0 25196 3 4 3
-2 0 5314 2 2 2
-388 307 9118144 6 273 7
-0 0 0 0 0 0
-1 0 2746 1 1 1
-0 0 0 0 0 0
-7 0 12542 4 5 5
-0 0 0 0 0 0
-2 0 5136 2 2 2
-194 127 5261652 4 133 5
-0 0 0 0 0 0
-22 17 1187734 3 12 3
-14 8 155393 3 12 3
+# Webalizer V2.23-08 Incremental Data - 07/03/2024 17:39:55
+2024 7 3 17 39 55
+1219 856 9 33 24 7 36706019 807 19 0
+3 56 184 1 3
+439 218 5923929 5 251 10
+610 509 25489516 3 423 5
+170 129 5292574 3 133 4
 0 0 0 0 0 0
 0 0 0 0 0 0
 0 0 0 0 0 0
 0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+0 0 0 0 0 0
+123 94 1318068 122
+73 44 1434454 54
+1 0 834 1
 0 0 0 0
-4 0 3682 3
-3 0 2797 1
-13 8 920529 8
-127 89 2971769 105
-35 0 42780 5
-4 0 4660 2
 0 0 0 0
-2 0 21570 2
-10 0 11119 4
-2 0 2152 1
-1 0 2568 1
-33 20 451853 27
-75 19 310786 47
-112 66 2014245 61
-30 20 302618 30
-41 12 218122 28
-44 27 1743058 31
-161 109 3378960 84
-149 145 4774378 120
-5 1 25498 4
-29 21 1279157 19
-1 0 2746 1
-5 0 26246 4
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+0 0 0 0
+4 2 45774 4
+28 12 213138 16
+174 63 2782760 52
+228 144 6461743 140
+118 99 3692331 101
+71 62 4348935 35
+92 69 3249253 74
+184 159 8237707 121
+123 108 4921022 87
+0 0 0 0
+0 0 0 0
+0 0 0 0
 0
 0
 0
-537
-0
-0
-0
-0
-0
-0
-0
-8
-24
-27
-7
+856
 0
 0
 0
 0
 0
-31
-156
+0
 0
 7
+63
+9
+0
+0
+0
+0
+0
+0
+71
+192
 0
 0
 0
@@ -92,466 +90,187 @@
 0
 0
 0
-89
+0
+0
+21
 0
 0
 0
 0
 0
 # -urls- 
-/admin/dashboard
-0 102 0 1045528 2 0
+/usuario/show/agfsdg
+0 1 0 6166 0 0
 /usuario
-0 10 0 99570 1 0
+0 132 0 1638850 0 0
 /bootstrap/css/app.css
-0 11 0 1018589 0 0
+0 29 0 2685371 0 0
+/usuario/show/1223
+0 1 0 6141 0 0
 /bootstrap/fonts/fa-regular-400.woff2
-0 6 0 152472 0 0
+0 2 0 50784 0 0
 /acceso/login
-0 34 0 247996 0 0
-/admin/cliente
-0 1 0 6150 0 0
+0 18 0 130920 0 0
+/usuario/new
+0 16 0 100260 0 0
 /bootstrap/js/app.js
-0 13 0 8806136 0 0
+0 29 0 21174246 0 0
+/usuario/+
+0 1 0 13121 0 0
+/usuario/show/userid
+0 1 0 6174 0 0
 /bootstrap/img/avatars/avatar-3.jpg
-0 10 0 349760 0 0
+0 24 0 839424 0 0
 /favicon.ico
-0 20 0 11284 0 0
+0 30 0 13560 0 0
+/usuario/ajaxList
+0 52 0 125706 3 4
 /bootstrap/img/avatars/avatar-4.jpg
-0 10 0 330240 0 0
-/.well-known/acme-challenge/zoqltFn0UPAiwsuHJSZhrfFUVC65p5yUlvr1dta0dWY
-0 5 0 1651 0 0
+0 24 0 792576 0 0
+/usuario/create
+0 7 0 43220 0 0
+/dashboard/error
+0 47 0 247044 0 0
+/usuario/1
+0 4 0 24568 0 0
 /dashboard
-0 2 0 22702 0 0
+0 7 0 79579 1 0
 /bootstrap/img/avatars/avatar-5.jpg
-0 11 0 395505 0 0
+0 24 0 824568 0 0
+/usuario/show/userid/asfasfas/sgsdgsdgsdgsdgsd
+0 1 0 6174 0 0
+/usuario/show/userid/asfasfas
+0 1 0 6174 0 0
+/usuario/show/12
+0 2 0 12332 0 0
 /acceso
-0 20 0 146407 2 0
-/bootstrap/img/flags/de.png
-0 3 0 321 0 0
+0 9 0 65940 0 0
+/usuario/show/afgsasfa
+0 1 0 6171 1 0
+/usuario/show
+0 10 0 61731 0 0
+/usuario/asfasf
+0 1 0 6173 0 0
 /bootstrap/img/brands/logo-eh-horizontal.svg
-0 8 0 56520 0 0
-/bootstrap/css/light.css
-0 4 0 175304 0 0
-/.well-known/acme-challenge/letsencrypt_3cfd17850b96dfe2f6cca81e005e3556
-0 1 0 287 0 0
-/bootstrap/img/flags/nl.png
-0 3 0 477 0 0
-/panel
-0 1 0 7274 0 0
+0 24 0 169560 0 0
 /
-0 213 0 3840749 25 10
+0 297 0 5229220 10 5
 /bootstrap/img/brands/logo.png
-0 9 0 86976 0 0
+0 5 0 54360 0 0
 /bootstrap/img/avatars/avatar-2.jpg
-0 10 0 385000 0 0
+0 24 0 924000 0 0
 /bootstrap/img/avatars/avatar.jpg
-0 12 0 365688 0 0
-/.well-known/acme-challenge/letsencrypt_bf7df05d5c82051bc4997d998a8ff53e
-0 1 0 287 0 0
-/bootstrap/img/flags/es.png
-0 3 0 5646 0 0
-/bootstrap/img/flags/us.png
-0 3 0 2325 0 0
-/panel/login
-0 5 0 36493 1 1
-/admin
-0 3 0 30794 3 0
-/robots.txt
-0 1 0 330 0 0
+0 24 0 625680 0 0
+/usuario/show/1
+0 2 0 12282 0 0
 /dashboard/dashboard
-0 9 0 102154 0 0
+0 6 0 68307 0 0
 # End Of Table - urls
 # -sites- (monthly)
-65.154.226.170
-0 1 0 834 1 1718209971
--
-154.28.229.235
-0 1 0 9321 1 1718198366
--
-194.55.186.107
-0 2 0 3316 0 0
--
-165.232.42.155
-0 2 0 21588 1 1718482767
+205.210.31.71
+0 1 0 2568 1 1719880109
 /
-179.43.188.122
-0 2 0 3316 0 0
--
-2.57.122.122
-0 4 2 3658 1 1718304267
--
-179.43.167.18
-0 7 0 6059 1 1718270074
--
-194.55.186.251
-0 2 0 5492 2 1718316423
--
-84.239.54.49
-0 2 0 2152 1 1718015266
--
-104.164.173.49
-0 1 0 9303 1 1718198369
--
-104.164.173.123
-0 1 0 9277 1 1718213583
--
-87.236.176.180
-0 1 0 975 1 1717690945
--
-87.236.176.205
-0 1 0 975 1 1718028903
--
-3.223.3.63
-0 2 0 2024 2 1718243756
--
-205.210.31.70
-0 1 0 2568 1 1718985846
+205.169.39.20
+0 1 0 10694 1 1720012996
 /
-5.164.29.116
-0 6 3 5754 3 1718248043
--
-93.123.39.131
-0 1 0 1242 0 0
--
-47.89.193.239
-0 1 0 1012 1 1718245078
--
-104.193.135.126
-0 2 1 10423 1 1718198413
--
-195.211.77.142
-0 1 0 453 1 1719272643
+205.210.31.173
+0 1 0 2902 1 1720015977
 /
-47.242.224.70
-0 2 0 2024 2 1718251969
--
-167.172.59.13
-0 2 0 21567 1 1718319764
--
-139.162.141.82
-0 18 0 22295 1 1718198349
--
-35.93.198.75
-0 1 1 328 0 0
--
-87.236.176.161
-0 1 0 797 1 1717255185
--
-205.210.31.241
-0 1 0 2746 1 1718993828
-/
-133.242.174.119
-0 1 0 1012 1 1718209285
--
-154.28.229.161
-0 1 0 9303 1 1718198369
--
-104.164.173.143
-0 1 0 9288 1 1718213586
--
-51.20.138.21
-0 1 1 328 0 0
--
-23.178.112.206
-0 1 1 328 0 0
--
-167.99.79.202
-0 3 0 2602 1 1718204630
--
-198.235.24.17
-0 1 0 2568 1 1719261986
+189.203.96.63
+0 194 138 2748942 3 1719798685
 /
 67.217.58.138
-0 2 2 574 0 0
--
-179.43.152.66
-0 1 0 2746 1 1718555881
+0 3 3 19989 1 1719946629
+/usuario/ajaxList
+199.45.155.87
+0 2 0 1846 2 1719801134
 /
-147.185.132.46
-0 1 0 2746 1 1718376146
+3.249.253.174
+0 1 0 83601 1 1719846729
 /
-87.236.176.173
-0 1 0 975 1 1717784988
--
-205.210.31.156
-0 1 0 2568 1 1718667364
+98.98.21.196
+0 9 6 96664 1 1719854790
 /
-104.164.173.161
-0 1 0 9302 1 1718198364
--
-45.148.10.232
-0 4 0 4660 2 1718952712
--
-206.81.24.227
-0 18 0 19269 1 1718198346
--
-198.235.24.116
-0 1 0 2746 1 1719420914
-/
-18.140.58.113
-0 1 0 975 1 1718589357
-/
-135.148.100.196
-0 1 0 2568 1 1719115932
-/
-198.235.24.132
-0 1 0 2568 1 1718543249
-/
-34.72.176.129
-0 1 0 10652 1 1718198361
--
-205.210.31.242
-0 1 0 2568 1 1719417586
-/
-64.227.5.66
-0 2 0 21570 1 1718352472
--
-18.222.152.246
-0 1 1 339 0 0
--
-34.221.113.1
-0 2 0 1594 1 1718297157
--
-205.210.31.22
-0 1 0 2746 1 1718805547
-/
-205.169.39.70
-0 1 0 9026 1 1718198372
--
-198.235.24.46
-0 1 0 2568 1 1719142317
-/
-45.148.10.59
-0 2 0 1950 2 1718461895
-/
-93.123.39.11
-0 1 0 1242 0 0
--
-206.168.34.181
-0 1 0 1012 1 1718397663
-/
-171.244.43.14
-0 1 0 1012 1 1718249432
--
-104.164.173.65
-0 1 0 9305 1 1718198364
--
-195.211.77.140
-0 1 0 453 1 1718243741
--
-198.235.24.110
-0 1 0 2568 1 1718643442
-/
-154.28.229.231
-0 1 0 9301 1 1718198366
--
-83.147.52.49
-0 2 0 3316 0 0
--
-162.243.171.10
-0 2 0 21596 1 1719523901
-/
-18.201.194.35
-0 1 0 2709 1 1717525698
--
-47.254.25.10
-0 1 0 889 0 0
--
-51.81.46.212
-0 1 0 2568 1 1718960562
-/
-187.189.93.61
-0 133 96 3882030 1 1719204217
-/
-159.65.94.225
-0 2 0 21590 1 1718659481
-/
-45.134.26.11
-0 1 0 10980 1 1718112965
--
-213.232.87.228
-0 33 0 40147 1 1718258058
--
-35.95.78.65
-0 1 1 330 0 0
--
-104.164.173.180
-0 1 0 9310 1 1718213583
--
 187.251.241.163
-0 576 427 14197575 11 1719494564
-/
-65.154.226.171
-0 1 0 10652 1 1718208644
--
-199.45.155.32
-0 1 0 1012 1 1718254524
--
-18.142.139.98
-0 1 1 328 0 0
--
-145.220.91.19
-0 1 0 834 1 1719481779
-/
-47.88.90.156
-0 1 0 896 0 0
--
+0 1007 709 33738813 8 1720028395
+/usuario/ajaxList
 # End Of Table - sites (monthly)
 # -sites- (daily)
-162.243.171.10
-0 2 0 21596 1 1719523901
+205.169.39.20
+0 1 0 10694 1 1720012996
+/
+205.210.31.173
+0 1 0 2902 1 1720015977
 /
 187.251.241.163
-0 11 8 132963 1 1719494564
-/
-145.220.91.19
-0 1 0 834 1 1719481779
-/
+0 168 129 5278978 2 1720028395
+/usuario/ajaxList
 # End Of Table - sites (daily)
 # -referrers- 
-https://sandbox.especialistashosting.com/admin/cliente
+https://sandbox.especialistashosting.com//usuario/create
+0 6
+https://sandbox.especialistashosting.com/usuario/show/1223
 0 1
-https://sandbox.especialistashosting.com/panel/login
-0 23
+https://sandbox.especialistashosting.com/usuario/show/agfsdg
+0 1
+https://sandbox.especialistashosting.com/usuario/new
+0 28
+https://sandbox.especialistashosting.com/usuario/asfasf
+0 1
+https://sandbox.especialistashosting.com/usuario/+
+0 11
+https://sandbox.especialistashosting.com/usuario/show/userid/asfasfas
+0 1
+https://sandbox.especialistashosting.com/usuario/show/userid/asfasfas/sgsdgsdgsdgsdgsd
+0 1
 - (Direct Request)
-0 271
+0 343
 https://sandbox.especialistashosting.com/dashboard/dashboard
-0 33
-https://sandbox.especialistashosting.com/admin
-0 9
-https://sandbox.especialistashosting.com/panel
+0 7
+https://sandbox.especialistashosting.com/usuario/show/1
 0 2
-https://sandbox.especialistashosting.com/dashboard
+https://sandbox.especialistashosting.com/usuario/show/12
 0 2
-https://sandbox.especialistashosting.com/bootstrap/css/light.css
-0 4
-https://sandbox.especialistashosting.com/acceso/login
-0 158
-http://sandbox.especialistashosting.com/wordpress/
+https://sandbox.especialistashosting.com/usuario/show/afgsasfa
 0 1
-https://sandbox.especialistashosting.com/admin/dashboard
-0 236
+https://sandbox.especialistashosting.com/dashboard
+0 7
+https://sandbox.especialistashosting.com/usuario/create
+0 1
+https://sandbox.especialistashosting.com/dashboard/error
+0 35
+https://sandbox.especialistashosting.com/usuario/ajaxList
+0 17
+https://sandbox.especialistashosting.com/usuario/show
+0 10
+https://sandbox.especialistashosting.com/acceso/login
+0 39
 https://sandbox.especialistashosting.com/usuario
-0 38
+0 671
+https://sandbox.especialistashosting.com/usuario/show/userid
+0 1
 https://sandbox.especialistashosting.com/bootstrap/css/app.css
-0 3
+0 2
 https://sandbox.especialistashosting.com/acceso
-0 105
+0 27
+https://sandbox.especialistashosting.com/usuario/1
+0 4
 # End Of Table - referrers
 # -agents- 
-Mozilla/5.0 (Linux; Android 8.1.0; Nexus 6P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.111 Mobile Safari/537.36
-0 1
-Mozilla/5.0 (iPhone; CPU iPhone OS 14_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Sa
-0 1
-Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36
-0 1
-Mozilla/5.0 (compatible; InternetMeasurement/1.0; +https://internet-measurement.com/)
-0 4
-python-httpx/0.27.0
-0 2
 Mozilla/5.0 (compatible; NetcraftSurveyAgent/1.0; +info@netcraft.com)
 0 1
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
-0 3
-Mozilla/5.0 (compatible; Let's Encrypt validation server; +https://www.letsencrypt.org)
-0 5
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
-0 1
-Mozilla/5.0 (compatible; wpbot/1.1; +https://forms.gle/ajBaxygz9jSR8p8G9)
-0 1
-Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36 OPR/62.0.3
-0 1
-Opera/9.51 Beta (Microsoft Windows; PPC; Opera Mobi/1718; U; en)
-0 1
-Mozilla/5.0 (Linux; Android 8.0.0; d-02K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.105 Safari/537.36
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 (scanner.duck
-0 6
 Mozilla/5.0 (compatible; CensysInspect/1.1; +https://about.censys.io/)
 0 2
-curl/7.68.0
-0 2
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:125.0) Gecko/20100101 Firefox/125.0 / \"java.lang.Thread.sleep\"(15000)
-0 1
-P3P Validator
-0 1
-Mozilla/4.8 [en] (Windows NT 5.1; U)
-0 1
-Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0
-0 1
-Go-http-client/1.1
-0 63
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
-0 1
-Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML like Gecko) Maxthon/4.0.0.2000 Chrome/22.0.1229.79 Safari/537.1
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 AVG/122.0.0.0
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.157 Safari/537.36
-0 1
-Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36
-0 1
-Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0
-0 1
-Mozilla/5.0 (X11; CrOS x86_64 8172.45.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.64 Safari/537.36
-0 2
-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36
-0 2
-Mozilla/5.0 (iPhone; CPU iPhone OS 7_1_2 like Mac OS X) AppleWebKit/537.51.2 (KHTML like Gecko) Version/7.0 Mobile/11D257 Saf
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36
-0 2
-Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
-0 2
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
-0 2
-Baiduspider ( http://www.baidu.com/search/spider.htm)
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0
-0 137
 Expanse, a Palo Alto Networks company, searches across the global IPv4 space multiple times per day to identify customers&#39
-0 7
-Mozilla/5.0 (Linux; Android 6.0; HTC One M9 Build/MRA313204) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.1138.98 Mobil
 0 2
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36
-0 1
-Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
-0 10
-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
-0 2
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36
-0 2
-Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/92.0.4515.159 Safari/537.36
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.146
-0 1
-Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.3319.102 Safari/537.36
-0 1
+PostmanRuntime/7.39.1
+0 3
 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0
-0 572
-Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.111 Safari/537.36
-0 2
-Mozilla/5.0 (Windows NT 10.0; Win64; x64)
-0 6
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36
-0 1
-Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
-0 3
-Mozilla/5.0 (iPad; U; CPU OS 4_3 like Mac OS X; en-us) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8F190 Sa
-0 1
-Mozilla/5.0 (Linux; Android 11; M2004J15SC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Mobile Safari/537.36
-0 3
+0 1209
 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.5938.132 Safari/537.36
 0 1
-Opera/9.80 (Windows NT 6.1; WOW64; U; pt) Presto/2.10.229 Version/11.62
+curl/7.81.0
 0 1
-Mozilla/5.0 (l9scan/2.0.833313e28353e2731323e27363; +https://leakix.net)
-0 2
-Mozlila/5.0 (Linux; Android 7.0; SM-G892A Bulid/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/60.0.31
-0 3
 # End Of Table - agents
 # -search strings- 
 # End Of Table - search strings

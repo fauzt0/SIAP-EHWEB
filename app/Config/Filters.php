@@ -25,7 +25,8 @@ class Filters extends BaseConfig
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
-        'AdminFilter'   => \App\Filters\AdminFilter::class
+        'AdminFilter'   => \App\Filters\AdminFilter::class,
+        'PermissionFilter' => \App\Filters\PermissionFilter::class
     ];
 
     /**
@@ -38,7 +39,7 @@ class Filters extends BaseConfig
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // 'csrf',
+            'csrf',
             // 'invalidchars',
         ],
         'after' => [
@@ -68,10 +69,12 @@ class Filters extends BaseConfig
      * Example:
      * 'isLoggedIn' => ['before' => ['account/*', 'profiles/*']]
      */
+
+     //aplicaremos los filtros de autenficacion a todas las secciones que requieran un filtro con login de administrador
     public array $filters = [
       //agregamos un except para admin/login y admin/login_post para que no se aplique el filtro
       'AdminFilter' => [
-        'before' => ['dashboard', 'dashboard/*','usuario','usuario/*']
-      ]     
+        'before' => ['dashboard', 'dashboard/*']        
+      ]
     ];
 }

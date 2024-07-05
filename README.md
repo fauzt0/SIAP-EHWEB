@@ -12,9 +12,6 @@
 Ej: Desarrollador Fausto Solano
 Nombre de espacio virtual: fasol
 Ruta del sandbox: sandbox.especialistashosting.com/fasol - fasol.sandbox.especialistashosting.com
-Base de datos: username_fasol
-Usuario: username_fasol
-Password: xxxxxxx
 
 - En case de requerir agregar una nueva funcionalidad, es necesario clonar la rama main a una nueva rama y trabajar en un namespace, nunca se deben manejar nuevas funcionalidades en produccion o rama maestra sin previa autorización
 
@@ -22,7 +19,7 @@ Password: xxxxxxx
 
 -Es necesario que todos los desarrolladores cuenten con una cuenta activa de GITHUB
 
-
+-Actualmente el servidor de desarrollo presenta un bloqueo mediante mod_security, por lo que es neceario agregar las cabeceras de ajax sin la codificación UTF-8.
 
 
 

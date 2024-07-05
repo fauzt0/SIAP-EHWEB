@@ -8,8 +8,7 @@ class Home extends BaseController
 {
 
   //variables de la clase 
-  protected $helpers = ['form', 'userdata'];
-  //datos del usuario logueado
+  protected $helpers = ['form', 'userdata'];  
 
   public function index()
   {
@@ -20,4 +19,19 @@ class Home extends BaseController
    
    return view('Dashboard/home', $data);  
   }
+
+  //mostramos el mensaje de error del flashdata
+  public function error(){
+
+    $data = array();
+    $data['title'] = "Error - EHWEB";   
+    $data['view'] = "Dashboard/error";
+    $data['user_data'] = getUserData();
+    $data['message'] = session()->getFlashdata('message');
+    echo  $data['message'];
+   // return view('Dashboard/error', $data);
+
+  }
+
+
 }

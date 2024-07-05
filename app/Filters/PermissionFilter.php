@@ -6,7 +6,9 @@ use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
-class AdminFilter implements FilterInterface
+
+
+class PermissionFilter implements FilterInterface
 {
     /**
      * Do whatever processing this filter needs to do.
@@ -25,21 +27,26 @@ class AdminFilter implements FilterInterface
      */
     public function before(RequestInterface $request, $arguments = null)
     {
-      //verificamos que tenga una marca de isLoggedIn
-      if(!session()->get('isLoggedIn')){
-        return redirect()->route('usuario.login');
-      }
 
-      //verificamos que el tipo de usuario sea admin
-      if(session()->get('tipo_acceso') != 'admin'){
-        return redirect()->route('usuario.login');
-      }
-
-      //verificamos que el usuario cuente con los permisos requeridos de dicha seccion
+      $sections = ['usuario', 'seccion' ];
+      // $section = $arguments[0];          
+      //echo $permission = $arguments[1];
       
+      /*array de secciones permitidas
+      $sections = ['usuario', 'seccion' ];
+      $section = $arguments[0];          
+      $permission = $arguments[1];
+      //if(!isset($section) || !is_numeric($section)){
+        if(!isset($section) || !in_array($section, $sections) || !isset($permission)){
+        throw new \Exception('Seccion no valida'); 
+      }     
 
+      //verificamos en la base de datos que el usuario tenga el permiso 
+      echo $section;
+      echo $permission;
+      */
 
-
+      
       
 
     }
