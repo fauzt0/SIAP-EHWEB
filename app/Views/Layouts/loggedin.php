@@ -6,7 +6,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>EHWEB - PANEL</title>
-
+   <?php
+    //renderizamos los head de la vista
+    $this->renderSection('head'); ?>   
   <!-- Bootstrap CSS -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
   <link class="js-stylesheet" href="<?php echo base_url(); ?>bootstrap/css/app.css" rel="stylesheet">
@@ -17,15 +19,14 @@
   <div class="wrapper">
     <!-- sidebar -->
     <?php 
-    echo $this->include('Partials/loggedin_sidebar'); 
-    
+      echo $this->include('Partials/loggedin_sidebar');     
     ?>
 
     <div class="main">
       <!-- main content y topbar -->
       <?php 
         echo $this->include('Partials/loggedin_topbar'); 
-        $this->renderSection('contenido');
+        $this->renderSection('contenido');//renderizamos el contenido principal
         echo $this->include('Partials/loggedin_footer');
       ?>    
     </div>  

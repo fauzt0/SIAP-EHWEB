@@ -26,7 +26,8 @@ class Filters extends BaseConfig
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
         'AdminFilter'   => \App\Filters\AdminFilter::class,
-        'PermissionFilter' => \App\Filters\PermissionFilter::class
+        'PermissionFilter' => \App\Filters\PermissionFilter::class,
+        'csrfTokenFilter'     => \App\Filters\CsrfTokenFilter::class, //filtro para actualizar y devolver el csrf token
     ];
 
     /**
@@ -44,6 +45,7 @@ class Filters extends BaseConfig
         ],
         'after' => [
             'toolbar',
+            'csrfTokenFilter',
             // 'honeypot',
             // 'secureheaders',
         ],

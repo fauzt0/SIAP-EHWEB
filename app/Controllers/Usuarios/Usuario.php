@@ -25,16 +25,15 @@ class Usuario extends ResourcePresenter
 
   //metodo que lista y busca a los usuarios
   public function ajaxList(){    
-    
-    //obtenemos todos los reques posibles post o get
-    // Obtener los datos enviados en la solicitud
-    
     //mostramos todo los reques posibles post o get
     $search = $this->request->getPost('search'); 
-    $data['search'] = $search."hola";
-    echo $data['search'];
-    //echo json_encode($data);
-    //echo json_encode($data);
+    $data['success'] = true;
+    $data['search'] = $search."hola";  
+    return $this->response->setJSON($data); 
+
+    //$this->response->setStatusCode(200);
+    //return $this->response;   
+
   }
 
   /*
@@ -56,8 +55,8 @@ class Usuario extends ResourcePresenter
   /*store a newly created user in storage. */
   public function create()
   {
-     header("Access-Control-Allow-Origin: *");
-    header("Access-Control-Allow-Methods: POST, GET");
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: POST");
     header("Access-Control-Allow-Headers: Content-Type");
 
     //ci4 

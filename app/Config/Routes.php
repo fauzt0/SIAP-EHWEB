@@ -29,9 +29,11 @@ use CodeIgniter\Router\RouteCollection;
   //$routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter']] );  
   $routes->group('usuario', function($routes)
   {  
-    $routes->post('ajaxList', 'Usuarios\Usuario::ajaxList');
+    $routes->post('ajaxList', 'Usuarios\Usuario::ajaxList');     
+    //restful routes with presenter          
   });
-  $routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter:usuario']] );
+  $routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter']] );
+
 
   /*
   $routes->group('usuario', function($routes)

@@ -29,6 +29,13 @@ class PermissionFilter implements FilterInterface
     {
 
       $sections = ['usuario', 'seccion' ];
+      
+
+
+
+
+
+
       // $section = $arguments[0];          
       //echo $permission = $arguments[1];
       
