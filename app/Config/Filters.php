@@ -25,8 +25,8 @@ class Filters extends BaseConfig
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
-        'AdminFilter'   => \App\Filters\AdminFilter::class,
-        'PermissionFilter' => \App\Filters\PermissionFilter::class,
+        //'AdminFilter'   => \App\Filters\AdminFilter::class, //protected by shield
+        //'PermissionFilter' => \App\Filters\PermissionFilter::class,//protected by shield 
         'csrfTokenFilter'     => \App\Filters\CsrfTokenFilter::class, //filtro para actualizar y devolver el csrf token
     ];
 
@@ -45,7 +45,7 @@ class Filters extends BaseConfig
         ],
         'after' => [
             'toolbar',
-            'csrfTokenFilter',
+            'csrfTokenFilter', //filtro para actualizar y devolver el csrf token
             // 'honeypot',
             // 'secureheaders',
         ],
@@ -73,10 +73,9 @@ class Filters extends BaseConfig
      */
 
      //aplicaremos los filtros de autenficacion a todas las secciones que requieran un filtro con login de administrador
-    public array $filters = [
-      //agregamos un except para admin/login y admin/login_post para que no se aplique el filtro
-      'AdminFilter' => [
+    public array $filters = [      
+      /*'AdminFilter' => [
         'before' => ['dashboard', 'dashboard/*']        
-      ]
+      ]*/
     ];
 }

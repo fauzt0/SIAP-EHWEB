@@ -35,11 +35,7 @@ class AdminFilter implements FilterInterface
         return redirect()->route('usuario.login');
       }
 
-      //verificamos que el usuario cuente con los permisos requeridos de dicha seccion
-      
-
-
-
+      //verificamos que el usuario cuente con los permisos requeridos de dicha seccion  
       
 
     }
