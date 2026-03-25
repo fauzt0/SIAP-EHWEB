@@ -5,90 +5,74 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-  $routes->get('/', 'Home::index'); //acceso principal 
-  service('auth')->routes($routes); //rutas de autenticacion shield (autenticacion de usuarios)
+  $routes->get('/', 'Home::index'); //acceso principal  
+
+  //verificamos la variable de entorno, en caso de ser produccion, no mostramos la ruta de ejemplo
+  if (ENVIRONMENT !== 'production') {
+    $routes->get('example_user', 'Users\ExampleController::index'); //ejemplo (eliminar en produccion)    
+  }
+
+
+
+ 
+  //rutas de autenticacion shield (autenticacion de usuarios administradores)   
+  $routes->group('nat', function($routes){ //equivalente a /admin o /erp 
+    service('auth')->routes($routes);  //rutas de autenticacion de shield 
+  
+    
+    //rutas para los dashboard
+    $routes->get('/', 'Dashboard\Home::index', ['as' => 'dashboard.index']); //acceso principal            
+    
 
   
-  //grupo de rutas para el login, pantalla de acceso login, y logout
-  /*
-  $routes->group('acceso', function($routes)
-  {    
-    $routes->get('/', 'Login\Login::index');//ruta para el login del admin
-    $routes->get('login', 'Login\Login::index',['as' => 'usuario.login']);//ruta para el formulario de login
-    $routes->post('login_post', 'Login\Login::login_post', ['as'  => 'usuario.login_post']);//ruta para el login del admin 
-    $routes->get('logout', 'Login\Login::logout', ['as'  => 'usuario.logout']);//ruta para el logout del admin    
-  });*/
+    //rutas de administracion de usuarios
+    //$routes->presenter('user',  ['controller' => 'Users\UserController', 'only' => 'index,show,new,create'] );             
+    $routes->group('user', function($routes){//agrupamos todas las rutas de administracion de usuarios en un solo grupo
+      $routes->get('/', 'Users\UserController::index', ['as' => 'users.list']); //acceso principal            
+      $routes->get('list', 'Users\UserController::index'); //acceso principal      
+      $routes->post('list_ajax', 'Users\UserController::list_ajax', ['as' => 'users.list_ajax']); //acceso principal 
 
-  //grupo de rutas para el admin con sesion iniciada, al dashboard y secciones del administrador genericas
-  /*
-  $routes->group('dashboard', function($routes)
-  {
-    $routes->get('/', 'Dashboard\Home::index');//ruta para el dashboard del admin
-    $routes->get('dashboard', 'Dashboard\Home::index', ['as'  => 'usuario.dashboard']);//ruta para el dashboard del admin      
-    //ruta para errores 
-    $routes->get('error', 'Dashboard\Home::error', ['as'  => 'usuario.error']);  
-  });*/
-  
-  //presenter de rutas de usuario para consumir desde el navegador. Cuenta con el filtro 'AdminFilter' para que solo el admin pueda acceder y el filtro 'PermissionFilter' para que solo el usuario pueda acceder dependiendo de sus permisos
-  //$routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter']] );  
-  /*
-  $routes->group('usuario', function($routes)
-  {  
-    $routes->post('ajaxList', 'Usuarios\Usuario::ajaxList');     
-    //restful routes with presenter          
+      $routes->post('create', 'Users\UserController::create', ['as'  => 'user.create']); //crear nuevo usuario (peticion de form o ajax)
+      $routes->get('show/(:num)', 'Users\UserController::show/$1', ['as'  => 'user.show' ] );//ruta para mostrar los detalles del usuario (nos permitira ver el perfil y editarlo)                 
+      $routes->post('update/(:num)', 'Users\UserController::update/$1', ['as'  => 'user.update']);
+      //$routes->get('update/(:num)', 'Users\UserController::update/$1', ['as'  => 'user.update']);      
+      $routes->get('addPermission/(:num)/', 'Users\UserController::addPermission/$1', ['as'  => 'user.permission']); //agregamos el permiso beta.access al usuario', 'Users\UserController::addPermission', ['as'  => 'user.permission']);
+      
+      // Catálogo de Roles y Permisos
+      $routes->get('roles', 'Users\RoleController::index', ['as' => 'users.roles']);
+
+    });//fin del grupo user
+
+
   });
-  $routes->presenter('usuario', ['controller' => 'Usuarios\Usuario', 'filter' => ['AdminFilter', 'PermissionFilter']] );
-
-*/
-  /*
-  $routes->group('usuario', function($routes)
-  {
-    //generamos todas las rutas equivalentes al presenter de usuario con el controlador 'Usuarios\Usuario' y el filtro 'PermissionFilter' con 2 parametros, para que solo el usuario pueda acceder dependiendo de sus permisos
-    $routes->get('/','Usuarios\Usuario::index', ['filter' => ['PermissionFilter:usuario,consultar']]);
-    $routes->get('show/(.*)', 'Usuarios\Usuario::show/$1', ['filter' => ['PermissionFilter:usuario,consultar']]);//ruta para el dashboard del admin
-    $routes->get('new', 'Usuarios\Usuario::new', ['filter' => ['PermissionFilter:usuario,agregar']]);
-    $routes->get('edit/(.*)', 'Usuarios\Usuario::edit/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
-    $routes->get('remove/(.*)', 'Usuarios\Usuario::remove/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
-    $routes->get('/(.*)', 'Usuarios\Usuario::show/$1', ['filter' => ['PermissionFilter:usuario,consultar']]);
-
-    $routes->post('create', 'Usuarios\Usuario::create', ['filter' => ['PermissionFilter:usuario,agregar']]);
-    $routes->post('update/(.*)', 'Usuarios\Usuario::update/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
-    $routes->post('delete/(.*)', 'Usuarios\Usuario::delete/$1', ['filter' => ['PermissionFilter:usuario,editar']]);
-    $routes->post('/', 'Usuarios\Usuario::create', ['filter' => ['PermissionFilter:usuario,agregar']]);   
-  n
-  }); */
   
 
-
- //nos permite organizar nuestras rutas en grupos
   /*
- $routes->group('dashboard', function($routes)
- {
+  $routes->group('user', function($routes)
+  {   
+    //shield routes
+    
+    //Dashboards del erp
+    //rutas de administracion de usuario
+    //$routes->presenter('user',  ['controller' => 'Users\UserController', 'only' => 'index,new,create', 'as'  => 'usr' ] );        
+    
+    
+    //$routes->get('new', 'Usuarios\Usuario::new', ['as'  => 'usuario.new']);
+    //$routes->get('/', 'Usuarios\Usuario::listar_usuarios'); //acceso principal 
+    //$routes->get('show/(:num)', 'Usuarios\Usuario::show/$1', ['as'  => 'usuario.show' ] );//ruta para el dashboard del admin    
+    //$routes->get('new', 'Usuarios\Usuario::new', ['as'  => 'usuario.new']);
+    //$routes->get('edit/(:num)', 'Usuarios\Usuario::edit/$1', ['as'  => 'usuario.edit']);
+    //$routes->get('remove/(:num)', 'Usuarios\Usuario::remove/$1', ['as'  => 'usuario.remove']);
+    //$routes->get('/(.*)', 'Usuarios\Usuario::show/$1', ['as'  => 'usuario.show']);
+    //$routes->get('create', 'Usuarios\Usuario::create', ['as'  => 'usuario.create']);
+    //$routes->post('update/(:num)', 'Usuarios\Usuario::update/$1', ['as'  => 'usuario.update']);
+    //$routes->post('delete/(:num)', 'Usuarios\Usuario::delete/$1', ['as'  => 'usuario.delete']);
 
-   $routes->get('users', 'Dashboard::users');
-    $routes->get('posts', 'Dashboard::posts');
-    $routes->get('comments', 'Dashboard::comments');
-    $routes->get('/', 'Pelicula::index');
-    $routes->presenter('pelicula');// para api rest ('api/photo');
-    $routes->get('test', 'Pelicula::test',['as' => 'pelicula.test']);   
-
- });*/
+  });
+*/
+   
+    
 
 //$routes->presenter('home');// para consumir desde el navegador
 
 //$routes->resource('home');// para api rest ('api/photo');
-
-/*$routes->presenter('pelicula', [
-  'controller' => 'Pelicula',
-]);// para consumir desde el navegador ('admin/photos');
-*/
-
-
-/*
-$routes->get('/peliculas', 'PeliculaController::index');
-$routes->get('/peliculas/new', 'PeliculaController::create');
-
-service('auth')->routes($routes);
-$routes->get('/peliculas/edit/(:num)', 'PeliculaController::create/$1');*/
-
-

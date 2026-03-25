@@ -1,3 +1,10 @@
+<?php
+/**
+ * Layout general para todas las vistas generales del sistema con usuario logueado(no clientes)
+ * 
+ * Incluye el sidebar, topbar y footer con el template core de bootstrap appstack
+ */
+?>
 <!DOCTYPE html>
 <html lang="es" data-bs-theme="light" data-layout="fluid" data-sidebar-theme="dark" data-sidebar-position="left" data-sidebar-behavior="sticky">
 <head>
@@ -5,14 +12,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>EHWEB - PANEL</title>
-   <?php
-    //renderizamos los head de la vista
-    $this->renderSection('head'); ?>   
-  <!-- Bootstrap CSS -->
+  <title><?= $this->renderSection('title') ?></title>
+
+  <!-- Bootstrap CSS template core -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
   <link class="js-stylesheet" href="<?php echo base_url(); ?>bootstrap/css/app.css" rel="stylesheet">
-  
+
+  <!--External css -->
+  <?= $this->renderSection('pageStyles') ?>
+  <!-- Render initial scripts (header required scripts) -->
+  <?= $this->renderSection('pageHeaderScripts') ?>  
 </head>
 
 <body >
@@ -25,8 +34,8 @@
     <div class="main">
       <!-- main content y topbar -->
       <?php 
-        echo $this->include('Partials/loggedin_topbar'); 
-        $this->renderSection('contenido');//renderizamos el contenido principal
+        echo $this->include('Partials/loggedin_topbar');         
+        $this->renderSection('main');//renderizamos el contenido principal
         echo $this->include('Partials/loggedin_footer');
       ?>    
     </div>  
@@ -35,8 +44,14 @@
 
 <!-- Bootstrap app.js -->
 <script src="<?php echo base_url(); ?>bootstrap/js/app.js"></script>
+<script src="<?php echo base_url(); ?>bootstrap/assets/tools.js"></script>
+
+<!-- Alertas Globales Conectadas al Controlador -->
+<?= $this->include('Partials/global_alerts') ?>
+
 <?php 
-  //renderizamos los scripts requeridos
-  $this->renderSection('scripts');
+  //Render final scripts (footer required scripts)
+  $this->renderSection('pageFooterScripts');
 ?>
+
 </html>

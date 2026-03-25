@@ -24,6 +24,7 @@ class AuthGroups extends ShieldAuthGroups
      * The group that a newly registered user is added to.
      */
     public string $defaultGroup = 'user';
+    
 
     /**
      * --------------------------------------------------------------------
@@ -40,6 +41,7 @@ class AuthGroups extends ShieldAuthGroups
      *
      * @see https://codeigniter4.github.io/shield/quick_start_guide/using_authorization/#change-available-groups for more info
      */
+    /*
     public array $groups = [
         'superadmin' => [
             'title'       => 'Super Admin',
@@ -61,6 +63,61 @@ class AuthGroups extends ShieldAuthGroups
             'title'       => 'Beta User',
             'description' => 'Has access to beta-level features.',
         ],
+    ];*/
+
+    public array $groups = [
+        'superadmin' => [
+            'title'       => 'Super Administrador',
+            'description' => 'Control completo del sistema ERP, modelos, tienda en linea y sitio web',
+        ],
+        'admin' => [
+            'title'       => 'Administrador',
+            'description' => 'Administradores del sistema ERP con acceso a todas las funciones excepto configuración avanzada',
+        ],
+        'editor' => [
+            'title'       => 'Editor',
+            'description' => 'Personal con permisos para editar contenido, catálogo y publicaciones',
+        ],
+        'seller' => [
+            'title'       => 'Vendedor',
+            'description' => 'Agente de ventas con acceso a gestión de clientes y prospectos',
+        ],
+        'customer' => [
+            'title'       => 'Cliente',
+            'description' => 'Usuarios finales, clientes con acceso al portal de servicios',
+        ],
+        'lead' => [
+            'title'       => 'Prospecto',
+            'description' => 'Usuarios potenciales registrados desde campañas o formularios externos',
+        ],
+        'developer' => [
+            'title'       => 'Desarrollador',
+            'description' => 'Programadores del sistema ERP con acceso a herramientas de desarrollo',
+        ],
+        'user' => [
+            'title'       => 'Usuario',
+            'description' => 'Usuarios generales del sistema con acceso limitado',
+        ],
+        'finance' => [
+            'title'       => 'Finanzas',
+            'description' => 'Personal de finanzas con acceso a módulos contables y financieros',
+        ],
+        'inventory' => [
+            'title'       => 'Inventario',
+            'description' => 'Personal de almacén con acceso a gestión de inventario',
+        ],
+        'sales' => [
+            'title'       => 'Módulo de Ventas',
+            'description' => 'Grupo heredado para personal general de ventas',
+        ],
+        'purchasing' => [
+            'title'       => 'Compras',
+            'description' => 'Personal de compras con acceso a módulos de compras y proveedores',
+        ],
+        'hr' => [
+            'title'       => 'Recursos Humanos',
+            'description' => 'Personal de RRHH con acceso a módulos de personal y nómina',
+        ],
     ];
 
     /**
@@ -72,13 +129,51 @@ class AuthGroups extends ShieldAuthGroups
      * If a permission is not listed here it cannot be used.
      */
     public array $permissions = [
-        'admin.access'        => 'Can access the sites admin area',
-        'admin.settings'      => 'Can access the main site settings',
-        'users.manage-admins' => 'Can manage other admins',
-        'users.create'        => 'Can create new non-admin users',
-        'users.edit'          => 'Can edit existing non-admin users',
-        'users.delete'        => 'Can delete existing non-admin users',
-        'beta.access'         => 'Can access beta-level features',
+        // Admin permissions
+        'superadmin.access'   => 'Can access the super admin area',
+        'superadmin.settings' => 'Can access the main site settings superadmin',
+        'superadmin.manage-admins' => 'Can manage other admins',
+        'admin.access'        => 'Can access the admin dashboard',
+        'admin.settings'      => 'Can access the main ERP settings',
+        'admin.manage-users'  => 'Can manage users',
+        
+        // User management
+        'users.create'        => 'Can create new users',
+        'users.edit'          => 'Can edit existing users',
+        'users.delete'        => 'Can delete existing users',
+        'users.view'          => 'Can view user details',
+        
+        // Finance module
+        'finance.access'      => 'Can access finance module',
+        'finance.transactions' => 'Can manage financial transactions',
+        'finance.reports'     => 'Can generate financial reports',
+        'finance.settings'    => 'Can configure finance settings',
+        
+        // Inventory module
+        'inventory.access'    => 'Can access inventory module',
+        'inventory.items'     => 'Can manage inventory items',
+        'inventory.movements' => 'Can record inventory movements',
+        'inventory.reports'   => 'Can generate inventory reports',
+        
+        // Sales module
+        'sales.access'        => 'Can access sales module',
+        'sales.create'        => 'Can create sales orders',
+        'sales.edit'          => 'Can edit sales orders',
+        'sales.reports'       => 'Can generate sales reports',
+        'sales.customers'     => 'Can manage customers',
+        
+        // Purchasing module
+        'purchasing.access'   => 'Can access purchasing module',
+        'purchasing.create'   => 'Can create purchase orders',
+        'purchasing.edit'     => 'Can edit purchase orders',
+        'purchasing.reports'  => 'Can generate purchasing reports',
+        'purchasing.suppliers' => 'Can manage suppliers',
+        
+        // HR module
+        'hr.access'           => 'Can access HR module',
+        'hr.employees'        => 'Can manage employee records',
+        'hr.payroll'          => 'Can manage payroll',
+        'hr.reports'          => 'Can generate HR reports',
     ];
 
     /**
@@ -91,27 +186,71 @@ class AuthGroups extends ShieldAuthGroups
      */
     public array $matrix = [
         'superadmin' => [
+            'superadmin.*',
             'admin.*',
             'users.*',
-            'beta.*',
+            'finance.*',
+            'inventory.*',
+            'sales.*',
+            'purchasing.*',
+            'hr.*',
         ],
         'admin' => [
+            'admin.*',
+            'users.*',
+            'finance.*',
+            'inventory.*',
+            'sales.*',
+            'purchasing.*',
+            'hr.*',
+        ],
+        'editor' => [
             'admin.access',
-            'users.create',
-            'users.edit',
-            'users.delete',
-            'beta.access',
+            // Puedes añadir permisos de edición aquí en el futuro
+        ],
+        'seller' => [
+            'admin.access',
+            'sales.*',
+            'users.view',
+        ],
+        'customer' => [
+            // Permisos base de portal CRM
+        ],
+        'lead' => [
+            // Sin acceso administrativo
         ],
         'developer' => [
             'admin.access',
             'admin.settings',
-            'users.create',
-            'users.edit',
-            'beta.access',
+            'users.view',
         ],
-        'user' => [],
-        'beta' => [
-            'beta.access',
+        'user' => [
+            'users.view',
+        ],
+        'finance' => [
+            'admin.access',
+            'finance.*',
+            'users.view',
+        ],
+        'inventory' => [
+            'admin.access',
+            'inventory.*',
+            'users.view',
+        ],
+        'sales' => [
+            'admin.access',
+            'sales.*',
+            'users.view',
+        ],
+        'purchasing' => [
+            'admin.access',
+            'purchasing.*',
+            'users.view',
+        ],
+        'hr' => [
+            'admin.access',
+            'hr.*',
+            'users.view',
         ],
     ];
 }

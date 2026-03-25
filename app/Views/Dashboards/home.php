@@ -1,6 +1,17 @@
-<?php $this->extend('Layouts/loggedin') ?>     
+<?php $this->extend($layout) ?>     
 
-<?php $this->section('contenido') ?>  
+<?php $this->section('title') ?>
+<?php 
+  //obtenemos  el titulo desde el viewData
+  //opcion 1: $title = $this->viewData['pageTitle'];
+  //echo $title;
+  //opcion 2: echo $pageTitle;
+  echo $pageTitle;
+?>
+<?php $this->endSection() ?>
+
+<?php $this->section('main') ?>  
+
   <main class="content">
     <div class="container-fluid p-0">
       Contenido del dashboard
@@ -9,7 +20,7 @@
 <?php $this->endSection() ?>
 
 
-<?php $this->section('scripts'); ?>
+<?php $this->section('pageFooterScripts'); ?>
   <script>
     //jquery test
     $(document).ready(function(){

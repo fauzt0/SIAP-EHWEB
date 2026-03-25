@@ -40,7 +40,9 @@ class Filters extends BaseConfig
     public array $globals = [
         'before' => [
             // 'honeypot',
-            'csrf',
+            'csrf' => [
+              'except' => ['nat/user/updater/*'], //excluimos la ruta nat/user/update/* del filtro CSRF en entorno de desarrollo
+            ],
             // 'invalidchars',
         ],
         'after' => [
@@ -78,4 +80,28 @@ class Filters extends BaseConfig
         'before' => ['dashboard', 'dashboard/*']        
       ]*/
     ];
-}
+    
+
+    //listado con las excepciones para entorno de desarrollo del filtro CSRF
+    public array $developmentExceptions = [
+        'nat/user/update/*',        
+    ];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Si estamos en desarrollo, agregamos excepciones al filtro CSRF.
+        if (ENVIRONMENT === 'development') {          
+            // Aquí puedes agregar todas las rutas que quieres excluir durante el desarrollo.
+                        
+            $valoresActuales =  $this->globals['before']['csrf']['except'];
+            //echo var_dump($valoresActuales); //for debug purposes 
+            //echo "<hr>"; ////for debug purposes 
+            ///agregamos los valores nuevos //for debug purposes 
+            $this->globals['before']['csrf']['except'] = array_merge($valoresActuales, $this->developmentExceptions);
+             //var_dump( $this->globals['before']['csrf']['except']); //for debug purposes 
+        }
+    }
+
+} //end of class Filters

@@ -45,6 +45,7 @@ class Auth extends ShieldAuth
      * View files
      * --------------------------------------------------------------------
      */
+    /*
     public array $views = [
         'login'                       => '\CodeIgniter\Shield\Views\login',
         'register'                    => '\CodeIgniter\Shield\Views\register',
@@ -57,7 +58,23 @@ class Auth extends ShieldAuth
         'magic-link-login'            => '\CodeIgniter\Shield\Views\magic_link_form',
         'magic-link-message'          => '\CodeIgniter\Shield\Views\magic_link_message',
         'magic-link-email'            => '\CodeIgniter\Shield\Views\Email\magic_link_email',
+    ];*/
+
+    public array $views = [
+        'login'                       => '\App\Views\Shield\login',//'\CodeIgniter\Shield\Views\login',
+        'register'                    => '\App\Views\Shield\register',//'\CodeIgniter\Shield\Views\register',
+        'layout'                      => '\App\Views\Shield\layout', //\CodeIgniter\Shield\Views\layout',
+        'action_email_2fa'            => '\CodeIgniter\Shield\Views\email_2fa_show',
+        'action_email_2fa_verify'     => '\CodeIgniter\Shield\Views\email_2fa_verify',
+        'action_email_2fa_email'      => '\CodeIgniter\Shield\Views\Email\email_2fa_email',
+        'action_email_activate_show'  => '\CodeIgniter\Shield\Views\email_activate_show',
+        'action_email_activate_email' => '\CodeIgniter\Shield\Views\Email\email_activate_email',
+        'magic-link-login'            => '\CodeIgniter\Shield\Views\magic_link_form',
+        'magic-link-message'          => '\CodeIgniter\Shield\Views\magic_link_message',
+        'magic-link-email'            => '\CodeIgniter\Shield\Views\Email\magic_link_email',
     ];
+
+
 
     /**
      * --------------------------------------------------------------------
@@ -152,7 +169,8 @@ class Auth extends ShieldAuth
      * --------------------------------------------------------------------
      * Determines whether users can register for the site.
      */
-    public bool $allowRegistration = false; //degfault true
+    //public bool $allowRegistration = false; //default true
+    public bool $allowRegistration = true; //degfault true
 
     /**
      * --------------------------------------------------------------------
@@ -407,8 +425,8 @@ class Auth extends ShieldAuth
      * @var array<string, string>
      */
     public array $tables = [
-        //'users'             => 'users',
-        'users'             => 'user',//se actualizo el nombre "users" a "user" para estandarizar los nombres en singulares
+        //'users'             => 'user',//se actualizo el nombre "users" a "user" para estandarizar los nombres en singulares
+        'users'             => 'users',        
         'identities'        => 'auth_identities',
         'logins'            => 'auth_logins',
         'token_logins'      => 'auth_token_logins',
@@ -429,7 +447,9 @@ class Auth extends ShieldAuth
      *
      * @var class-string<UserModel>
      */
-    public string $userProvider = UserModel::class;
+    //public string $userProvider = UserModel::class;
+    public string $userProvider =  \App\Models\Users\UserModel::class; // se creo un userModel personalizado para agregar campos personalizados
+
 
     /**
      * Returns the URL that a user should be redirected
