@@ -708,9 +708,8 @@ class UserController extends RoleController
       return $this->response->setJSON($this->outputData);
     }
 
-    // Restaurar: limpiar deleted_at directamente via DB
-    $db = \Config\Database::connect();
-    $result = $db->table('users')->where('id', $userId)->update(['deleted_at' => null]);
+    // Restaurar: limpiar deleted_at usando el modelo en lugar de conexión directa a la BD
+    $result = $this->usersProvider->withDeleted()->update($userId, ['deleted_at' => null]);
 
     if (!$result) {
       $this->setOutputError('No se pudo restaurar al usuario.');

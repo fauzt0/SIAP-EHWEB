@@ -59,11 +59,17 @@ class Appinfo extends BaseCommand{
         return;
       }
 
+      if ($component === 'renderLayout') {
+        $this->displayRenderLayoutInfo();
+        return;
+      }
+
       //mosramos una lista de las opciones disponibles como "viewData", "outputData" o "methods"  
-      CLI::write('Opciones disponibles: viewData, outputData, methods, commands');  
+      CLI::write('Opciones disponibles: viewData, outputData, methods, commands, renderLayout');  
       CLI::write('Por ejemplo: '. CLI::color('app:info viewData', 'green'));  
       CLI::write('Por ejemplo: '. CLI::color('app:info methods', 'green'));
       CLI::write('Por ejemplo: '. CLI::color('app:info commands', 'green'));
+      CLI::write('Por ejemplo: '. CLI::color('app:info renderLayout', 'green'));
 
 
     }
@@ -214,4 +220,29 @@ class Appinfo extends BaseCommand{
     CLI::table($commandsData, $header);
   }
 
+  private function displayRenderLayoutInfo(): void
+  {
+    CLI::write('Funcionamiento del método renderLayout($layout, $viewPath)', 'yellow');
+    CLI::write('Este método es el motor de renderizado del sistema. Utiliza el sistema de Herencia de Vistas (View Inheritance) de CodeIgniter 4.');
+    CLI::newLine();
+
+    $data = [
+      ['$layout', 'string', 'Ruta del archivo base (ej: Layouts/user_loggedin_layout)'],
+      ['$viewPath', 'string', 'Ruta de la vista de contenido (ej: Users/main_users)'],
+    ];
+
+    CLI::table($data, ['Campo', 'Tipo', 'Descripción']);
+    CLI::newLine();
+
+    CLI::write('Flujo de ejecución:', 'cyan');
+    CLI::write('1. Valida que $viewPath no esté vacío (lanza 404 si lo está).');
+    CLI::write('2. Inyecta $viewPath en $viewData[\'pageView\'].');
+    CLI::write('3. Inyecta $layout en $viewData[\'layout\'].');
+    CLI::write('4. Retorna view($viewPath, $viewData).');
+    CLI::newLine();
+
+    CLI::write('Requisito en la Vista:', 'red');
+    CLI::write('La vista definida en $viewPath DEBE tener la línea: ' . CLI::color('<?php $this->extend($layout); ?>', 'green') . ' al inicio.');
+    CLI::write('Esto permite que la vista se "incruste" dentro de las secciones (renderSection) definidas en el layout.');
+  }
 }

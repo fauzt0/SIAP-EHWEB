@@ -13,6 +13,7 @@ Este documento centraliza todas las especificaciones técnicas, convenciones de 
 5. [Arquitectura de Datos: DataTableTrait](#5-arquitectura-de-datos-datatabletrait)
 6. [Prevención de Errores en UI (DataTables Guard)](#6-prevención-de-errores-en-ui-datatables-guard)
 7. [Seguridad y Permisos (Shield CI4)](#7-seguridad-y-permisos-shield-ci4)
+8. [Bitácora de Auditoría y Registro de Actividad](#8-bitácora-de-auditoría-y-registro-de-actividad)
 
 ---
 
@@ -130,3 +131,31 @@ La seguridad se gestiona en tres niveles concéntricos:
 2. **Filtro Granular (`permission:xyz`):** Aplicado a nivel de ruta para acciones sensibles.
    - Ejemplo: `'filter' => 'permission:users.delete'` garantiza que solo usuarios autorizados ejecuten el borrado.
 3. **Reactividad en la Vista:** Se utiliza `auth()->user()->can('permiso')` para ocultar botones o menús del DOM. Esto asegura que el usuario nunca vea opciones con las que no tiene permiso para interactuar.
+
+---
+
+<a name="8-bitácora-de-auditoría-y-registro-de-actividad"></a>
+## 8. Bitácora de Auditoría y Registro de Actividad
+
+Para garantizar la rastreabilidad de las acciones sensibles dentro del sistema, es **obligatorio** registrar en la bitácora de auditoría cualquier operación que mutue datos o represente un evento de seguridad.
+
+### Operaciones Críticas Obligatorias
+Se deben registrar siempre las siguientes acciones:
+- **Autenticación:** Inicios y cierres de sesión.
+- **Mutación de Datos:** Creación, edición o eliminación (física o lógica) de registros en la base de datos.
+- **Seguridad:** Cambios de contraseñas, edición de permisos o asignación de roles.
+
+### Estándar de Implementación
+El registro se realiza a través del modelo `UserActivityLogsModel`. La firma del método es `logActivity(string $type, string $description, int $userId = null)`.
+
+**Ejemplo de implementación (basado en `UserController`):**
+```php
+// 1. Instanciar el modelo de bitácora
+$logModel = new \App\Models\Users\UserActivityLogsModel();
+
+// 2. Registrar la acción justo antes del éxito de la operación
+$logModel->logActivity('delete_user', 'Eliminó al usuario: ' . $user->username . ' (ID: ' . $userId . ')');
+```
+
+> [!TIP]
+> **Identificación de Usuario:** El modelo detecta automáticamente el ID del usuario en sesión, su dirección IP y el ID del sistema. El parámetro opcional `$userId` solo debe pasarse si se desea registrar una acción sobre un usuario objetivo distinto al que ejecuta la acción (ej: "Se actualizaron permisos de [ID]").
