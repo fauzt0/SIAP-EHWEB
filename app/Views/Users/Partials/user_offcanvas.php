@@ -168,19 +168,26 @@ function loadUserOffcanvas(userId) {
 			contactsContainer.style.display = 'block';
 			u.contacts.forEach(function(c) {
 				const li = document.createElement('li');
-				li.className = 'mb-1 small';
-				let icon = 'link';
-				const source = c.contact_source;
-				if(source === 'phone_number') icon = 'phone';
-				if(source === 'mobile_number') icon = 'smartphone';
-				if(source === 'email') icon = 'mail';
-				if(['facebook','twitter','instagram','github','linkedin'].includes(source)) icon = source;
-				if(source === 'whatsapp') icon = 'message-circle';
-				if(source === 'skype') icon = 'video';
-				if(source === 'telegram') icon = 'send';
+				li.className = 'mb-2 small d-flex align-items-center';
 				
-				li.innerHTML = '<i data-lucide="' + icon + '" class="align-middle me-2 text-primary" style="width:14px;height:14px;"></i>' + 
-							   '<span class="align-middle">' + c.contact_value + '</span>';
+				const source = c.contact_source;
+				const iconsMap = {
+					'phone_number': 'fas fa-phone',
+					'mobile_number': 'fas fa-mobile-alt',
+					'email': 'fas fa-envelope',
+					'facebook': 'fab fa-facebook',
+					'twitter': 'fab fa-twitter',
+					'instagram': 'fab fa-instagram',
+					'whatsapp': 'fab fa-whatsapp',
+					'skype': 'fab fa-skype',
+					'telegram': 'fab fa-telegram-plane',
+					'github': 'fab fa-github',
+					'linkedin': 'fab fa-linkedin'
+				};
+				const iconClass = iconsMap[source] || 'fas fa-external-link-alt';
+				
+				li.innerHTML = `<i class="${iconClass} fa-fw align-middle me-2 text-primary" style="font-size: 0.85rem;"></i> 
+							   <span class="align-middle">${c.contact_value}</span>`;
 				contactsList.appendChild(li);
 			});
 		} else {
@@ -263,6 +270,9 @@ function openEditModal() {
 		document.getElementById('edit_role').value = u.roleKey;
 		document.getElementById('edit_password').value = '';
 		document.getElementById('edit_password_confirm').value = '';
+		
+		document.getElementById('edit-avatar-preview').src = u.avatar;
+		document.getElementById('edit-avatar-input').value = ''; // Limpiar caché file input
 
 		// Prellenar contactos en el modal de edición
 		const editContactsContainer = document.getElementById('edit-contacts-container');

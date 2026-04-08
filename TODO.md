@@ -156,7 +156,7 @@ Actualmente el sistema ya tiene el login con la validación de Shield, por lo qu
 
 Actualmente, el sistema utiliza un avatar estático de marcador de posición (`avatar.jpg`) en el listado de usuarios y perfiles. 
 
-- [] La arquitectura de usuarios tiene una tabla adicional con referencia o llave foranea a la tabla de usuarios, la cual tiene por nombre "data_contact_user" con el id, users_id(fk), contact_source(enum: phone_number, mobile_number, email, facebook, github, linkedin) y contac_value. Necesito agregar el formulario para que al agregar o editar al usuario, me permita agregar estos datos (relacion uno a muchos pues un usuario puede tener varios medios de contacto), ademas de que el mismo usuario pueda editarlos y agregarlos desde su perfil .
+- [x] La arquitectura de usuarios tiene una tabla adicional con referencia o llave foranea a la tabla de usuarios, la cual tiene por nombre "data_contact_user" con el id, users_id(fk), contact_source(enum: phone_number, mobile_number, email, facebook, github, linkedin) y contac_value. Necesito agregar el formulario para que al agregar o editar al usuario, me permita agregar estos datos (relacion uno a muchos pues un usuario puede tener varios medios de contacto), ademas de que el mismo usuario pueda editarlos y agregarlos desde su perfil .
 
 
 **Tareas Completadas:**

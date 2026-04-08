@@ -526,6 +526,15 @@ class UserController extends RoleController
         'rules' => 'required',
         'errors' => ['required' => 'Debe seleccionar un rol para el usuario.']
       ],
+      'avatar' => [
+        'label' => 'Fotografía de perfil',
+        'rules' => 'permit_empty|is_image[avatar]|ext_in[avatar,png,jpg,jpeg,gif]|max_size[avatar,2048]',
+        'errors' => [
+          'is_image' => 'El archivo debe ser una imagen real.',
+          'ext_in' => 'El formato debe ser PNG, JPG, JPEG o GIF.',
+          'max_size' => 'La imagen no puede pesar más de 2MB.'
+        ]
+      ],
     ];
 
     // Validación condicional de contraseña (solo si se envió)
@@ -555,6 +564,18 @@ class UserController extends RoleController
     $user->first_name = $this->request->getPost('first_name');
     $user->last_name = $this->request->getPost('last_name');
     $user->username = $this->request->getPost('username') ?? $user->username;
+
+    // Procesamos el avatar si fue enviado
+    $avatarFile = $this->request->getFile('avatar');
+    if ($avatarFile && $avatarFile->isValid() && !$avatarFile->hasMoved()) {
+      // Eliminar el avatar anterior si existe para evitar saturar el disco
+      if (!empty($user->avatar) && file_exists(FCPATH . 'uploads/avatars/' . $user->avatar)) {
+        unlink(FCPATH . 'uploads/avatars/' . $user->avatar);
+      }
+      $avatarName = $avatarFile->getRandomName();
+      $avatarFile->move(FCPATH . 'uploads/avatars', $avatarName);
+      $user->avatar = $avatarName;
+    }
 
     // Si se cambió el password, lo actualizamos
     if (!empty($newPassword)) {

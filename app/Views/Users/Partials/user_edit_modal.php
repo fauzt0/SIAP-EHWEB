@@ -8,9 +8,18 @@
 			</div>
 			<div class="modal-body m-3">
 				<form id="formEditUser">
-					<!-- Token CSRF -->
 					<input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token_edit">
 					<input type="hidden" name="user_id" id="edit_user_id">
+
+					<div class="text-center mb-4">
+						<div class="position-relative d-inline-block">
+							<img id="edit-avatar-preview" src="<?= base_url('bootstrap/img/avatars/avatar.jpg') ?>" class="rounded-circle img-fluid border" style="width: 100px; height: 100px; object-fit: cover;" alt="Avatar">
+							<label for="edit-avatar-input" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 30px; height: 30px; cursor: pointer;" title="Cambiar foto">
+								<i class="fas fa-camera" style="font-size: 0.85rem;"></i>
+							</label>
+						</div>
+						<input type="file" id="edit-avatar-input" name="avatar" class="d-none" accept="image/png,image/jpg,image/jpeg,image/gif">
+					</div>
 
 					<div class="mb-3">
 						<label class="form-label">Nombre de Usuario (Username)</label>
@@ -141,6 +150,18 @@ document.addEventListener("DOMContentLoaded", function() {
 			this.classList.toggle('btn-outline-secondary');
 			this.classList.toggle('btn-secondary');
 		});
+	});
+
+	// Preview de avatar en edición
+	document.getElementById('edit-avatar-input')?.addEventListener('change', function() {
+		var file = this.files[0];
+		if (file) {
+			var reader = new FileReader();
+			reader.onload = function(e) {
+				document.getElementById('edit-avatar-preview').src = e.target.result;
+			};
+			reader.readAsDataURL(file);
+		}
 	});
 
 	// Lógica de medios de contacto en edición
