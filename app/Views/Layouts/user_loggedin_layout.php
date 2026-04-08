@@ -8,6 +8,8 @@
 <!DOCTYPE html>
 <html lang="es" data-bs-theme="light" data-layout="fluid" data-sidebar-theme="dark" data-sidebar-position="left" data-sidebar-behavior="sticky">
 <head>
+  <!-- Aplicar tema guardado antes del render (evita flash) -->
+  <script>(function(){var t=localStorage.getItem('appstack-theme');if(t)document.documentElement.setAttribute('data-bs-theme',t);})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">

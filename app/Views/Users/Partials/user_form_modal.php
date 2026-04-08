@@ -7,13 +7,19 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body m-3">
-        <form id="formAddUser">
+        <form id="formAddUser" enctype="multipart/form-data">
           <!-- Token CSRF -->
           <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token">
 
           <div class="mb-3">
             <label class="form-label">Nombre de Usuario (Username)</label>
             <input type="text" class="form-control form-control-lg" name="username" placeholder="ej. jdoe" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Fotografía de Perfil (Opcional)</label>
+            <input class="form-control form-control-lg" type="file" name="avatar" accept="image/jpeg, image/png, image/gif">
+            <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF (Máx. 2MB).</small>
           </div>
 
           <div class="mb-3">
