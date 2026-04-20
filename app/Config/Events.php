@@ -53,3 +53,49 @@ Events::on('pre_system', static function () {
         }
     }
 });
+
+/*
+ * --------------------------------------------------------------------
+ * Bitácora de Actividad / Shield Events
+ * --------------------------------------------------------------------
+ * Se interceptan los inicios y cierres de sesión para grabarlos
+ * en la base de datos inmediatamente.
+ */
+Events::on('login', static function ($user) {
+    if ($user && isset($user->id)) {
+        $logModel = new \App\Models\Users\UserActivityLogsModel();
+        // Usamos la app para identificar si fue un success login de email/pwd, magic link, etc (opcional)
+        $logModel->logActivity('login', 'El usuario inició sesión exitosamente en el sistema.', $user->id);
+    }
+});
+
+Events::on('logout', static function ($user) {
+    if ($user && isset($user->id)) {
+        $logModel = new \App\Models\Users\UserActivityLogsModel();
+        $logModel->logActivity('logout', 'El usuario cerró su sesión.', $user->id);
+    }
+});
+
+Events::on('failedLogin', static function ($credentials) {
+    $logModel = new \App\Models\Users\UserActivityLogsModel();
+    
+    // Extraemos el correo intentado
+    $emailAttempt = $credentials['email'] ?? 'Desconocido';
+    $userId = null;
+    
+    // Intentamos buscar si ese correo pertenece a un usuario real en la base de datos
+    // para enlazar este "intento fallido" al perfil del usuario
+    if ($emailAttempt !== 'Desconocido') {
+        $usersProvider = auth()->getProvider();
+        $user = $usersProvider->findByCredentials(['email' => $emailAttempt]);
+        if ($user) {
+            $userId = $user->id;
+        }
+    }
+
+    $logModel->logActivity(
+        'failed_login', 
+        "Intento fallido de inicio de sesión. Correo usado: {$emailAttempt}.", 
+        $userId
+    );
+});

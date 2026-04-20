@@ -74,11 +74,9 @@ class Filters extends BaseConfig
      * 'isLoggedIn' => ['before' => ['account/*', 'profiles/*']]
      */
 
-     //aplicaremos los filtros de autenficacion a todas las secciones que requieran un filtro con login de administrador
+    //aplicaremos los filtros de autenticacion a todas las secciones internas
     public array $filters = [      
-      /*'AdminFilter' => [
-        'before' => ['dashboard', 'dashboard/*']        
-      ]*/
+      
     ];
     
 

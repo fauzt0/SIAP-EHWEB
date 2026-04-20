@@ -50,19 +50,31 @@ class UserModel extends ShieldUserModel
             ->join('auth_identities', 'auth_identities.user_id = users.id AND auth_identities.type = \'email_password\'', 'left')
             ->join('auth_groups_users', 'auth_groups_users.user_id = users.id', 'left');
 
-        // Filtros personalizados adicionales desde UI
+        // 2. Filtro de estatus (soft delete)
+        // Por defecto mostramos SOLO usuarios activos (sin deleted_at)
+        $status = $postData['status'] ?? '';
+        if ($status === 'deleted') {
+            // Solo eliminados (soft-delete)
+            $this->builder()->where('users.deleted_at IS NOT NULL');
+        } else {
+            // Activos — comportamiento por defecto
+            $this->builder()->where('users.deleted_at IS NULL');
+        }
+
+        // 3. Filtro por rol
         if (!empty($postData['role'])) {
             $this->builder()->where('auth_groups_users.group', $postData['role']);
         }
-        if (!empty($postData['status'])) {
-            if ($postData['status'] === 'active') {
-                $this->builder()->where('users.deleted_at IS NULL');
-            } else if ($postData['status'] === 'deleted') {
-                $this->builder()->where('users.deleted_at IS NOT NULL');
-            }
+
+        // 4. Filtro por rango de fecha de creación
+        if (!empty($postData['date_from'])) {
+            $this->builder()->where('users.created_at >=', $postData['date_from'] . ' 00:00:00');
+        }
+        if (!empty($postData['date_to'])) {
+            $this->builder()->where('users.created_at <=', $postData['date_to'] . ' 23:59:59');
         }
 
-        // 2. Aplicamos la lógica genérica de filtros y ordenamiento del Trait
+        // 5. Aplicamos la lógica genérica de búsqueda y ordenamiento del Trait
         $this->_apply_datatables_filters($postData);
     }
 

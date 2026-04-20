@@ -14,7 +14,9 @@ use CodeIgniter\RESTful\ResourceController;
 class RoleController extends BaseController
 {
 
-  protected $usersProvider;      
+  protected $usersProvider;
+  protected $authGroups;
+  protected $groupModel;
 
   public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
   {

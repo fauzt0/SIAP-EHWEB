@@ -1,41 +1,45 @@
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-content js-simplebar">
     <a class="sidebar-brand" href="index.html" style="padding-top: 1rem; padding-bottom: 0rem;">
-      <!--
-      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-        width="20px" height="20px" viewBox="0 0 20 20" enable-background="new 0 0 20 20" xml:space="preserve">
-        <path d="M19.4,4.1l-9-4C10.1,0,9.9,0,9.6,0.1l-9,4C0.2,4.2,0,4.6,0,5s0.2,0.8,0.6,0.9l9,4C9.7,10,9.9,10,10,10s0.3,0,0.4-0.1l9-4
-          C19.8,5.8,20,5.4,20,5S19.8,4.2,19.4,4.1z"/>
-        <path d="M10,15c-0.1,0-0.3,0-0.4-0.1l-9-4c-0.5-0.2-0.7-0.8-0.5-1.3c0.2-0.5,0.8-0.7,1.3-0.5l8.6,3.8l8.6-3.8c0.5-0.2,1.1,0,1.3,0.5
-          c0.2,0.5,0,1.1-0.5,1.3l-9,4C10.3,15,10.1,15,10,15z"/>
-        <path d="M10,20c-0.1,0-0.3,0-0.4-0.1l-9-4c-0.5-0.2-0.7-0.8-0.5-1.3c0.2-0.5,0.8-0.7,1.3-0.5l8.6,3.8l8.6-3.8c0.5-0.2,1.1,0,1.3,0.5
-          c0.2,0.5,0,1.1-0.5,1.3l-9,4C10.3,20,10.1,20,10,20z"/>
-      </svg> 
-      <span class="align-middle me-3">Especialistas Web</span>
-    -->
-    
-      <img src="<?php echo base_url()?>bootstrap/img/brands/logo-eh-horizontal.svg" alt="" class="sidebar-brand-icons" width="180px" >
-
-      
+      <img src="<?php echo base_url() ?>bootstrap/img/brands/logo-eh-horizontal.svg" alt="" class="sidebar-brand-icons"
+        width="180px">
     </a>
 
     <ul class="sidebar-nav">
       <li class="sidebar-header">
         Navigation
       </li>
-      <li class="sidebar-item active">
-        <a data-bs-target="#dashboards" data-bs-toggle="collapse" class="sidebar-link collapsed">
+      <li class="sidebar-item <?= url_is('nat/dashboard*') || url_is('nat') ? 'active' : '' ?>">
+        <a data-bs-target="#dashboards" data-bs-toggle="collapse"
+          class="sidebar-link <?= url_is('nat/dashboard*') || url_is('nat') ? '' : 'collapsed' ?>">
           <i class="align-middle" data-lucide="sliders"></i> <span class="align-middle">Dashboards</span>
           <span class="badge badge-sidebar-primary">5</span>
         </a>
-        <ul id="dashboards" class="sidebar-dropdown list-unstyled collapse show" data-bs-parent="#sidebar">
-          <li class="sidebar-item active"><a class="sidebar-link" href="dashboard-default.html" >Default</a></li>
+        <ul id="dashboards"
+          class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/dashboard*') || url_is('nat') ? 'show' : '' ?>"
+          data-bs-parent="#sidebar">
+          <li class="sidebar-item active"><a class="sidebar-link" href="dashboard-default.html">Default</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="dashboard-analytics.html">Analytics</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="dashboard-saas.html">SaaS</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="dashboard-social.html">Social</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="dashboard-crypto.html">Crypto</a></li>
         </ul>
       </li>
+      <?php if (auth()->user()->can('admin.manage-users')): ?>
+        <li class="sidebar-item <?= url_is('nat/user*') ? 'active' : '' ?>">
+          <a data-bs-target="#users-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/user*') ? '' : 'collapsed' ?>">
+            <i class="align-middle" data-lucide="users"></i> <span class="align-middle">Usuarios</span>
+          </a>
+          <ul id="users-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/user*') ? 'show' : '' ?> "
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/user') ? 'active' : '' ?>"><a class="sidebar-link"
+                href="<?= base_url('nat/user') ?>">Administrar</a></li>
+            <li class="sidebar-item <?= url_is('nat/user/roles') ? 'active' : '' ?>"><a class="sidebar-link"
+                href="<?= base_url('nat/user/roles') ?>">Roles</a></li>
+          </ul>
+        </li>
+      <?php endif; ?>
       <li class="sidebar-header">
         Apps
       </li>
@@ -45,14 +49,14 @@
         </a>
         <ul id="ecommerce" class="sidebar-dropdown list-unstyled collapse " data-bs-parent="#sidebar">
           <li class="sidebar-item"><a class="sidebar-link" href="ecommerce-products.html">
-            Products <span class="badge badge-sidebar-primary">New</span>
-          </a></li>
+              Products <span class="badge badge-sidebar-primary">New</span>
+            </a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ecommerce-products-details.html">
-            Product Details <span class="badge badge-sidebar-primary">New</span>
-          </a></li>
+              Product Details <span class="badge badge-sidebar-primary">New</span>
+            </a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ecommerce-orders.html">
-            Orders <span class="badge badge-sidebar-primary">New</span>
-          </a></li>
+              Orders <span class="badge badge-sidebar-primary">New</span>
+            </a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ecommerce-customers.html">Customers</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ecommerce-invoice.html">Invoice</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ecommerce-pricing.html">Pricing</a></li>
@@ -99,9 +103,9 @@
         </a>
         <ul id="tasks" class="sidebar-dropdown list-unstyled collapse " data-bs-parent="#sidebar">
           <li class="sidebar-item"><a class="sidebar-link" href="tasks-list.html">
-            List
-            <span class="badge badge-sidebar-primary">New</span>
-          </a></li>
+              List
+              <span class="badge badge-sidebar-primary">New</span>
+            </a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="tasks-kanban.html">Kanban</a></li>
         </ul>
       </li>
@@ -129,7 +133,8 @@
           <li class="sidebar-item"><a class="sidebar-link" href="auth-sign-up.html">Sign Up</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="auth-sign-up-cover.html">Sign Up Cover</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="auth-reset-password.html">Reset Password</a></li>
-          <li class="sidebar-item"><a class="sidebar-link" href="auth-reset-password-cover.html">Reset Password Cover</a></li>
+          <li class="sidebar-item"><a class="sidebar-link" href="auth-reset-password-cover.html">Reset Password
+              Cover</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="auth-lock-screen.html">Lock Screen</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="auth-lock-screen-cover.html">Lock Screen Cover</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="auth-2fa.html">2FA</a></li>
@@ -170,7 +175,8 @@
           <li class="sidebar-item"><a class="sidebar-link" href="ui-cards.html">Cards</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ui-carousel.html">Carousel</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ui-embed-video.html">Embed Video</a></li>
-          <li class="sidebar-item"><a class="sidebar-link" href="ui-general.html">General <span class="badge badge-sidebar-primary">10+</span></a></li>
+          <li class="sidebar-item"><a class="sidebar-link" href="ui-general.html">General <span
+                class="badge badge-sidebar-primary">10+</span></a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ui-grid.html">Grid</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ui-modals.html">Modals</a></li>
           <li class="sidebar-item"><a class="sidebar-link" href="ui-offcanvas.html">Offcanvas</a></li>
@@ -241,7 +247,8 @@
         </a>
         <ul id="charts" class="sidebar-dropdown list-unstyled collapse " data-bs-parent="#sidebar">
           <li class="sidebar-item"><a class="sidebar-link" href="charts-chartjs.html">Chart.js</a></li>
-          <li class="sidebar-item"><a class="sidebar-link" href="charts-apexcharts.html">ApexCharts <span class="badge badge-sidebar-primary">New</span></a></li>
+          <li class="sidebar-item"><a class="sidebar-link" href="charts-apexcharts.html">ApexCharts <span
+                class="badge badge-sidebar-primary">New</span></a></li>
         </ul>
       </li>
       <li class="sidebar-item">
@@ -307,7 +314,8 @@
         </div>
 
         <div class="d-grid">
-          <a href="https://themes.getbootstrap.com/product/appstack-responsive-admin-template/" class="btn btn-primary" target="_blank">Download</a>
+          <a href="https://themes.getbootstrap.com/product/appstack-responsive-admin-template/" class="btn btn-primary"
+            target="_blank">Download</a>
         </div>
       </div>
     </div>
