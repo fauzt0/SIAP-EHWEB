@@ -14,6 +14,11 @@ Este documento centraliza todas las especificaciones técnicas, convenciones de 
 6. [Prevención de Errores en UI (DataTables Guard)](#6-prevención-de-errores-en-ui-datatables-guard)
 7. [Seguridad y Permisos (Shield CI4)](#7-seguridad-y-permisos-shield-ci4)
 8. [Bitácora de Auditoría y Registro de Actividad](#8-bitácora-de-auditoría-y-registro-de-actividad)
+9. [Estándar MVC y Transacciones de Base de Datos](#9-estandar-mvc-y-transacciones-de-base-de-datos)
+10. [Integración de Componentes UI: Select2](#10-integración-de-componentes-ui-select2)
+11. [Gestión de Fechas (Backend vs UI)](#11-gestión-de-fechas-backend-vs-ui)
+12. [Estándar de Iconografía (FontAwesome)](#12-estándar-de-iconografía-fontawesome)
+13. [Estructura de Navegación: Breadcrumbs](#13-estructura-de-navegación-breadcrumbs)
 
 ---
 
@@ -50,15 +55,48 @@ headers: {
 <a name="2-gestión-de-seguridad-csrf"></a>
 ## 2. Gestión de Seguridad CSRF y Renovación de Tokens
 
-El sistema utiliza un filtro de seguridad personalizado (`CsrfTokenFilter.php`) que implementa una política de regeneración estricta para mitigar ataques de falsificación de peticiones.
+El sistema utiliza un filtro de seguridad personalizado (`CsrfTokenFilter.php`) que implementa una política de regeneración estricta.
 
 > [!NOTE]
-> Cada petición exitosa (POST, PUT, DELETE) invalida el token anterior y genera uno nuevo que se envía en las cabeceras de respuesta (`Headers`).
+> Cada petición exitosa (POST, PUT, DELETE) invalida el token anterior y genera uno nuevo que se envía en las cabeceras de respuesta.
 
 **Obligación del Desarrollador:**
-El frontend debe capturar siempre el nuevo hash desde el header `<?= csrf_header() ?>` y actualizar el campo oculto del formulario. Esto evita errores `403 Forbidden` en peticiones subsecuentes sin recarga de página.
+El frontend debe capturar siempre el nuevo hash desde el header `<?= csrf_header() ?>` y actualizar el campo oculto del formulario. Esto evita errores `403 Forbidden` en peticiones subsecuentes.
+
+### A. Estándar de Implementación en Vistas
+Para asegurar que las peticiones AJAX (especialmente DataTables) siempre tengan acceso al token, se debe incluir un input hidden al inicio de la sección `main` de la vista, **independientemente de si existen modales o no**:
+
+```html
+<!-- Al inicio de la sección main -->
+<input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token">
+```
+
+### B. Integración con DataTables
+En la inicialización del DataTable (POST), se debe inyectar el token y, lo más importante, **escuchar el evento `xhr.dt`** para actualizar el input global con el nuevo token devuelto por el servidor:
+
+```javascript
+window.miTabla = $('#tabla').DataTable({
+    ajax: {
+        url: '...',
+        type: 'POST',
+        data: function (d) {
+            // Inyectar token actual del input global
+            d['<?= csrf_token() ?>'] = document.getElementById('csrf_token').value;
+        }
+    },
+    // ...
+});
+
+// ESCUCHAR RENOVACIÓN (Crucial para evitar 403 en el siguiente clic)
+$('#tabla').on('xhr.dt', function (e, settings, json, xhr) {
+    if (xhr && xhr.getResponseHeader('<?= csrf_header() ?>')) {
+        document.getElementById('csrf_token').value = xhr.getResponseHeader('<?= csrf_header() ?>');
+    }
+});
+```
 
 ---
+
 
 <a name="3-enrutamiento-y-convenciones-de-url"></a>
 ## 3. Enrutamiento y Convenciones de URL
@@ -157,5 +195,124 @@ $logModel = new \App\Models\Users\UserActivityLogsModel();
 $logModel->logActivity('delete_user', 'Eliminó al usuario: ' . $user->username . ' (ID: ' . $userId . ')');
 ```
 
-> [!TIP]
-> **Identificación de Usuario:** El modelo detecta automáticamente el ID del usuario en sesión, su dirección IP y el ID del sistema. El parámetro opcional `$userId` solo debe pasarse si se desea registrar una acción sobre un usuario objetivo distinto al que ejecuta la acción (ej: "Se actualizaron permisos de [ID]").
+---
+
+<a name="9-estandar-mvc-y-transacciones-de-base-de-datos"></a>
+## 9. Estándar MVC y Transacciones de Base de Datos
+
+### El Problema de las Transacciones en Controladores
+De acuerdo a los principios estrictos de arquitectura MVC que rigen este proyecto, un Controlador **nunca debe interactuar directamente con la capa de conexión de base de datos** invocando métodos como `$db = \Config\Database::connect();`. El controlador actúa únicamente como orquestador de tráfico HTTP.
+
+### Transacciones Multi-Tabla (El Estándar Correcto)
+Cuando una operación de negocio requiere mutar datos en múltiples tablas de forma atómica (usando `$db->transStart()` y `$db->transComplete()`), esta lógica de infraestructura **NO debe residir en el Controlador**. 
+
+Para resolver esto, la responsabilidad debe delegarse al **Modelo Principal** de la operación o a una clase de Servicio (Service Pattern).
+
+**Ejemplo Incorrecto (Antipatrón en Controlador):**
+```php
+// ❌ PROHIBIDO EN CONTROLADORES
+$db = \Config\Database::connect();
+$db->transStart();
+$modeloA->insert($dataA);
+$modeloB->insert($dataB);
+$db->transComplete();
+```
+
+**Ejemplo Correcto (Delegación al Modelo):**
+El controlador simplemente llama a un método personalizado del modelo que agrupa la lógica:
+```php
+// ✅ Controlador delegando la responsabilidad (Capa HTTP pura)
+if (!$this->profileModel->createWorkerWithEmployment($profileData, $employmentData)) {
+    return $this->setOutputError('Error al guardar el trabajador.');
+}
+```
+
+Y dentro del Modelo Principal (ej. `HrProfileModel.php`), se utiliza la instancia `$this->db` nativa del modelo para manejar la transacción:
+```php
+// ✅ Modelo encapsulando la transacción multi-tabla (Capa de Datos)
+public function createWorkerWithEmployment(array $profileData, array $employmentData): bool
+{
+    $this->db->transStart();
+    $this->insert($profileData); // Inserta en su propia tabla
+    
+    // Instancia el modelo secundario para la inserción vinculada
+    $employmentModel = new \App\Models\HR\HrEmploymentModel();
+    $employmentModel->insert($employmentData); 
+    
+    $this->db->transComplete();
+    return $this->db->transStatus(); // Devuelve true/false según el éxito
+}
+```
+
+> [!IMPORTANT]
+> Es un mandato arquitectónico que cualquier controlador que actualmente implemente transacciones manuales con `\Config\Database::connect()` (incluyendo módulos legado) sea refactorizado para mover dicha lógica a la capa de Modelos.
+
+---
+
+<a name="10-integración-de-componentes-ui-select2"></a>
+## 10. Integración de Componentes UI: Select2
+
+Para mantener la consistencia visual y funcional de los selects dinámicos (especialmente con bases de datos grandes), se utiliza la librería Select2 integrada con el tema de Bootstrap 5 de AppStack.
+
+### Consideraciones en Entornos Dinámicos (Modales/Offcanvas)
+Si un Select2 se renderiza dentro de un contenedor dinámico (como un modal), pierde el contexto del `z-index` y su buscador deja de funcionar correctamente. Es obligatorio inicializarlo indicando el contenedor padre:
+
+```javascript
+$('#mi-select').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Seleccione una opción',
+    allowClear: true,
+    width: '100%',
+    dropdownParent: $('#mi-select').parent() // Soluciona errores de foco y z-index
+});
+```
+
+---
+
+<a name="11-gestión-de-fechas-backend-vs-ui"></a>
+## 11. Gestión de Fechas (Backend vs UI)
+
+Es imperativo mantener una separación estricta en el formato de fechas:
+
+*   **Capa de Datos (Base de Datos / Modelos):** Siempre en formato ISO 8601 (`YYYY-MM-DD`).
+*   **Capa de Presentación (DataTables / UI):** Formateado localmente (`DD/MM/YYYY`) usando `date('d/m/Y', strtotime($fecha))`.
+*   **Formularios de Ingreso:** Mantener el uso del input nativo HTML5 `<input type="date">`. Esto garantiza que los navegadores móviles desplieguen el selector nativo del SO, mejorando exponencialmente la UX sin depender de pesadas librerías de terceros (como flatpickr) a menos que se requiera rango de fechas/horas específico.
+
+---
+
+<a name="12-estándar-de-iconografía-fontawesome"></a>
+## 12. Estándar de Iconografía (FontAwesome)
+
+En este ecosistema basado en AppStack, aunque existan librerías secundarias (como Lucide o Feather), el **estándar primario y obligatorio es FontAwesome 5/6**.
+
+### Directiva de Uso
+Utilizar siempre la familia Solid (`fas`) o Regular (`far`) según el peso requerido. 
+**Ejemplo:** `<i class="fas fa-fw fa-info-circle"></i>`
+
+> [!WARNING]
+> **Evitar librerías JS-based como Lucide** para componentes que se renderizan vía AJAX o DataTables. Dado que estas librerías inyectan un SVG usando JavaScript al cargar la página, no detectan contenido dinámico insertado posteriormente a menos que se re-ejecute manualmente su analizador del DOM, introduciendo posibles fugas de rendimiento y complejidad innecesaria.
+
+---
+
+<a name="13-estructura-de-navegación-breadcrumbs"></a>
+## 13. Estructura de Navegación: Breadcrumbs
+
+Para asegurar que el usuario mantenga el sentido de orientación en módulos jerárquicos (como Recursos Humanos o Ventas), se debe utilizar la clase de utilidad `App\Libraries\Breadcrumb`.
+
+### Implementación en Controlador
+Se instancia en el `initController` con el nivel base, y se complementa en cada vista particular:
+
+```php
+// En el constructor/initController:
+$this->breadcrumb = new Breadcrumb([
+    'Inicio'           => base_url(),
+    'Recursos Humanos' => route_to('hr.workers'),
+]);
+
+// En el método de la vista (ej: edit()):
+$this->viewData['breadcrumb'] = $this->breadcrumb->getBreadCrumbHtml([
+    'Inicio'           => route_to('dashboard.index'),
+    'Recursos Humanos' => route_to('hr.workers'),
+    'Editar Trabajador'=> '', // Nivel actual sin link
+]);
+```

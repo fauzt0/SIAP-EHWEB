@@ -172,6 +172,10 @@ class AuthGroups extends ShieldAuthGroups
         // HR module
         'hr.access'           => 'Can access HR module',
         'hr.employees'        => 'Can manage employee records',
+        'hr.view'             => 'Can view worker list and profiles',
+        'hr.create'           => 'Can create new worker records',
+        'hr.edit'             => 'Can edit worker records',
+        'hr.delete'           => 'Can delete worker records (soft delete)',
         'hr.payroll'          => 'Can manage payroll',
         'hr.reports'          => 'Can generate HR reports',
     ];

@@ -57,6 +57,33 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
 
     });//fin del grupo user
 
+    // -----------------------------------------------------------------------
+    // Rutas del módulo de Recursos Humanos
+    // -----------------------------------------------------------------------
+    $routes->group('hr', ['filter' => 'permission:hr.access'], function ($routes) {
+
+      // Vista principal: Listado de trabajadores
+      $routes->get('/', 'HR\WorkerController::index', ['as' => 'hr.index']);
+      $routes->get('workers', 'HR\WorkerController::index', ['as' => 'hr.workers']);
+      $routes->post('workers_ajax', 'HR\WorkerController::workers_ajax', ['as' => 'hr.workers_ajax']);
+
+      // Perfil de trabajador (Offcanvas + vista completa)
+      $routes->get('worker/show_ajax/(:num)', 'HR\WorkerController::show_ajax/$1', ['as' => 'hr.worker.show_ajax', 'filter' => 'permission:hr.view']);
+
+      // Alta de trabajador
+      $routes->get('worker/new', 'HR\WorkerController::new_worker', ['as' => 'hr.worker.new', 'filter' => 'permission:hr.create']);
+      $routes->post('worker/create', 'HR\WorkerController::create', ['as' => 'hr.worker.create', 'filter' => 'permission:hr.create']);
+
+      // Edición de trabajador
+      $routes->get('worker/edit/(:num)', 'HR\WorkerController::edit/$1', ['as' => 'hr.worker.edit', 'filter' => 'permission:hr.edit']);
+      $routes->post('worker/update/(:num)', 'HR\WorkerController::update/$1', ['as' => 'hr.worker.update', 'filter' => 'permission:hr.edit']);
+
+      // Eliminación y restauración (Soft Delete)
+      $routes->post('worker/delete/(:num)', 'HR\WorkerController::delete/$1', ['as' => 'hr.worker.delete', 'filter' => 'permission:hr.delete']);
+      $routes->post('worker/restore/(:num)', 'HR\WorkerController::restore/$1', ['as' => 'hr.worker.restore', 'filter' => 'permission:hr.edit']);
+
+    }); // fin del grupo hr
+
   });//fin del grupo protegido por sesion
 
 });

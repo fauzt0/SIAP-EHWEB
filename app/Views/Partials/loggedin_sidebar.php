@@ -40,6 +40,25 @@
           </ul>
         </li>
       <?php endif; ?>
+      
+      <?php if (auth()->user()->can('hr.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/hr*') ? 'active' : '' ?>">
+          <a data-bs-target="#hr-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/hr*') ? '' : 'collapsed' ?>">
+            <i class="align-middle" data-lucide="briefcase"></i> <span class="align-middle">Recursos Humanos</span>
+          </a>
+          <ul id="hr-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/hr*') ? 'show' : '' ?> "
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/hr') || url_is('nat/hr/workers') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/hr/workers') ?>">Trabajadores</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/hr/worker/new') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/hr/worker/new') ?>">Nuevo Ingreso</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
       <li class="sidebar-header">
         Apps
       </li>
