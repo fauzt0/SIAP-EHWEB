@@ -96,6 +96,12 @@
                         <i class="fas fa-file-contract fa-fw me-1"></i>Contratos
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="oc-tab-documentos-tab" data-bs-toggle="tab"
+                        data-bs-target="#oc-tab-documentos" type="button" role="tab">
+                        <i class="fas fa-folder-open fa-fw me-1"></i>Documentos
+                    </button>
+                </li>
             </ul>
 
             <div class="tab-content px-4 py-3" id="workerOffcanvasTabContent">
@@ -185,6 +191,26 @@
                             </tr>
                         </tbody>
                     </table>
+
+                    <!-- Horario laboral (placeholder) -->
+                    <div class="border-top pt-3 mt-3">
+                        <p class="text-muted small fw-semibold text-uppercase mb-2">
+                            <i class="fas fa-clock me-1"></i>Horario Laboral
+                        </p>
+                        <div class="text-muted small fst-italic" id="oc-w-schedule">
+                            Sin horario asignado.
+                        </div>
+                    </div>
+
+                    <!-- Incidencias (placeholder) -->
+                    <div class="border-top pt-3 mt-3">
+                        <p class="text-muted small fw-semibold text-uppercase mb-2">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Últimas Incidencias
+                        </p>
+                        <div class="text-muted small fst-italic" id="oc-w-incidents">
+                            Sin incidencias registradas.
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ── Tab: Contratos ── -->
@@ -231,39 +257,23 @@
                             <span class="small">Cargando historial de contratos...</span>
                         </div>
                     </div>
+                    
+                </div><!-- /oc-tab-contratos -->
 
+                <!-- ── Tab: Documentos ── -->
+                <div class="tab-pane fade" id="oc-tab-documentos" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 small fw-bold text-uppercase">
+                            <i class="fas fa-folder-open me-1 text-primary"></i>Expediente Digital
+                        </h6>
+                    </div>
+                    <div id="oc-documents-list" class="list-group list-group-flush border rounded overflow-hidden">
+                        <!-- Se puebla vía JS -->
                     </div>
                     
-                    <!-- SECCIÓN: EXPEDIENTE DIGITAL -->
-                    <div class="border-top pt-3 mt-3">
-                        <p class="text-muted small fw-semibold text-uppercase mb-2">
-                            <i class="fas fa-folder-open me-1"></i>Expediente Digital
-                        </p>
-                        <div id="oc-documents-list" class="list-group list-group-flush border rounded overflow-hidden">
-                            <!-- Se puebla vía JS -->
-                        </div>
+                    <div class="alert alert-info mt-3 py-2 px-3 small border-0 shadow-none" style="font-size: 0.75rem;">
+                        <i class="fas fa-info-circle me-1"></i> Aquí puedes consultar la documentación cargada del trabajador.
                     </div>
-
-                    <!-- Horario laboral (placeholder) -->
-                    <div class="border-top pt-3 mt-3">
-                        <p class="text-muted small fw-semibold text-uppercase mb-2">
-                            <i class="fas fa-clock me-1"></i>Horario Laboral
-                        </p>
-                        <div class="text-muted small fst-italic" id="oc-w-schedule">
-                            Sin horario asignado.
-                        </div>
-                    </div>
-
-                    <!-- Incidencias (placeholder) -->
-                    <div class="border-top pt-3 mt-3">
-                        <p class="text-muted small fw-semibold text-uppercase mb-2">
-                            <i class="fas fa-exclamation-triangle me-1"></i>Últimas Incidencias
-                        </p>
-                        <div class="text-muted small fst-italic" id="oc-w-incidents">
-                            Sin incidencias registradas.
-                        </div>
-                    </div>
-
                 </div>
 
             </div><!-- /tab-content -->
