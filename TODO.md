@@ -15,18 +15,19 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
 - [x] Edición de empleado. El formulario de alta también funciona para edición con datos precargados.
 - [x] Eliminar trabajador (soft delete) con botón en listado.
 - [ ] Diseño del offcanvas de perfil: botones "Nuevo Contrato", "Calcular Finiquito", cards informativos de vacaciones, incidencias, horario laboral y árbol cronológico de contratos.
+- [x] **[HR/CATÁLOGOS] Gestión de Departamentos y Puestos:** Implementar interfaz sencilla para el CRUD de catálogos de RRHH.
 
 
 ## Módulo de Contratos (interno en recursos humanos)
 Una vez implementado el módulo de recursos humanos, se agregará la funcionalidad de contratos, el cual consiste en que cada trabajador tendrá un contrato que se descargará en pdf. Este se genera de manera automática al dar de alta al trabajador o cuando se realice alguna modificación en sus datos, por lo que se deberá mantener un historico de cambios de contrato, la opción para descargarlo y un pequeño buscador de contratos. Se adjuntan ejemplos visuales del sistema previamente relacionado (Chisa ERP), como referencia visual.
 
-- [ ] *Importante*: PDF. Debido a que este módulo y varios módulos posteriores van a requerir generar archivos en pdf, se buscará la implementación de un generador de pdf escalable, moderno y flexible, por lo que se deeberá crear una libreria para la generación de documentos en pdf.
-- [ ] Contratos Vista general. Se tendrá un botón en la parte superior del listado de trabajadores (modulo padre creado previamente) con acceso a una nueva ruta ![alt text](image-12.png), donde se tendrá un formulario para el alta de nuevo contrato (plantillas). En esta nueva ruta aparecerá un buscador de datatables con los datos de la plantillas de contratos previamente creados ![alt text](image-13.png), descripción y fecha de última edición asi como el botón para editar o eliminar dicha plantilla (softdelete). 
-- [ ] Contratos Plantilla alta y editar. Para crear una nueva plantilla se tendrá un botón en la parte superior derecha del listado general de contratos (vista general de contratos) que abrirá una nueva ruta con un formulario, editor de texto enriquecido y opción para insertar variables en formato {{nombre_variable}} asi como campos de datos en general como nombre de la plantilla, logo de encabezado, domicilio fiscal y descripción y la opción de editar bloque de firmas para las firmas del contrato en el editor de texto enriquecido. ![alt text](image-29.png)
-- [] Modelos base. El formulario para el contrato tendrá en la parte superior un selector con modelos base (modelos con texto ya cargados no editables) que permiten tener una plantilla con bases legales de contratos en mexico ![alt text](image-14.png) y que al ser agregados, se cargan en el editor de texto enriquecido. Los modelos son: Legal LFT Mexico ![alt text](image-15.png), clasico ![alt text](image-16.png), moderno ![alt text](image-17.png), corporativo ![alt text](image-17.png). Se podrá almacenar la plantilla de contrato como una plantilla base para futuros contratos en el area de trabajadores. Al guardar esta plantilla se mostrará el listado de plantillas creadas. La opción para editar las plantillas previamente creadas abrira una nueva ruta con los mismos campos que el alta de plantilla pero con los datos de la plantilla ya precargados.
-- [ ] Contratos. Cada que se realiza un alta de trabajadores o edición de datos del trabajador, se deberá generar un nuevo contrato de manera automática utilizando el modelo base default (legal LFT mexico) con los datos actualizados asi como un historico de cambios que permacerá visible tanto en el offcanvas del trabajador ![alt text](image-20.png) como en el botón para dar de alta nuevos contratos (listado de contratos realizados anteriormente) ![alt text](image-22.png) donde aparecerá el formulario para crear un nuevo contrato (basado en las plantillas que se crearon en el punto anterior) ![alt text](image-21.png) mediante selectores y que se asignará al trabajador. En el listado de contratos realizados anteriormente se mostrará también el historico de contratos del trabajador, el cual consiste en una tabla sencilla de datatables sin serverside rendering, con datos generales del contrato y botón de ver por modal con el contrato (una vista previa con la estructura de secciones, titulos y espacio de firmas, con los datos del trabajador, etc)  y la opción para descargarlo en pdf ![alt text](image-23.png). Al crear o guardar el nuevo contrato seleccionando el tipo de contrato (tiempo determinado, prueba 3 meses, capacitacion inicial , etc ) ![alt text](image-24.png) y plantilla ![alt text](image-25.png) asi como el motivo. Se agregará este contrato al historico del usuario. En caso de que los datos del usuario se actualicen, se agregará el nuevo contrato usando la plantilla default o la ultima plantilla utilizada para este usuario (la de default en caso de no haber creado ninguna antes).
-- [] En el offcanvas del trabajador, en el historico de contratos, se deberá mostrar de manera cronologica los contratos con la opción para ver (modal) ![alt text](image-26.png) ![alt text](image-27.png) y descargar pdf.
-- [] En todas las secciones que permita la descarga de contratos PDF, deberán ser estandarizadas, es decir, debe ser el mismo pdf generado y a mostrar, siendo el mismo caso en el modal que muestre una vista previa. ![alt text](image-28.png)
+- [x] *Importante*: PDF. Implementación de un generador de pdf escalable, moderno y flexible mediante la libreria `PdfLibrary` (basada en Mpdf).
+- [x] Contratos Vista general. Botón en el listado de trabajadores con acceso a la gestión de plantillas y listado DataTables (server-side).
+- [x] Contratos Plantilla alta y editar. Formulario con editor Quill, variables dinámicas {{nombre_variable}}, carga de logotipo de cabecera y bloque de firmas.
+- [x] Modelos base. Selector de modelos base (Legal LFT México, etc.) que cargan texto predefinido en el editor.
+- [x] Contratos. Generación automática de contrato al alta/edición de trabajador con histórico de versiones inmutables (content_snapshot).
+- [x] En el offcanvas del trabajador, historial cronológico de contratos con opción de descarga en PDF profesional.
+- [x] Estandarización de PDF con diseño corporativo, logotipo y estilos premium.
 
 
 
@@ -67,6 +68,12 @@ Una vez implementado el módulo de recursos humanos, se agregará la funcionalid
 - [ ] **[TÉCNICO/MVC] Validar y refactorizar transacciones de BD en `UserController`**
   - **Problema:** Revisar si el controlador de usuarios tiene transacciones o conexiones a base de datos manuales (similar a lo que ocurría en WorkerController).
   - **Solución:** De ser así, trasladar la lógica pertinente al `UserModel` y alinear el código con la Sección 9 de la Documentación Técnica.
+- [ ] **[HR/CATÁLOGOS] Integración de sucursales (Branches)**
+  - **Problema:** El selector de sucursales en el alta de empleados debe alimentarse de `org_branches`, pero actualmente no existe un módulo para gestionar estas sucursales (modulo de configuración de empresa pendiente).
+  - **Solución:** Implementar el listado de sucursales dentro de un futuro módulo de "Configuración de Empresa" y asegurar que el alta de trabajadores consuma estos datos dinámicamente.
+- [ ] **[UI/ESTÁNDAR] Estandarizar diseño de tablas (table-striped)**
+  - **Tarea:** Asegurar que todas las tablas del sistema (incluyendo Administración de Usuarios y futuros módulos) utilicen la clase `table-striped` para mejorar la legibilidad.
+
 
 
 ---

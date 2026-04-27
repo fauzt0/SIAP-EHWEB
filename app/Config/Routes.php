@@ -82,6 +82,43 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
       $routes->post('worker/delete/(:num)', 'HR\WorkerController::delete/$1', ['as' => 'hr.worker.delete', 'filter' => 'permission:hr.delete']);
       $routes->post('worker/restore/(:num)', 'HR\WorkerController::restore/$1', ['as' => 'hr.worker.restore', 'filter' => 'permission:hr.edit']);
 
+      // Catálogos (Departamentos y Puestos)
+      $routes->group('catalogs', function ($routes) {
+          $routes->get('/', 'HR\CatalogController::index', ['as' => 'hr.catalogs.index']);
+          
+          // Departamentos
+          $routes->post('departments/save', 'HR\CatalogController::saveDepartment', ['as' => 'hr.catalogs.department.save']);
+          $routes->post('departments/delete/(:num)', 'HR\CatalogController::deleteDepartment/$1', ['as' => 'hr.catalogs.department.delete']);
+          
+          // Puestos
+          $routes->post('jobs/save', 'HR\CatalogController::saveJob', ['as' => 'hr.catalogs.job.save']);
+          $routes->post('jobs/delete/(:num)', 'HR\CatalogController::deleteJob/$1', ['as' => 'hr.catalogs.job.delete']);
+      });
+
+      // ── Contratos y Plantillas ──────────────────────────────────────────
+      $routes->group('contracts', function($routes) {
+          // Plantillas
+          $routes->get('templates', 'HR\ContractTemplateController::index', ['as' => 'hr.contracts.templates.index']);
+          $routes->post('templates/list-ajax', 'HR\ContractTemplateController::listAjax', ['as' => 'hr.contracts.templates.listAjax']);
+          $routes->get('templates/new', 'HR\ContractTemplateController::form', ['as' => 'hr.contracts.templates.new']);
+          $routes->get('templates/edit/(:num)', 'HR\ContractTemplateController::form/$1', ['as' => 'hr.contracts.templates.edit']);
+          $routes->get('templates/get-base-model', 'HR\ContractTemplateController::getBaseModel', ['as' => 'hr.contracts.templates.getBaseModel']);
+          $routes->post('templates/save', 'HR\ContractTemplateController::save', ['as' => 'hr.contracts.templates.save']);
+          $routes->post('templates/delete/(:num)', 'HR\ContractTemplateController::delete/$1', ['as' => 'hr.contracts.templates.delete']);
+
+          // Descarga y Gestión de Contratos del Trabajador
+          $routes->get('download/(:num)', 'HR\WorkerController::downloadContract/$1', ['as' => 'hr.contracts.download']);
+          $routes->get('history/(:num)', 'HR\WorkerController::contractHistory/$1', ['as' => 'hr.contracts.history']);
+          $routes->get('get_contracts/(:num)', 'HR\WorkerController::getContracts/$1');
+          
+          // Generación Manual Avanzada
+          $routes->get('generate/(:num)', 'HR\WorkerController::generateContractView/$1', ['as' => 'hr.contracts.generate']);
+          $routes->get('generate/(:num)/(:num)', 'HR\WorkerController::generateContractView/$1/$2', ['as' => 'hr.contracts.generate_edit']);
+          $routes->post('render-template', 'HR\WorkerController::getRenderedTemplateAjax', ['as' => 'hr.contracts.render_template']);
+          $routes->post('preview-raw', 'HR\WorkerController::previewPdfRaw', ['as' => 'hr.contracts.preview_raw']);
+          $routes->post('save-manual/(:num)', 'HR\WorkerController::saveManualContract/$1', ['as' => 'hr.contracts.save_manual']);
+      });
+
     }); // fin del grupo hr
 
   });//fin del grupo protegido por sesion

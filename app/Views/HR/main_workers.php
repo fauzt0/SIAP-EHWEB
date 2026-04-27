@@ -33,15 +33,20 @@ $this->endSection(); ?>
         <div class="card">
           <div class="card-body">
 
-            <!-- Fila de acciones superiores -->
             <div class="row mb-3">
               <div class="col-md-12">
-                <div class="text-sm-start">
-                  <?php if (auth()->user()->can('hr.create')): ?>
-                    <a href="<?= route_to('hr.worker.new') ?>" class="btn btn-primary btn-lg" id="btn-nuevo-ingreso">
-                      <i data-lucide="user-plus"></i> Nuevo Ingreso
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <button type="button" class="btn btn-light btn-lg me-2"><i data-lucide="download"></i> Export</button>
+                    <a href="<?= route_to('hr.contracts.templates.index') ?>" class="btn btn-light btn-lg me-2">
+                      <i data-lucide="file-text"></i> Plantillas
                     </a>
-                  <?php endif; ?>
+                    <?php if (auth()->user()->can('hr.create')): ?>
+                      <a href="<?= route_to('hr.worker.new') ?>" class="btn btn-primary btn-lg" id="btn-nuevo-ingreso">
+                        <i data-lucide="user-plus"></i> Nuevo Ingreso
+                      </a>
+                    <?php endif; ?>
+                  </div>
                 </div>
               </div>
             </div>
@@ -94,7 +99,7 @@ $this->endSection(); ?>
             </div>
 
             <!-- Tabla DataTable -->
-            <table id="datatables-workers" class="table w-100">
+            <table id="datatables-workers" class="table table-striped w-100">
               <thead>
                 <tr>
                   <th class="text-start" style="width: 50px;">#</th>
@@ -130,13 +135,13 @@ document.addEventListener("DOMContentLoaded", function () {
 function inicializarWorkersDataTable() {
   if ($.fn.dataTable.isDataTable('#datatables-workers')) return;
 
-  window.workersDataTable = $('#datatables-workers').DataTable({
+    window.workersDataTable = $('#datatables-workers').DataTable({
     processing: true,
     serverSide: true,
     responsive: true,
     dom: "<'row'<'col-sm-12 col-md-6'><'col-sm-12 col-md-6 text-end'l>>" +
          "<'row'<'col-sm-12'tr>>" +
-         "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-md-end justify-content-center'p>>",
+         "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-md-end justify-content-center'p>>",
     ajax: {
       url: '<?= route_to('hr.workers_ajax') ?>',
       type: 'POST',
@@ -160,7 +165,7 @@ function inicializarWorkersDataTable() {
     language: {
       url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-MX.json'
     },
-    pageLength: 15,
+    pageLength: 10, // Cambiado a 10 para coincidir con el dropdown por defecto
     order: [[1, 'asc']]
   });
 

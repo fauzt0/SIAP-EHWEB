@@ -55,6 +55,12 @@
             <li class="sidebar-item <?= url_is('nat/hr/worker/new') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= base_url('nat/hr/worker/new') ?>">Nuevo Ingreso</a>
             </li>
+            <li class="sidebar-item <?= url_is('nat/hr/catalogs*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/hr/catalogs') ?>">Catálogos</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/hr/contracts/templates*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/hr/contracts/templates') ?>">Plantillas (Contratos)</a>
+            </li>
           </ul>
         </li>
       <?php endif; ?>

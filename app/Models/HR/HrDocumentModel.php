@@ -10,27 +10,28 @@ class HrDocumentModel extends Model
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'object';
-    protected $useSoftDeletes   = false;
+    protected $useSoftDeletes   = true;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'user_id',
+        'profile_id',
         'document_type_id',
-        'file_name',
         'file_path',
-        'upload_date',
         'notes'
     ];
 
     // Dates
-    protected $useTimestamps = false; // We use a custom upload_date
+    protected $useTimestamps = true;
+    protected $dateFormat    = 'datetime';
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+    protected $deletedField  = 'deleted_at';
 
     // Validation
     protected $validationRules      = [
-        'user_id'          => 'required|is_natural_no_zero',
+        'profile_id'       => 'required|is_natural_no_zero',
         'document_type_id' => 'permit_empty|is_natural_no_zero',
-        'file_name'        => 'required|max_length[255]',
         'file_path'        => 'required|max_length[255]',
-        'upload_date'      => 'permit_empty|valid_date'
+        'notes'            => 'permit_empty'
     ];
     
     protected $validationMessages   = [];

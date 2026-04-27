@@ -70,27 +70,65 @@ class HrProfileModel extends Model
 
     // Validation
     protected $validationRules      = [
-        'user_id'        => 'permit_empty|is_natural_no_zero|is_unique[hr_profiles.user_id,id,{id}]',
-        'first_name'     => 'required_without[user_id]|max_length[100]',
-        'last_name'      => 'required_without[user_id]|max_length[100]',
-        'curp'           => 'required|exact_length[18]|alpha_numeric|is_unique[hr_profiles.curp,id,{id}]',
-        'rfc'            => 'required|min_length[12]|max_length[13]|alpha_numeric|is_unique[hr_profiles.rfc,id,{id}]',
-        'nss'            => 'permit_empty|exact_length[11]|numeric|is_unique[hr_profiles.nss,id,{id}]',
-        'birth_date'     => 'required|valid_date',
-        'gender'         => 'required|in_list[M,F,O]',
-        'marital_status' => 'required|in_list[soltero,casado,divorciado,viudo,union_libre]',
-        'bank_clabe'     => 'permit_empty|exact_length[18]|numeric'
+        'user_id'        => [
+            'label' => 'Usuario',
+            'rules' => 'permit_empty|is_natural_no_zero|is_unique[hr_profiles.user_id,id,{id}]'
+        ],
+        'first_name'     => [
+            'label' => 'Nombre(s)',
+            'rules' => 'required_without[user_id]|max_length[100]'
+        ],
+        'last_name'      => [
+            'label' => 'Apellidos',
+            'rules' => 'required_without[user_id]|max_length[100]'
+        ],
+        'curp'           => [
+            'label' => 'CURP',
+            'rules' => 'required|exact_length[18]|alpha_numeric|is_unique[hr_profiles.curp,id,{id}]'
+        ],
+        'rfc'            => [
+            'label' => 'RFC',
+            'rules' => 'required|min_length[12]|max_length[13]|alpha_numeric|is_unique[hr_profiles.rfc,id,{id}]'
+        ],
+        'nss'            => [
+            'label' => 'NSS',
+            'rules' => 'permit_empty|exact_length[11]|numeric|is_unique[hr_profiles.nss,id,{id}]'
+        ],
+        'birth_date'     => [
+            'label' => 'Fecha de Nacimiento',
+            'rules' => 'required|valid_date'
+        ],
+        'gender'         => [
+            'label' => 'Género',
+            'rules' => 'required|in_list[M,F,O]'
+        ],
+        'marital_status' => [
+            'label' => 'Estado Civil',
+            'rules' => 'required|in_list[soltero,casado,divorciado,viudo,union_libre]'
+        ],
+        'bank_clabe'     => [
+            'label' => 'CLABE Interbancaria',
+            'rules' => 'permit_empty|exact_length[18]|numeric'
+        ]
     ];
 
     protected $validationMessages   = [
         'curp' => [
-            'is_unique' => 'Esta CURP ya se encuentra registrada en otro perfil.'
+            'is_unique'    => 'Esta CURP ya se encuentra registrada en otro perfil.',
+            'exact_length' => 'La CURP debe tener exactamente 18 caracteres.'
         ],
         'rfc' => [
-            'is_unique' => 'Este RFC ya se encuentra registrado en otro perfil.'
+            'is_unique'  => 'Este RFC ya se encuentra registrado en otro perfil.',
+            'min_length' => 'El RFC debe tener al menos 12 caracteres.',
+            'max_length' => 'El RFC no puede exceder los 13 caracteres.'
         ],
         'nss' => [
-            'is_unique' => 'Este Número de Seguridad Social ya se encuentra registrado.'
+            'is_unique'    => 'Este Número de Seguridad Social ya se encuentra registrado.',
+            'exact_length' => 'El NSS debe tener exactamente 11 dígitos.'
+        ],
+        'bank_clabe' => [
+            'exact_length' => 'La CLABE debe tener exactamente 18 dígitos.',
+            'numeric'      => 'La CLABE solo debe contener números.'
         ]
     ];
 

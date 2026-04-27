@@ -50,20 +50,58 @@ class HrEmploymentModel extends Model
 
     // Validation
     protected $validationRules      = [
-        'profile_id'      => 'required|is_natural_no_zero|is_unique[hr_employment_data.profile_id,profile_id,{profile_id}]',
-        'employee_number' => 'required|max_length[20]|is_unique[hr_employment_data.employee_number,profile_id,{profile_id}]',
-        'department_id'   => 'permit_empty|is_natural_no_zero',
-        'job_id'          => 'permit_empty|is_natural_no_zero',
-        'location_id'     => 'permit_empty|is_natural_no_zero',
-        'current_salary'  => 'required|numeric|greater_than_equal_to[0]',
-        'daily_salary'    => 'required|numeric|greater_than_equal_to[0]',
-        'hiring_date'     => 'required|valid_date',
-        'termination_date'=> 'permit_empty|valid_date',
-        'status'          => 'required|in_list[active,on_leave,terminated,suspended]',
-        'worker_type'     => 'required|in_list[planta,temporal,proyecto,honorarios]',
-        'payroll_type'    => 'required|in_list[quincenal,mensual,semanal]',
-        'payment_method'  => 'required|in_list[transferencia,efectivo,cheque]',
-        'corporate_email' => 'permit_empty|valid_email'
+        'profile_id'      => [
+            'label' => 'Perfil',
+            'rules' => 'required|is_natural_no_zero|is_unique[hr_employment_data.profile_id,profile_id,{profile_id}]'
+        ],
+        'employee_number' => [
+            'label' => 'Número de Empleado',
+            'rules' => 'required|max_length[20]|is_unique[hr_employment_data.employee_number,profile_id,{profile_id}]'
+        ],
+        'department_id'   => [
+            'label' => 'Departamento',
+            'rules' => 'permit_empty|is_natural_no_zero'
+        ],
+        'job_id'          => [
+            'label' => 'Puesto',
+            'rules' => 'permit_empty|is_natural_no_zero'
+        ],
+        'location_id'     => [
+            'label' => 'Sucursal',
+            'rules' => 'permit_empty|is_natural_no_zero'
+        ],
+        'current_salary'  => [
+            'label' => 'Salario Mensual',
+            'rules' => 'required|numeric|greater_than_equal_to[0]'
+        ],
+        'daily_salary'    => [
+            'label' => 'Salario Diario',
+            'rules' => 'required|numeric|greater_than_equal_to[0]'
+        ],
+        'hiring_date'     => [
+            'label' => 'Fecha de Ingreso',
+            'rules' => 'required|valid_date'
+        ],
+        'status'          => [
+            'label' => 'Estatus',
+            'rules' => 'required|in_list[active,on_leave,terminated,suspended]'
+        ],
+        'worker_type'     => [
+            'label' => 'Tipo de Trabajador',
+            'rules' => 'required|in_list[planta,temporal,proyecto,honorarios]'
+        ],
+        'payroll_type'    => [
+            'label' => 'Tipo de Nómina',
+            'rules' => 'required|in_list[quincenal,mensual,semanal]'
+        ],
+        'payment_method'  => [
+            'label' => 'Forma de Pago',
+            'rules' => 'required|in_list[transferencia,efectivo,cheque]'
+        ],
+        'corporate_email' => [
+            'label' => 'Email Corporativo',
+            'rules' => 'permit_empty|valid_email'
+        ]
     ];
     
     protected $validationMessages   = [
@@ -71,7 +109,12 @@ class HrEmploymentModel extends Model
             'is_unique' => 'Este número de empleado ya está asignado a otro trabajador.'
         ],
         'current_salary' => [
-            'numeric' => 'El salario debe ser un valor numérico válido.'
+            'numeric' => 'El salario mensual debe ser un valor numérico.',
+            'required' => 'El salario base mensual es obligatorio.'
+        ],
+        'daily_salary' => [
+            'numeric' => 'El salario diario debe ser un valor numérico.',
+            'required' => 'El salario diario integrado (SDI) es obligatorio.'
         ]
     ];
     
