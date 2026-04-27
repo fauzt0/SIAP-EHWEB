@@ -454,6 +454,10 @@ class WorkerController extends BaseController
             'isEdit'        => true,
             'autoEmployeeNumber' => $employment->employee_number ?? '',
             'document_types'     => (new \App\Models\HR\HrDocumentTypeModel())->findAll(),
+            'documents'          => (new \App\Models\HR\HrDocumentModel())->select('hr_documents.*, hr_cat_document_types.name as type_name')
+                                    ->join('hr_cat_document_types', 'hr_cat_document_types.id = hr_documents.document_type_id', 'left')
+                                    ->where('profile_id', $profileId)
+                                    ->findAll(),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/worker_form');

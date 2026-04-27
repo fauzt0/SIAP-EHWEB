@@ -577,7 +577,31 @@ $taxRegimes = [
                         </tr>
                       </thead>
                       <tbody>
-                        <tr class="empty-row">
+                        <?php if (!empty($response['documents'])): ?>
+                          <?php foreach ($response['documents'] as $doc): ?>
+                            <tr>
+                              <td>
+                                <span class="badge bg-light text-dark border"><?= esc($doc->type_name) ?></span>
+                              </td>
+                              <td>
+                                <div class="d-flex align-items-center">
+                                  <i class="fas fa-file-alt text-primary me-2"></i>
+                                  <span class="small text-truncate" style="max-width: 200px;"><?= basename($doc->file_path) ?></span>
+                                  <a href="<?= base_url('nat/hr/documents/download/' . $doc->id) ?>?action=view" target="_blank" class="btn btn-link btn-sm ms-auto py-0">
+                                    <i class="fas fa-eye"></i> Ver
+                                  </a>
+                                </div>
+                              </td>
+                              <td>
+                                <span class="small text-muted"><?= esc($doc->notes) ?></span>
+                              </td>
+                              <td class="text-center">
+                                <i class="fas fa-check-circle text-success" title="Documento guardado"></i>
+                              </td>
+                            </tr>
+                          <?php endforeach; ?>
+                        <?php endif; ?>
+                        <tr class="empty-row" style="<?= !empty($response['documents']) ? 'display:none;' : '' ?>">
                           <td colspan="4" class="text-center text-muted py-4">
                             No se han agregado nuevos documentos.
                           </td>
