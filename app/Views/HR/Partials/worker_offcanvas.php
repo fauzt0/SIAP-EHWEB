@@ -257,7 +257,7 @@
                             <span class="small">Cargando historial de contratos...</span>
                         </div>
                     </div>
-                    
+
                 </div><!-- /oc-tab-contratos -->
 
                 <!-- ── Tab: Documentos ── -->
@@ -270,9 +270,10 @@
                     <div id="oc-documents-list" class="list-group list-group-flush border rounded overflow-hidden">
                         <!-- Se puebla vía JS -->
                     </div>
-                    
+
                     <div class="alert alert-info mt-3 py-2 px-3 small border-0 shadow-none" style="font-size: 0.75rem;">
-                        <i class="fas fa-info-circle me-1"></i> Aquí puedes consultar la documentación cargada del trabajador.
+                        <i class="fas fa-info-circle me-1"></i> Aquí puedes consultar la documentación cargada del
+                        trabajador. Para editar un documento, dirígete a la pestaña de edición de trabajador.
                     </div>
                 </div>
 

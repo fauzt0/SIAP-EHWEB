@@ -673,11 +673,72 @@ $taxRegimes = [
 
   </div>
 </main>
+<!-- MODAL: EDITAR DOCUMENTO EXISTENTE -->
+<div class="modal fade" id="modalEditDoc" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold">Editar Documento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEditDoc">
+            <input type="hidden" id="edit_doc_id">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Tipo de Documento</label>
+                <select id="edit_doc_type" class="form-select" required>
+                    <?php if (!empty($response['document_types'])): ?>
+                        <?php foreach ($response['document_types'] as $type): ?>
+                            <option value="<?= $type->id ?>"><?= esc($type->name) ?></option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Notas / Descripción</label>
+                <textarea id="edit_doc_notes" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="mb-0">
+                <label class="form-label fw-semibold">Remplazar Archivo (Opcional)</label>
+                <input type="file" id="edit_doc_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                <div class="form-text small text-warning mt-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Al subir un nuevo archivo, el anterior será eliminado permanentemente.
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnUpdateDoc">Actualizar Documento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php $this->endSection() ?>
 
 <?php $this->section('pageFooterScripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // PERSISTENCIA DE PESTAÑAS (Stay in same tab after reload)
+  const lastTab = localStorage.getItem('activeWorkerTab');
+  if (lastTab) {
+      const triggerEl = document.querySelector(`button[data-bs-target="${lastTab}"]`);
+      if (triggerEl) {
+          // Usar un pequeño delay para asegurar que Bootstrap esté listo
+          setTimeout(() => {
+              const tab = bootstrap.Tab.getOrCreateInstance(triggerEl);
+              tab.show();
+          }, 100);
+      }
+  }
+  // Guardar tab activo al cambiar
+  document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
+      btn.addEventListener('shown.bs.tab', (e) => {
+          localStorage.setItem('activeWorkerTab', e.target.getAttribute('data-bs-target'));
+      });
+  });
+
   const form        = document.getElementById('formWorker');
   const btnSave     = document.getElementById('btnSaveWorker');
   const errBox      = document.getElementById('form-worker-errors');
@@ -742,9 +803,16 @@ document.addEventListener('DOMContentLoaded', function () {
           <input type="text" name="document_notes[]" class="form-control form-control-sm" placeholder="Ej. Vigencia 2025">
         </td>
         <td class="text-center">
-          <button type="button" class="btn btn-sm btn-outline-danger btn-remove-doc" title="Quitar">
-            <i class="fas fa-times"></i>
-          </button>
+          <div class="btn-group btn-group-sm">
+            ${isEdit ? `
+              <button type="button" class="btn btn-outline-success btn-save-new-doc" title="Subir ahora">
+                <i class="fas fa-upload"></i>
+              </button>
+            ` : ''}
+            <button type="button" class="btn btn-outline-danger btn-remove-doc" title="Quitar">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </td>
       `;
 
@@ -769,7 +837,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // --- LÓGICA DE BÚSQUEDA Y FILTRO DE DOCUMENTOS ---
   const searchInput = document.getElementById('searchDocuments');
   const showDeletedSwitch = document.getElementById('showDeletedDocs');
-  
   function filterDocuments() {
     const term = searchInput.value.toLowerCase();
     const showDeleted = showDeletedSwitch.checked;
@@ -800,12 +867,108 @@ document.addEventListener('DOMContentLoaded', function () {
       const target = e.target.closest('button');
       if (!target) return;
 
+      // SUBIR DOCUMENTO INDIVIDUAL (NUEVO)
+      if (target.classList.contains('btn-save-new-doc')) {
+          const tr = target.closest('tr');
+          const typeSelect = tr.querySelector('select[name="document_type_ids[]"]');
+          const fileInput  = tr.querySelector('input[name="document_files[]"]');
+          const notesInput = tr.querySelector('input[name="document_notes[]"]');
+
+          if (!fileInput.files.length) {
+              alert('Por favor seleccione un archivo.');
+              return;
+          }
+
+          target.disabled = true;
+          target.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+          const formData = new FormData();
+          formData.append('document_type_id', typeSelect.value);
+          formData.append('document_file', fileInput.files[0]);
+          formData.append('notes', notesInput.value);
+          formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+          fetch('<?= route_to('hr.worker.add_document_ajax', $response['profile']->id ?? 0) ?>', {
+              method: 'POST',
+              body: formData,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(r => r.json())
+          .then(resp => {
+              if (resp.success) {
+                  if (typeof notifyShow === 'function') notifyShow(resp.message, 'success');
+                  
+                  // Inyectar la nueva fila real en la tabla
+                  const doc = resp.document;
+                  const newRowHtml = `
+                    <tr class="document-row" 
+                        data-id="${doc.id}" 
+                        data-deleted="0"
+                        data-type="${doc.type_name.toLowerCase()}"
+                        data-notes="${(doc.notes || '').toLowerCase()}"
+                        data-filename="${doc.file_path.toLowerCase()}">
+                      <td>
+                        <span class="badge bg-light text-dark border">${doc.type_name}</span>
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <i class="fas fa-file-alt text-primary me-2"></i>
+                          <span class="small text-truncate" style="max-width: 150px;">${doc.file_path}</span>
+                          <a href="<?= base_url('nat/hr/documents/download/') ?>${doc.id}?action=view" target="_blank" class="btn btn-link btn-sm ms-auto py-0">
+                            <i class="fas fa-eye"></i> Ver
+                          </a>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="small text-muted">${doc.notes || '(Sin notas)'}</span>
+                      </td>
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-warning btnEditDoc" 
+                                data-id="${doc.id}" 
+                                data-type-id="${typeSelect.value}"
+                                data-notes="${notesInput.value}"
+                                title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btnDeleteDoc" data-id="${doc.id}" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                  
+                  // Insertar al inicio del tbody (o antes de la primera fila)
+                  tableDocsBody.insertAdjacentHTML('afterbegin', newRowHtml);
+                  
+                  // Eliminar la fila temporal de carga
+                  tr.remove();
+                  
+                  if (tableDocsBody.querySelectorAll('tr').length === 0) {
+                      // (No debería pasar aquí ya que acabamos de agregar una, pero por consistencia)
+                  }
+              } else {
+                  alert(resp.message);
+                  target.disabled = false;
+                  target.innerHTML = '<i class="fas fa-upload"></i>';
+              }
+          });
+      }
+
       // ELIMINAR (Soft Delete)
       if (target.classList.contains('btnDeleteDoc')) {
           const id = target.getAttribute('data-id');
           if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
           
-          fetch('<?= base_url('nat/hr/documents/delete/') ?>' + id, { method: 'POST' })
+          const formData = new FormData();
+          formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+          fetch('<?= base_url('nat/hr/documents/delete/') ?>' + id, { 
+              method: 'POST',
+              body: formData,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
               .then(r => r.json())
               .then(resp => {
                   if (resp.success) {
@@ -819,7 +982,14 @@ document.addEventListener('DOMContentLoaded', function () {
       // RESTAURAR
       if (target.classList.contains('btnRestoreDoc')) {
           const id = target.getAttribute('data-id');
-          fetch('<?= base_url('nat/hr/documents/restore/') ?>' + id, { method: 'POST' })
+          const formData = new FormData();
+          formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+          fetch('<?= base_url('nat/hr/documents/restore/') ?>' + id, { 
+              method: 'POST',
+              body: formData,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
               .then(r => r.json())
               .then(resp => {
                   if (resp.success) {
@@ -854,10 +1024,17 @@ document.addEventListener('DOMContentLoaded', function () {
       const formData = new FormData();
       formData.append('document_type_id', typeId);
       formData.append('notes', notes);
+      formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+      const fileInput = document.getElementById('edit_doc_file');
+      if (fileInput && fileInput.files.length > 0) {
+          formData.append('document_file', fileInput.files[0]);
+      }
 
       fetch('<?= base_url('nat/hr/documents/update/') ?>' + id, {
           method: 'POST',
-          body: formData
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
       })
       .then(r => r.json())
       .then(resp => {
@@ -877,12 +1054,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const val = userIdSelect.value;
       if (val === '') {
           manualFields.forEach(el => el.style.display = 'block');
-          document.getElementById('first_name').setAttribute('required', 'required');
-          document.getElementById('last_name').setAttribute('required', 'required');
+          document.getElementById('first_name')?.setAttribute('required', 'required');
+          document.getElementById('last_name')?.setAttribute('required', 'required');
       } else {
           manualFields.forEach(el => el.style.display = 'none');
-          document.getElementById('first_name').removeAttribute('required');
-          document.getElementById('last_name').removeAttribute('required');
+          document.getElementById('first_name')?.removeAttribute('required');
+          document.getElementById('last_name')?.removeAttribute('required');
       }
   }
 
@@ -1014,7 +1191,14 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(data => {
       if (data.success) {
         if (typeof notifyShow === 'function') notifyShow(data.message, 'success');
-        setTimeout(() => { window.location.href = '<?= route_to('hr.workers') ?>'; }, 900);
+        
+        // Si es edición, nos quedamos en la página (reload para refrescar datos)
+        // Si es nuevo, redireccionamos al listado
+        const targetUrl = isEdit ? window.location.href : '<?= route_to('hr.workers') ?>';
+        
+        setTimeout(() => { 
+          window.location.href = targetUrl; 
+        }, 900);
       } else {
         // Mostrar errores del servidor en el área de alertas
         let errStr = data.error || data.message || 'Revise los campos enviados.';

@@ -81,6 +81,7 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
       // Edición de trabajador
       $routes->get('worker/edit/(:num)', 'HR\WorkerController::edit/$1', ['as' => 'hr.worker.edit', 'filter' => 'permission:hr.edit']);
       $routes->post('worker/update/(:num)', 'HR\WorkerController::update/$1', ['as' => 'hr.worker.update', 'filter' => 'permission:hr.edit']);
+      $routes->post('worker/add_document_ajax/(:num)', 'HR\WorkerController::addDocumentAjax/$1', ['as' => 'hr.worker.add_document_ajax', 'filter' => 'permission:hr.edit']);
 
       // Eliminación y restauración (Soft Delete)
       $routes->post('worker/delete/(:num)', 'HR\WorkerController::delete/$1', ['as' => 'hr.worker.delete', 'filter' => 'permission:hr.delete']);

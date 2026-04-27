@@ -753,15 +753,44 @@ class WorkerController extends BaseController
     }
 
     /**
-     * Actualiza metadatos de un documento
+     * Actualiza un documento (Metadatos y/o reemplazo de archivo)
      */
     public function updateDocument(int $documentId)
     {
         $docModel = new \App\Models\HR\HrDocumentModel();
+        $oldDoc   = $docModel->find($documentId);
+
+        if (!$oldDoc) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Documento no encontrado.']);
+        }
+
         $data = [
             'document_type_id' => $this->request->getPost('document_type_id'),
             'notes'            => $this->request->getPost('notes'),
         ];
+
+        // Manejo de reemplazo de archivo
+        $newFile = $this->request->getFile('document_file');
+        if ($newFile && $newFile->isValid() && !$newFile->hasMoved()) {
+            $uploadPath = WRITEPATH . 'uploads/hr/documents/' . $oldDoc->profile_id;
+            
+            // Asegurar que el directorio existe
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+
+            // Generar nombre y mover
+            $newName = $newFile->getRandomName();
+            $newFile->move($uploadPath, $newName);
+            
+            $data['file_path'] = 'hr/documents/' . $oldDoc->profile_id . '/' . $newName;
+
+            // ELIMINAR FÍSICAMENTE EL ARCHIVO ANTERIOR PARA AHORRAR ESPACIO
+            $oldFullPath = WRITEPATH . 'uploads/' . $oldDoc->file_path;
+            if (file_exists($oldFullPath) && is_file($oldFullPath)) {
+                unlink($oldFullPath);
+            }
+        }
 
         if ($docModel->update($documentId, $data)) {
             return $this->response->setJSON(['success' => true, 'message' => 'Documento actualizado correctamente.']);
@@ -769,6 +798,59 @@ class WorkerController extends BaseController
         return $this->response->setJSON(['success' => false, 'message' => 'No se pudo actualizar el documento.']);
     }
     
+    /**
+     * Agrega un documento individual vía AJAX (solo en edición)
+     */
+    public function addDocumentAjax(int $profileId)
+    {
+        if (!$this->request->isAJAX() || !$this->request->is('post')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Petición denegada.']);
+        }
+
+        $file = $this->request->getFile('document_file');
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Archivo no válido.']);
+        }
+
+        $typeId = $this->request->getPost('document_type_id');
+        $notes  = $this->request->getPost('notes');
+
+        $uploadPath = WRITEPATH . 'uploads/hr/documents/' . $profileId;
+
+        // Asegurar que el directorio existe
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0777, true);
+        }
+
+        $newName = $file->getRandomName();
+        
+        if ($file->move($uploadPath, $newName)) {
+            $docModel = new \App\Models\HR\HrDocumentModel();
+            $docId = $docModel->insert([
+                'profile_id'       => $profileId,
+                'document_type_id' => !empty($typeId) ? (int)$typeId : null,
+                'file_path'        => 'hr/documents/' . $profileId . '/' . $newName,
+                'notes'            => $notes,
+            ]);
+
+            $typeModel = new \App\Models\HR\HrDocumentTypeModel();
+            $typeName = $typeModel->find($typeId)->name ?? 'Otro';
+
+            return $this->response->setJSON([
+                'success' => true, 
+                'message' => 'Documento subido correctamente.',
+                'document' => [
+                    'id'        => $docId,
+                    'type_name' => $typeName,
+                    'file_path' => $newName,
+                    'notes'     => $notes
+                ]
+            ]);
+        }
+
+        return $this->response->setJSON(['success' => false, 'message' => 'Error al mover el archivo.']);
+    }
+
     public function generateContractView(int $profileId, int $contractId = 0)
     {
         $profile = $this->profileModel->find($profileId);
