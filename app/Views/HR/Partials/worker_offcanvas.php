@@ -585,16 +585,15 @@
                     html += `
             <div class="position-relative mb-4" style="margin-left: 20px;">
                 <span class="position-absolute" style="left: -37px; top: 2px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3b7ddd; background: #fff;"></span>
-                <div class="d-flex justify-content-between mb-1">
+                <div class="d-flex justify-content-between mb-2">
                     <div>
                         <span class="badge bg-${typeClass}">${typeLabel}</span>
                         <small class="text-muted ms-2"><i class="fas fa-clock me-1"></i>${timeStr}</small>
                     </div>
                     <span class="small text-muted">${dateStr}</span>
                 </div>
-                <h6 class="mb-1 text-dark fw-bold" style="font-size: 0.9rem;">${typeLabel}</h6>
-                <p class="small text-muted mb-2">${realReason}</p>
-                <div class="mt-2 d-flex gap-2">
+                <div class="text-dark small mb-2">${realReason || 'Contrato Vigente'}</div>
+                <div class="mt-1 d-flex gap-2">
                     <a href="<?= base_url('nat/hr/contracts/download/') ?>${contract.id}?action=view" target="_blank" class="btn btn-xs btn-outline-primary py-1 px-2" style="font-size: 0.7rem;">
                         <i class="fas fa-eye me-1"></i>Ver
                     </a>

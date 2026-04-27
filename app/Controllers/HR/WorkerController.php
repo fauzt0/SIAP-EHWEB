@@ -678,7 +678,7 @@ class WorkerController extends BaseController
         $contracts = $query->findAll();
         $documents = (new \App\Models\HR\HrDocumentModel())->where('profile_id', $profileId)->findAll();
 
-        return $this->response->setJSON(['success' => true, 'contracts' => $contracts, 'documents' => $documents]);
+        return $this->response->setJSON(['success' => true, 'data' => $contracts, 'documents' => $documents]);
     }
 
     public function downloadContract(int $contractId)
