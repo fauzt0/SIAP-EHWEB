@@ -457,6 +457,7 @@ class WorkerController extends BaseController
             'documents'          => (new \App\Models\HR\HrDocumentModel())->select('hr_documents.*, hr_cat_document_types.name as type_name')
                                     ->join('hr_cat_document_types', 'hr_cat_document_types.id = hr_documents.document_type_id', 'left')
                                     ->where('profile_id', $profileId)
+                                    ->withDeleted() // CARGAR TODOS PARA EL FILTRO
                                     ->findAll(),
         ];
 
@@ -724,6 +725,48 @@ class WorkerController extends BaseController
             ->setFileName(basename($document->file_path))
             ->setHeader('Content-Type', $mimeType)
             ->setHeader('Content-Disposition', $action . '; filename="' . basename($document->file_path) . '"');
+    }
+
+    /**
+     * Elimina un documento (Soft Delete)
+     */
+    public function deleteDocument(int $documentId)
+    {
+        $docModel = new \App\Models\HR\HrDocumentModel();
+        if ($docModel->delete($documentId)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Documento eliminado correctamente.']);
+        }
+        return $this->response->setJSON(['success' => false, 'message' => 'No se pudo eliminar el documento.']);
+    }
+
+    /**
+     * Restaura un documento eliminado
+     */
+    public function restoreDocument(int $documentId)
+    {
+        $docModel = new \App\Models\HR\HrDocumentModel();
+        // Se requiere withDeleted() para actualizar un registro ya eliminado
+        if ($docModel->withDeleted()->update($documentId, ['deleted_at' => null])) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Documento restaurado correctamente.']);
+        }
+        return $this->response->setJSON(['success' => false, 'message' => 'No se pudo restaurar el documento.']);
+    }
+
+    /**
+     * Actualiza metadatos de un documento
+     */
+    public function updateDocument(int $documentId)
+    {
+        $docModel = new \App\Models\HR\HrDocumentModel();
+        $data = [
+            'document_type_id' => $this->request->getPost('document_type_id'),
+            'notes'            => $this->request->getPost('notes'),
+        ];
+
+        if ($docModel->update($documentId, $data)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Documento actualizado correctamente.']);
+        }
+        return $this->response->setJSON(['success' => false, 'message' => 'No se pudo actualizar el documento.']);
     }
     
     public function generateContractView(int $profileId, int $contractId = 0)

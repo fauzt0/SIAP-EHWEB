@@ -561,42 +561,79 @@ $taxRegimes = [
                 <div class="tab-pane fade" id="form-tab-documentacion" role="tabpanel">
                   <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0 fw-bold"><i class="fas fa-folder-open me-2 text-primary"></i>Archivos del Expediente</h6>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddDocument">
-                      <i class="fas fa-plus me-1"></i> Agregar Documento
-                    </button>
+                    <div class="d-flex gap-2">
+                        <div class="input-group input-group-sm" style="width: 250px;">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="searchDocuments" class="form-control border-start-0" placeholder="Buscar documentos...">
+                        </div>
+                        <div class="form-check form-switch pt-1 ms-2">
+                            <input class="form-check-input" type="checkbox" id="showDeletedDocs">
+                            <label class="form-check-label small fw-semibold" for="showDeletedDocs">Ver eliminados</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="btnAddDocument">
+                          <i class="fas fa-plus me-1"></i> Agregar Documento
+                        </button>
+                    </div>
                   </div>
                   
                   <div class="table-responsive">
                     <table class="table table-sm table-bordered align-middle" id="tableDocuments">
                       <thead class="bg-light text-center">
                         <tr>
-                          <th style="width: 250px;">Tipo de Documento</th>
+                          <th style="width: 200px;">Tipo de Documento</th>
                           <th>Archivo</th>
                           <th>Notas / Descripción</th>
-                          <th style="width: 50px;"></th>
+                          <th style="width: 100px;">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
                         <?php if (!empty($response['documents'])): ?>
-                          <?php foreach ($response['documents'] as $doc): ?>
-                            <tr>
+                          <?php foreach ($response['documents'] as $doc): 
+                                $isDeleted = !empty($doc->deleted_at);
+                          ?>
+                            <tr class="document-row <?= $isDeleted ? 'table-light text-muted opacity-75 d-none' : '' ?>" 
+                                data-id="<?= $doc->id ?>" 
+                                data-deleted="<?= $isDeleted ? '1' : '0' ?>"
+                                data-type="<?= esc(strtolower($doc->type_name)) ?>"
+                                data-notes="<?= esc(strtolower($doc->notes)) ?>"
+                                data-filename="<?= esc(strtolower(basename($doc->file_path))) ?>">
                               <td>
-                                <span class="badge bg-light text-dark border"><?= esc($doc->type_name) ?></span>
+                                <span class="badge <?= $isDeleted ? 'bg-secondary' : 'bg-light text-dark border' ?>"><?= esc($doc->type_name) ?></span>
+                                <?php if ($isDeleted): ?>
+                                    <span class="badge bg-danger ms-1">Eliminado</span>
+                                <?php endif; ?>
                               </td>
                               <td>
                                 <div class="d-flex align-items-center">
-                                  <i class="fas fa-file-alt text-primary me-2"></i>
-                                  <span class="small text-truncate" style="max-width: 200px;"><?= basename($doc->file_path) ?></span>
-                                  <a href="<?= base_url('nat/hr/documents/download/' . $doc->id) ?>?action=view" target="_blank" class="btn btn-link btn-sm ms-auto py-0">
+                                  <i class="fas <?= $isDeleted ? 'fa-file-archive text-muted' : 'fa-file-alt text-primary' ?> me-2"></i>
+                                  <span class="small text-truncate" style="max-width: 150px;"><?= basename($doc->file_path) ?></span>
+                                  <a href="<?= base_url('nat/hr/documents/download/' . $doc->id) ?>?action=view" target="_blank" class="btn btn-link btn-sm ms-auto py-0 <?= $isDeleted ? 'disabled text-muted' : '' ?>">
                                     <i class="fas fa-eye"></i> Ver
                                   </a>
                                 </div>
                               </td>
                               <td>
-                                <span class="small text-muted"><?= esc($doc->notes) ?></span>
+                                <span class="small <?= $isDeleted ? 'fst-italic' : 'text-muted' ?>"><?= esc($doc->notes ?: '(Sin notas)') ?></span>
                               </td>
                               <td class="text-center">
-                                <i class="fas fa-check-circle text-success" title="Documento guardado"></i>
+                                <div class="btn-group btn-group-sm">
+                                    <?php if ($isDeleted): ?>
+                                        <button type="button" class="btn btn-outline-success btnRestoreDoc" data-id="<?= $doc->id ?>" title="Restaurar">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-outline-warning btnEditDoc" 
+                                            data-id="<?= $doc->id ?>" 
+                                            data-type-id="<?= $doc->document_type_id ?>"
+                                            data-notes="<?= esc($doc->notes) ?>"
+                                            title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btnDeleteDoc" data-id="<?= $doc->id ?>" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                               </td>
                             </tr>
                           <?php endforeach; ?>
@@ -728,6 +765,110 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   }
+
+  // --- LÓGICA DE BÚSQUEDA Y FILTRO DE DOCUMENTOS ---
+  const searchInput = document.getElementById('searchDocuments');
+  const showDeletedSwitch = document.getElementById('showDeletedDocs');
+  
+  function filterDocuments() {
+    const term = searchInput.value.toLowerCase();
+    const showDeleted = showDeletedSwitch.checked;
+    const rows = document.querySelectorAll('.document-row');
+    
+    rows.forEach(row => {
+        const isDeleted = row.getAttribute('data-deleted') === '1';
+        const type = row.getAttribute('data-type') || '';
+        const notes = row.getAttribute('data-notes') || '';
+        const filename = row.getAttribute('data-filename') || '';
+        
+        const matchesSearch = type.includes(term) || notes.includes(term) || filename.includes(term);
+        const matchesStatus = showDeleted || !isDeleted;
+        
+        if (matchesSearch && matchesStatus) {
+            row.classList.remove('d-none');
+        } else {
+            row.classList.add('d-none');
+        }
+    });
+  }
+
+  if (searchInput) searchInput.addEventListener('input', filterDocuments);
+  if (showDeletedSwitch) showDeletedSwitch.addEventListener('change', filterDocuments);
+
+  // --- LÓGICA DE ACCIONES (ELIMINAR / RESTAURAR / EDITAR) ---
+  document.addEventListener('click', function(e) {
+      const target = e.target.closest('button');
+      if (!target) return;
+
+      // ELIMINAR (Soft Delete)
+      if (target.classList.contains('btnDeleteDoc')) {
+          const id = target.getAttribute('data-id');
+          if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
+          
+          fetch('<?= base_url('nat/hr/documents/delete/') ?>' + id, { method: 'POST' })
+              .then(r => r.json())
+              .then(resp => {
+                  if (resp.success) {
+                      location.reload(); // Recarga simple para reflejar cambios de estado
+                  } else {
+                      alert(resp.message);
+                  }
+              });
+      }
+
+      // RESTAURAR
+      if (target.classList.contains('btnRestoreDoc')) {
+          const id = target.getAttribute('data-id');
+          fetch('<?= base_url('nat/hr/documents/restore/') ?>' + id, { method: 'POST' })
+              .then(r => r.json())
+              .then(resp => {
+                  if (resp.success) {
+                      location.reload();
+                  } else {
+                      alert(resp.message);
+                  }
+              });
+      }
+
+      // ABRIR MODAL EDITAR
+      if (target.classList.contains('btnEditDoc')) {
+          const id = target.getAttribute('data-id');
+          const typeId = target.getAttribute('data-type-id');
+          const notes = target.getAttribute('data-notes');
+          
+          document.getElementById('edit_doc_id').value = id;
+          document.getElementById('edit_doc_type').value = typeId;
+          document.getElementById('edit_doc_notes').value = notes;
+          
+          const modal = new bootstrap.Modal(document.getElementById('modalEditDoc'));
+          modal.show();
+      }
+  });
+
+  // ACTUALIZAR DOCUMENTO (AJAX)
+  document.getElementById('btnUpdateDoc')?.addEventListener('click', function() {
+      const id = document.getElementById('edit_doc_id').value;
+      const typeId = document.getElementById('edit_doc_type').value;
+      const notes = document.getElementById('edit_doc_notes').value;
+
+      const formData = new FormData();
+      formData.append('document_type_id', typeId);
+      formData.append('notes', notes);
+
+      fetch('<?= base_url('nat/hr/documents/update/') ?>' + id, {
+          method: 'POST',
+          body: formData
+      })
+      .then(r => r.json())
+      .then(resp => {
+          if (resp.success) {
+              location.reload();
+          } else {
+              alert(resp.message);
+          }
+      });
+  });
+
 
   // Lógica para mostrar/ocultar Nombre Manual
   function toggleManualNames() {
