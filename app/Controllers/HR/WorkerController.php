@@ -249,6 +249,11 @@ class WorkerController extends BaseController
             'daily_salary'       => $employment->daily_salary ?? null,
             'hiring_date'        => $employment->hiring_date ?? null,
             'status'             => $employment->status ?? 'active',
+            // Expediente digital
+            'documents'          => (new \App\Models\HR\HrDocumentModel())->select('hr_documents.*, hr_cat_document_types.name as type_name')
+                                    ->join('hr_cat_document_types', 'hr_cat_document_types.id = hr_documents.document_type_id', 'left')
+                                    ->where('profile_id', $profileId)
+                                    ->findAll(),
             // Historial de contratos
             'contracts'          => (new \App\Models\HR\WorkerContractModel())->getHistoryByProfile($profileId),
             'contracts_count'    => (new \App\Models\HR\WorkerContractModel())->where('profile_id', $profileId)->countAllResults(),
@@ -382,8 +387,10 @@ class WorkerController extends BaseController
             $this->setOutputError('Error al guardar el trabajador. Por favor, intente nuevamente.');
             return $this->response->setJSON($this->outputData);
         }
-
         $newProfileId = $this->profileModel->getInsertID();
+
+        // PROCESAR DOCUMENTOS DEL EXPEDIENTE
+        $this->processDocuments($newProfileId);
 
         // GENERACIÓN AUTOMÁTICA DE CONTRATO
         try {
@@ -524,6 +531,9 @@ class WorkerController extends BaseController
             return $this->response->setJSON($this->outputData);
         }
 
+        // PROCESAR NUEVOS DOCUMENTOS DEL EXPEDIENTE
+        $this->processDocuments($profileId);
+
         // GENERACIÓN AUTOMÁTICA DE CONTRATO POR CAMBIOS
         try {
             $contractService = new \App\Services\ContractService();
@@ -537,8 +547,39 @@ class WorkerController extends BaseController
 
         $this->setOutputSuccess('Trabajador actualizado correctamente.');
         $this->outputData['response'] = ['profile_id' => $profileId, 'redirect' => route_to('hr.workers')];
-
+        $this->outputData['csrf']     = csrf_hash();
         return $this->response->setJSON($this->outputData);
+    }
+
+    /**
+     * Procesa la carga de archivos del expediente digital.
+     */
+    private function processDocuments(int $profileId)
+    {
+        $typeIds = $this->request->getPost('document_type_ids');
+        $notes   = $this->request->getPost('document_notes');
+        $files   = $this->request->getFileMultiple('document_files');
+
+        if (!$files) return;
+
+        $docModel = new \App\Models\HR\HrDocumentModel();
+        
+        foreach ($files as $index => $file) {
+            if ($file->isValid() && !$file->hasMoved()) {
+                // Directorio seguro: writable/uploads/hr/documents/{profileId}/
+                $newName = $file->getRandomName();
+                $targetDir = WRITEPATH . 'uploads/hr/documents/' . $profileId;
+                
+                if ($file->move($targetDir, $newName)) {
+                    $docModel->insert([
+                        'profile_id'       => $profileId,
+                        'document_type_id' => !empty($typeIds[$index]) ? (int)$typeIds[$index] : null,
+                        'file_path'        => 'hr/documents/' . $profileId . '/' . $newName,
+                        'notes'            => !empty($notes[$index]) ? $notes[$index] : null,
+                    ]);
+                }
+            }
+        }
     }
 
     public function delete(int $profileId)
@@ -635,26 +676,50 @@ class WorkerController extends BaseController
         }
 
         $contracts = $query->findAll();
+        $documents = (new \App\Models\HR\HrDocumentModel())->where('profile_id', $profileId)->findAll();
 
-        return $this->response->setJSON(['success' => true, 'data' => $contracts]);
+        return $this->response->setJSON(['success' => true, 'contracts' => $contracts, 'documents' => $documents]);
     }
 
     public function downloadContract(int $contractId)
     {
         $action  = $this->request->getGet('action') === 'view' ? 'I' : 'D';
         $service = new \App\Services\ContractService();
-        $pdfData = $service->exportToPdf($contractId, $action);
-
-        if (!$pdfData) {
-            return redirect()->back()->with('error', 'No se pudo generar el PDF.');
-        }
-
+        $pdfData = $service->exportToPdf($contractId);
+        
         $response = $this->response
             ->setHeader('Content-Type', 'application/pdf')
             ->setHeader('Content-Disposition', ($action === 'I' ? 'inline' : 'attachment') . '; filename="' . $pdfData['filename'] . '"')
             ->setBody($pdfData['content']);
 
         return $response;
+    }
+
+    /**
+     * Descarga segura de un documento del expediente digital.
+     */
+    public function downloadDocument(int $documentId)
+    {
+        $docModel = new \App\Models\HR\HrDocumentModel();
+        $document = $docModel->find($documentId);
+
+        if (!$document) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Documento no encontrado.');
+        }
+
+        $filePath = WRITEPATH . 'uploads/' . $document->file_path;
+
+        if (!file_exists($filePath)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('El archivo físico no existe.');
+        }
+
+        $mimeType = mime_content_type($filePath);
+        $action   = $this->request->getGet('action') === 'view' ? 'inline' : 'attachment';
+
+        return $this->response->download($filePath, null)
+            ->setFileName(basename($document->file_path))
+            ->setHeader('Content-Type', $mimeType)
+            ->setHeader('Content-Disposition', $action . '; filename="' . basename($document->file_path) . '"');
     }
     
     public function generateContractView(int $profileId, int $contractId = 0)

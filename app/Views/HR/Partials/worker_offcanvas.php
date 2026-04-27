@@ -232,8 +232,20 @@
                         </div>
                     </div>
 
+                    </div>
+                    
+                    <!-- SECCIÓN: EXPEDIENTE DIGITAL -->
+                    <div class="border-top pt-3 mt-3">
+                        <p class="text-muted small fw-semibold text-uppercase mb-2">
+                            <i class="fas fa-folder-open me-1"></i>Expediente Digital
+                        </p>
+                        <div id="oc-documents-list" class="list-group list-group-flush border rounded overflow-hidden">
+                            <!-- Se puebla vía JS -->
+                        </div>
+                    </div>
+
                     <!-- Horario laboral (placeholder) -->
-                    <div class="border-top pt-3 mt-2">
+                    <div class="border-top pt-3 mt-3">
                         <p class="text-muted small fw-semibold text-uppercase mb-2">
                             <i class="fas fa-clock me-1"></i>Horario Laboral
                         </p>
@@ -438,6 +450,9 @@
 
                 // Cargar historial de contratos
                 loadContractsHistory(profileId);
+
+                // Cargar expediente digital
+                renderDocuments(resp.response.documents || []);
             })
             .catch(error => {
                 console.error('Error en worker show_ajax:', error);
@@ -445,6 +460,54 @@
                     '<div class="alert alert-danger m-3">Error de conexión con el servidor.</div>';
             });
     }
+
+    /**
+     * renderDocuments(docs)
+     * Renderiza la lista de documentos del expediente digital en el offcanvas.
+     */
+    function renderDocuments(docs) {
+        const container = document.getElementById('oc-documents-list');
+        if (!container) return;
+
+        if (!docs || docs.length === 0) {
+            container.innerHTML = `
+                <div class="p-3 text-center text-muted small bg-light">
+                    <i class="fas fa-info-circle me-1"></i> No hay documentos cargados.
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        docs.forEach(doc => {
+            const dateObj = new Date(doc.created_at);
+            const dateStr = dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+            // Generar URL usando base_url() y el ID
+            const downloadUrl = '<?= base_url('nat/hr/documents/download/') ?>' + doc.id;
+
+            html += `
+                <div class="list-group-item px-3 py-2 border-0 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div style="min-width: 0;">
+                            <div class="fw-bold small text-truncate" title="${doc.type_name || 'Documento'}">${doc.type_name || 'Documento'}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">
+                                <i class="far fa-calendar-alt me-1"></i>${dateStr}
+                                ${doc.notes ? `<br><i class="far fa-comment-dots me-1"></i>${doc.notes}` : ''}
+                            </div>
+                        </div>
+                        <div class="btn-group ms-2">
+                            <a href="${downloadUrl}?action=view" target="_blank" class="btn btn-xs btn-outline-primary" title="Ver">
+                                <i class="fas fa-eye fa-xs"></i>
+                            </a>
+                            <a href="${downloadUrl}?action=download" class="btn btn-xs btn-outline-secondary" title="Descargar">
+                                <i class="fas fa-download fa-xs"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
     /**
      * loadContractsHistory(profileId)
      */

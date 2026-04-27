@@ -69,6 +69,7 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
 
       // Perfil de trabajador (Offcanvas + vista completa)
       $routes->get('worker/show_ajax/(:num)', 'HR\WorkerController::show_ajax/$1', ['as' => 'hr.worker.show_ajax', 'filter' => 'permission:hr.view']);
+      $routes->get('documents/download/(:num)', 'HR\WorkerController::downloadDocument/$1', ['as' => 'hr.documents.download', 'filter' => 'permission:hr.view']);
 
       // Alta de trabajador
       $routes->get('worker/new', 'HR\WorkerController::new_worker', ['as' => 'hr.worker.new', 'filter' => 'permission:hr.create']);

@@ -100,6 +100,12 @@ $taxRegimes = [
                   <i class="fas fa-first-aid fa-fw me-1"></i> Emergencias
                 </button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-link-documentacion" data-bs-toggle="tab"
+                  data-bs-target="#form-tab-documentacion" type="button" role="tab">
+                  <i class="fas fa-file-alt fa-fw me-1"></i> Documentación
+                </button>
+              </li>
             </ul>
 
             <!-- Área de errores globales del formulario -->
@@ -549,6 +555,41 @@ $taxRegimes = [
                   </div>
                 </div>
 
+                <!-- ================================================================ -->
+                <!-- TAB 6: DOCUMENTACIÓN (EXPEDIENTE DIGITAL) -->
+                <!-- ================================================================ -->
+                <div class="tab-pane fade" id="form-tab-documentacion" role="tabpanel">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-folder-open me-2 text-primary"></i>Archivos del Expediente</h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddDocument">
+                      <i class="fas fa-plus me-1"></i> Agregar Documento
+                    </button>
+                  </div>
+                  
+                  <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle" id="tableDocuments">
+                      <thead class="bg-light text-center">
+                        <tr>
+                          <th style="width: 250px;">Tipo de Documento</th>
+                          <th>Archivo</th>
+                          <th>Notas / Descripción</th>
+                          <th style="width: 50px;"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="empty-row">
+                          <td colspan="4" class="text-center text-muted py-4">
+                            No se han agregado nuevos documentos.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="form-text mt-2">
+                    <i class="fas fa-info-circle me-1"></i> Formatos permitidos: PDF, JPG, PNG. Tamaño máximo: 5MB por archivo.
+                  </div>
+                </div>
+
               </div><!-- /tab-content -->
 
               <!-- Botones de acción del formulario -->
@@ -584,7 +625,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const isEdit      = <?= $isEdit ? 'true' : 'false' ?>;
   const formAction  = '<?= $formAction ?>';
   const userIdSelect = document.getElementById('user_id');
-
+  const btnAddDoc     = document.getElementById('btnAddDocument');
+  const tableDocsBody = document.querySelector('#tableDocuments tbody');
+  
+  // Catálogo de tipos de documentos para JS
+  const documentTypes = <?= json_encode($response['document_types'] ?? []) ?>;
   // Inicializar Select2 para selectores principales
   if ($('#user_id').length) {
     $('#user_id').select2({
@@ -603,6 +648,60 @@ document.addEventListener('DOMContentLoaded', function () {
       allowClear: true,
       width: '100%',
       dropdownParent: $('#direct_manager_id').parent()
+    });
+  }
+
+  // --- LÓGICA DE DOCUMENTACIÓN DINÁMICA ---
+  if (btnAddDoc) {
+    btnAddDoc.addEventListener('click', function() {
+      // Quitar fila de "vacío" si existe
+      const emptyRow = tableDocsBody.querySelector('.empty-row');
+      if (emptyRow) emptyRow.remove();
+
+      const rowId = Date.now();
+      const tr = document.createElement('tr');
+      tr.id = `doc-row-${rowId}`;
+      
+      // Construir opciones del select desde el catálogo
+      let typeOptions = '<option value="">— Seleccione Tipo —</option>';
+      documentTypes.forEach(type => {
+        typeOptions += `<option value="${type.id}">${type.name}</option>`;
+      });
+
+      tr.innerHTML = `
+        <td>
+          <select name="document_type_ids[]" class="form-select form-select-sm" required>
+            ${typeOptions}
+          </select>
+        </td>
+        <td>
+          <input type="file" name="document_files[]" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" required>
+        </td>
+        <td>
+          <input type="text" name="document_notes[]" class="form-control form-control-sm" placeholder="Ej. Vigencia 2025">
+        </td>
+        <td class="text-center">
+          <button type="button" class="btn btn-sm btn-outline-danger btn-remove-doc" title="Quitar">
+            <i class="fas fa-times"></i>
+          </button>
+        </td>
+      `;
+
+      tableDocsBody.appendChild(tr);
+
+      // Evento para eliminar la fila
+      tr.querySelector('.btn-remove-doc').addEventListener('click', function() {
+        tr.remove();
+        if (tableDocsBody.querySelectorAll('tr').length === 0) {
+          tableDocsBody.innerHTML = `
+            <tr class="empty-row">
+              <td colspan="4" class="text-center text-muted py-4">
+                No se han agregado nuevos documentos.
+              </td>
+            </tr>
+          `;
+        }
+      });
     });
   }
 
