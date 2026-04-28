@@ -6,86 +6,73 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
 ## ❌ Tareas por hacer
 
 
-## Módulo de Recursos Humanos
-- [x] Preparación de las tablas de la base de datos. Migraciones creadas y ejecutadas para el módulo de RRHH.
-- [x] Preparación para módulo de Recursos humanos. Controladores y modelos creados con la arquitectura estándar.
-- [x] Vista principal del módulo de Recursos humanos. Listado de trabajadores con DataTables (server-side), filtros avanzados por estatus, departamento y sucursal.
-- [ ] Vista de perfil del trabajador (offcanvas). Botón de ver perfil que abre un offcanvas con datos completos del trabajador, botones de acción (Editar, Nuevo Contrato, Calcular Finiquito), cards de vacaciones, incidencias, horario laboral e historial de contratos.
-- [x] Alta de empleados. Formulario de 5 pestañas (Personales, Laborales, Nómina/Prestaciones, Bancarios, Emergencias) con selector de usuario del sistema, regímenes SAT, jefe directo con Select2 y número de empleado autogenerado.
-- [x] Edición de empleado. El formulario de alta también funciona para edición con datos precargados.
-- [x] Eliminar trabajador (soft delete) con botón en listado.
-- [ ] Diseño del offcanvas de perfil: botones "Nuevo Contrato", "Calcular Finiquito", cards informativos de vacaciones, incidencias, horario laboral y árbol cronológico de contratos.
-- [x] **[HR/CATÁLOGOS] Gestión de Departamentos y Puestos:** Implementar interfaz sencilla para el CRUD de catálogos de RRHH.
+## Módulo de Recursos Humanos (Fase 2)
+![Imagen de referencia](image.png) Imagen de referencia. Se debe mantener el diseñop actual de las cards que ya existe en el offcanvas, pero debe contener la informacion de referencia.
+
+- [ ] **Vista de perfil del trabajador (offcanvas):** Finalizar el diseño de cards informativos para vacaciones, incidencias y horario laboral asi como sus funcionalidades:
+- [ ] **Horarios Laborales:**
+    - [ ] Implementar gestión de turnos y asignación de horarios por trabajador.![alt text](image-3.png). 
+    ![alt text](image-4.png.).Crea el archivo .md con la descripción de las tablas de turnos y crea las migraciones correspondientes para crear las tablas en la base de datos.     
+    - [ ] Configuración de días de descanso y jornadas especiales.
+- [ ] **Gestión de Vacaciones e Incidencias:**
+    - [ ] Módulo de control de asistencia y registro de incidencias (faltas, retardos, permisos).
+    ![listado_incidencias_usuario](image-5.png), ![alta_nueva_incidencia](image-6.png).
+    - [ ] Acceso directo al control de de asistencias e incidencias desde el dashboar general de recursos humanos "nat/hr/workers". El acceso será un botón con un número que indique el número de incidencias no atendidas o revisadas. El botón desplegará un modal con el listado de indicendias y los metodos de aprobación, rechazo, etc (dejo a tu consideracion las opciones de incidencias. Los que "pendiente" es que no se han revisado, los que estan palomeados es que ya se revisaron y aprobado su justificante, los que estan tachados es que ya se aprobaron y se desconto el dia, los que tienen una x es que se rechazaron..) El listado tendrá un pequeño filtro, de preferencia debe ser server side rendering (utiliza los metodos y arquitectura que ya hemos empleado en el sistema).
+    - [ ] Sistema de cálculo y control de vacaciones según antigüedad (Ley Federal del Trabajo). En caso no tener la antiguedad suficiente, no se puede crear la solicitud y se envia la alerta antes de abrir el modal.![alt text](image-10.png) ![alt text](image-11.png)
+    - [ ] Card informativo en Offcanvas de vacaciones del trabajador: Días totales vs Días disfrutados. Botón de acceso directo para solicitud de vacaciones. ![alt text](image-7.png).
+    - [ ] Modal de solicitud de vacaciones con listados de historial. ![alt text](image-8.png) ![alt text](image-9.png)
+    - [ ] Modal general con alertas de solicitudes de vacaciones, aprovaciones, rechazados, etc. Contralores y metodos del backend y del modelo para aprobar, rechazar, filtrar y notificar a los usuarios. * Esto en el listado general de trabajadores.
+    ![alt text](image-1.png) 
+- [ ] **Gestión de Finiquitos y Liquidaciones:**
+    - [ ] Calculadora automática de finiquito (aguinaldo, vacaciones y prima vacacional proporcional). ![alt text](image-13.png)
+    - [ ] Calculadora de liquidación (indemnización 3 meses, 20 días por año, prima de antigüedad).
+    - [ ] Generación de formatos PDF de baja: Carta de renuncia y Recibo de finiquito/liquidación. Este a diferencia del contrato, no se podra editar, solo genera el documento sin almacenarlo en base de datos o ruta interna del sistema. 
+    
+- [ ] Cards informativos en la parte superior del listado de trabajadores "/nat/hr/workers", con datos "total de empleados", "nuevos (30d)", "nómina mensual", "incidencias (pendientes, vacaciones, etc)".![alt text](image-12.png). Implementar algun sistema de consulta rapida o cache, etc, para prevenir consuiltas constantes a la base de datos para obtener estos datos. (cache de codeigniter o algo similar).
+    
+
+## 🛠️ Mejoras y Refactorización
+- [ ] **[CONTRATOS] Optimización del Sistema de Plantillas:**
+    - [ ] Mejorar el editor de plantillas para soportar bloques condicionales.
+    - [ ] Implementar previsualización en tiempo real con datos de prueba.
+    - [ ] Versionado de plantillas base.
+    - [ ] Sección de Mi perfil con acceso directo a solicitud de vacaciones, alta de incidencias, acceso a historial de contratos, datos del usuario y formulario para actualizar ciertos datos (email, teléfono, datos del perfil). Los datos sensibles o laborales no se podrán actualizar, solo estarán disponibles para consulta.
 
 
-## Módulo de Contratos (interno en recursos humanos)
-Una vez implementado el módulo de recursos humanos, se agregará la funcionalidad de contratos, el cual consiste en que cada trabajador tendrá un contrato que se descargará en pdf. Este se genera de manera automática al dar de alta al trabajador o cuando se realice alguna modificación en sus datos, por lo que se deberá mantener un historico de cambios de contrato, la opción para descargarlo y un pequeño buscador de contratos. Se adjuntan ejemplos visuales del sistema previamente relacionado (Chisa ERP), como referencia visual.
-
-- [x] *Importante*: PDF. Implementación de un generador de pdf escalable, moderno y flexible mediante la libreria `PdfLibrary` (basada en Mpdf).
-- [x] Contratos Vista general. Botón en el listado de trabajadores con acceso a la gestión de plantillas y listado DataTables (server-side).
-- [x] Contratos Plantilla alta y editar. Formulario con editor Quill, variables dinámicas {{nombre_variable}}, carga de logotipo de cabecera y bloque de firmas.
-- [x] Modelos base. Selector de modelos base (Legal LFT México, etc.) que cargan texto predefinido en el editor.
-- [x] Contratos. Generación automática de contrato al alta/edición de trabajador con histórico de versiones inmutables (content_snapshot).
-- [x] En el offcanvas del trabajador, historial cronológico de contratos con opción de descarga en PDF profesional.
-- [x] Estandarización de PDF con diseño corporativo, logotipo y estilos premium.
-
-
-
-
-
-
-
-
-
-
-
-
-
-## 🚀 Hitos Próximos
-- [ ] Módulo de proveedores.
-- [ ] Módulo de productos y servicios.
-- [ ] Módulo de contabilidad. 
-- [ ] Implementar módulo de Reportes base
-- [ ] Configurar respaldos automáticos de base de datos
-- [ ] Optimización de assets para producción
+- [ ] **[UI/ESTÁNDAR] Estandarizar diseño de tablas (table-striped):** Asegurar que todas las tablas del sistema utilicen la clase `table-striped`.
+- [ ] **[TÉCNICO/CSRF] Corregir dependencia frágil del #csrf_token en `main_users.php`** (Ver detalles en TODO anterior).
 
 ---
 
-## 🛠️ Correcciones y Mejoras Pendientes
+## 🚀 Hitos Próximos
+- [ ] Módulo de notificaciones
+- [ ] Módulo de proveedores.
+- [ ] Módulo de productos y servicios.
+- [ ] Módulo de contabilidad. 
+- [ ] Implementar módulo de Reportes base.
 
-- [ ] Revisar tiempos de respuesta en DataTables con >10k registros
-- [ ] Mejorar validaciones de seguridad en carga de archivos masivos
-- [ ] **[TÉCNICO/CSRF] Corregir dependencia frágil del #csrf_token en `main_users.php`**
-  - **Problema:** El input `<input id="csrf_token">` que DataTables usa para las peticiones POST proviene del modal `user_form_modal.php`. Si un usuario no tiene el permiso `users.create`, el modal no se renderiza y el token no existe en el DOM → falla silenciosa con 403 en filtros y paginación.
-  - **Solución:** Agregar el input global directamente al inicio de la sección `main` en `app/Views/Users/main_users.php`, siguiendo el estándar de la Sección 2 de `DOCUMENTACION_TECNICA.md`:
-    ```html
-    <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token">
-    ```
-  - **Nota:** Una vez agregado, el input del modal puede mantenerse para compatibilidad o eliminarse para evitar duplicados de ID (ambos apuntan al mismo elemento en el DOM).
-- [x] **[TÉCNICO/MVC] Refactorizar transacciones de BD en `WorkerController`**
-  - **Problema:** Los métodos `create()` y `update()` instancian directamente `\Config\Database::connect()` y manejan lógica de transacciones multi-tabla (`$db->transStart()`). Esto viola la separación de responsabilidades del patrón MVC.
-  - **Solución:** Mover la lógica de transacción a métodos especializados dentro de `HrProfileModel` (ej. `createWorkerWithEmployment()`), manteniendo el controlador agnóstico de la capa de infraestructura de datos. (Ver Sección 9 de `DOCUMENTACION_TECNICA.md`).
-- [ ] **[TÉCNICO/MVC] Validar y refactorizar transacciones de BD en `UserController`**
-  - **Problema:** Revisar si el controlador de usuarios tiene transacciones o conexiones a base de datos manuales (similar a lo que ocurría en WorkerController).
-  - **Solución:** De ser así, trasladar la lógica pertinente al `UserModel` y alinear el código con la Sección 9 de la Documentación Técnica.
-- [ ] **[HR/CATÁLOGOS] Integración de sucursales (Branches)**
-  - **Problema:** El selector de sucursales en el alta de empleados debe alimentarse de `org_branches`, pero actualmente no existe un módulo para gestionar estas sucursales (modulo de configuración de empresa pendiente).
-  - **Solución:** Implementar el listado de sucursales dentro de un futuro módulo de "Configuración de Empresa" y asegurar que el alta de trabajadores consuma estos datos dinámicamente.
-- [ ] **[UI/ESTÁNDAR] Estandarizar diseño de tablas (table-striped)**
-  - **Tarea:** Asegurar que todas las tablas del sistema (incluyendo Administración de Usuarios y futuros módulos) utilicen la clase `table-striped` para mejorar la legibilidad.
-
+## Módulo de notificaciones.
+- [ ] Implementar base de datos para notificaciones.
+- [ ] Implementar metodos del backend para notificaciones.
+- [ ] Implementar metodos del frontend para notificaciones.
+- [ ] Implementar o extender las notificaciones para solicitudes de vacaciones y respuestas a los trabajadores/usuarios
+- [ ] Alertas para usuarios sin NSS, contratos, o datos importantes faltantes dentro de HR.
 
 
 ---
 
 ## ✅ Tareas Completadas Recientemente
 
-- [x] Arquitectura de Catálogos, Sales & Billing (Omnicanalidad, Parcialidades, SoftDeletes)
-- [x] Estructuración de base de datos para Contabilidad y Proveedores.
-- [x] Estructuración de proyectos
-- [x] Sistema de gestión de usuarios y sesiones con roles (Shield)
-- [x] Corrección de iconos de contacto en Offcanvas
-- [x] Implementación de edición de avatar para administradores
-- [x] Reorganización de documentación técnica
-- [x] Revisión y validación de migraciones del módulo Sales (tablas: sales_orders, sales_order_items, billing_payments, customer_services, service_renewal_logs, customer_wallet_transactions)
-- [x] Diseño profesional de tablas Sales: soporte omnicanal, parcialidades, renovaciones automáticas/manuales, pagos/tickets y facturación CFDI
+### Recursos Humanos & Contratos (Fase 1)
+- [x] **Gestión Documental AJAX:** Subida inmediata de archivos, reemplazo con limpieza física y persistencia de pestañas sin recarga.
+- [x] **Historial de Contratos:** Generación automática de versiones inmutables (`content_snapshot`) en alta y edición.
+- [x] **PDF Corporativo:** Implementación de `PdfLibrary` con diseño premium, logotipos y firmas.
+- [x] **Expediente Digital:** CRUD completo de documentos con filtros de búsqueda y soporte de Soft Delete.
+- [x] **Catálogos RRHH:** Gestión de Departamentos, Puestos, Tipos de Contrato y Plantillas.
+- [x] **Alta/Edición de Empleados:** Formulario multi-pestaña con validaciones LFT y autogeneración de número de empleado.
+- [x] **Arquitectura MVC:** Refactorización de transacciones a los modelos (`HrProfileModel`).
+
+### Otros
+- [x] Sistema de gestión de usuarios y sesiones (Shield).
+- [x] Refactorización de avatares y auditoría de actividades.
+- [x] Estructuración de base de datos para Ventas, Facturación y Clientes.
