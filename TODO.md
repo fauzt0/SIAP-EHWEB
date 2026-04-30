@@ -9,24 +9,25 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
 ## Módulo de Recursos Humanos (Fase 2)
 ![Imagen de referencia](image.png) Imagen de referencia. Se debe mantener el diseñop actual de las cards que ya existe en el offcanvas, pero debe contener la informacion de referencia.
 
-- [ ] **Vista de perfil del trabajador (offcanvas):** Finalizar el diseño de cards informativos para vacaciones, incidencias y horario laboral asi como sus funcionalidades:
-- [ ] **Horarios Laborales:**
-    - [ ] Implementar gestión de turnos y asignación de horarios por trabajador.![alt text](image-3.png). 
+- [x] **Vista de perfil del trabajador (offcanvas):** Finalizar el diseño de cards informativos para vacaciones, incidencias y horario laboral asi como sus funcionalidades:
+- [x] **Horarios Laborales:**
+    - [x] Implementar gestión de turnos y asignación de horarios por trabajador.![alt text](image-3.png). 
     ![alt text](image-4.png.).Crea el archivo .md con la descripción de las tablas de turnos y crea las migraciones correspondientes para crear las tablas en la base de datos.     
-    - [ ] Configuración de días de descanso y jornadas especiales.
-- [ ] **Gestión de Vacaciones e Incidencias:**
-    - [ ] Módulo de control de asistencia y registro de incidencias (faltas, retardos, permisos).
+    - [x] Configuración de días de descanso y jornadas especiales.
+- [x] **Gestión de Vacaciones e Incidencias:**
+    - [x] Módulo de control de asistencia y registro de incidencias (faltas, retardos, permisos).
     ![listado_incidencias_usuario](image-5.png), ![alta_nueva_incidencia](image-6.png).
-    - [ ] Acceso directo al control de de asistencias e incidencias desde el dashboar general de recursos humanos "nat/hr/workers". El acceso será un botón con un número que indique el número de incidencias no atendidas o revisadas. El botón desplegará un modal con el listado de indicendias y los metodos de aprobación, rechazo, etc (dejo a tu consideracion las opciones de incidencias. Los que "pendiente" es que no se han revisado, los que estan palomeados es que ya se revisaron y aprobado su justificante, los que estan tachados es que ya se aprobaron y se desconto el dia, los que tienen una x es que se rechazaron..) El listado tendrá un pequeño filtro, de preferencia debe ser server side rendering (utiliza los metodos y arquitectura que ya hemos empleado en el sistema).
-    - [ ] Sistema de cálculo y control de vacaciones según antigüedad (Ley Federal del Trabajo). En caso no tener la antiguedad suficiente, no se puede crear la solicitud y se envia la alerta antes de abrir el modal.![alt text](image-10.png) ![alt text](image-11.png)
-    - [ ] Card informativo en Offcanvas de vacaciones del trabajador: Días totales vs Días disfrutados. Botón de acceso directo para solicitud de vacaciones. ![alt text](image-7.png).
-    - [ ] Modal de solicitud de vacaciones con listados de historial. ![alt text](image-8.png) ![alt text](image-9.png)
-    - [ ] Modal general con alertas de solicitudes de vacaciones, aprovaciones, rechazados, etc. Contralores y metodos del backend y del modelo para aprobar, rechazar, filtrar y notificar a los usuarios. * Esto en el listado general de trabajadores.
+    - [x] Acceso directo al control de de asistencias e incidencias desde el dashboar general de recursos humanos "nat/hr/workers". El acceso será un botón con un número que indique el número de incidencias no atendidas o revisadas. El botón desplegará un modal con el listado de indicendias y los metodos de aprobación, rechazo, etc (dejo a tu consideracion las opciones de incidencias. Los que "pendiente" es que no se han revisado, los que estan palomeados es que ya se revisaron y aprobado su justificante, los que estan tachados es que ya se aprobaron y se desconto el dia, los que tienen una x es que se rechazaron..) El listado tendrá un pequeño filtro, de preferencia debe ser server side rendering (utiliza los metodos y arquitectura que ya hemos empleado en el sistema).
+    - [x] Sistema de cálculo y control de vacaciones según antigüedad (Ley Federal del Trabajo). En caso no tener la antiguedad suficiente, no se puede crear la solicitud y se envia la alerta antes de abrir el modal.![alt text](image-10.png) ![alt text](image-11.png)
+- [x] **Gestión de Solicitudes de Vacaciones:**
+    - [x] Card informativo en Offcanvas de vacaciones del trabajador: Días totales vs Días disfrutados. Botón de acceso directo para solicitud de vacaciones. ![alt text](image-7.png).
+    - [x] Modal de solicitud de vacaciones con listados de historial. ![alt text](image-8.png) ![alt text](image-9.png)
+    - [x] Modal general con alertas de solicitudes de vacaciones, aprovaciones, rechazados, etc. Contralores y metodos del backend y del modelo para aprobar, rechazar, filtrar y notificar a los usuarios. * Esto en el listado general de trabajadores.
     ![alt text](image-1.png) 
-- [ ] **Gestión de Finiquitos y Liquidaciones:**
+- [x] **Gestión de Finiquitos y Liquidaciones:**
     - [x] Calculadora automática de finiquito (aguinaldo, vacaciones y prima vacacional proporcional). ![alt text](image-13.png)
     - [x] Calculadora de liquidación (indemnización 3 meses, 20 días por año, prima de antigüedad).
-    - [ ] Generación de formatos PDF de baja: Carta de renuncia y Recibo de finiquito/liquidación. Este a diferencia del contrato, no se podra editar, solo genera el documento sin almacenarlo en base de datos o ruta interna del sistema. 
+    - [x] Generación de formatos PDF de baja: Carta de renuncia y Recibo de finiquito/liquidación. Este a diferencia del contrato, no se podra editar, solo genera el documento sin almacenarlo en base de datos o ruta interna del sistema. 
     
 - [x] Cards informativos en la parte superior del listado de trabajadores "/nat/hr/workers", con datos "total de empleados", "nuevos (30d)", "nómina mensual", "incidencias (pendientes, vacaciones, etc)".![alt text](image-12.png). Implementar algun sistema de consulta rapida o cache, etc, para prevenir consuiltas constantes a la base de datos para obtener estos datos. (cache de codeigniter o algo similar).
     
