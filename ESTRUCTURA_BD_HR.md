@@ -126,3 +126,74 @@ Tablas: `hr_cat_departments`, `hr_cat_jobs`, `hr_cat_contract_types`, `hr_cat_do
 
 > [!IMPORTANT]
 > **Integridad Referencial:** Todas las relaciones están protegidas con llaves foráneas (`FOREIGN KEY`) y acciones en cascada (`ON DELETE CASCADE` o `SET NULL`) según la lógica de negocio definida en las migraciones de evolución de Abril 2026.
+
+---
+
+## 4. Gestión de Tiempos, Vacaciones e Incidencias (Fase 2)
+
+### `hr_cat_shifts` (Catálogo de Turnos)
+Define los horarios base de la empresa.
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INT(11) PK | Identificador único. |
+| `name` | VARCHAR(100) | Nombre (Ej: Turno Matutino). |
+| `start_time` | TIME | Hora de entrada. |
+| `end_time` | TIME | Hora de salida. |
+| `grace_period` | INT | Minutos de tolerancia antes de retardo. |
+| `work_days` | VARCHAR(50) | Días laborables (Ej: "1,2,3,4,5" para Lun-Vie). |
+| `created_at` / `updated_at` / `deleted_at` | DATETIME | Auditoría completa. |
+
+### `hr_worker_schedules` (Asignación de Horarios)
+Vincula a los trabajadores con sus respectivos turnos.
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INT(11) PK | Identificador único. |
+| `profile_id` | INT(11) FK | Trabajador (`hr_profiles`). |
+| `shift_id` | INT(11) FK | Turno asignado (`hr_cat_shifts`). |
+| `start_date` | DATE | Fecha desde la que aplica el horario. |
+| `created_at` / `updated_at` / `deleted_at` | DATETIME | Auditoría completa. |
+
+### `hr_incidences` (Registro de Incidencias)
+Control de faltas, retardos y permisos.
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INT(11) PK | Identificador único. |
+| `profile_id` | INT(11) FK | Trabajador (`hr_profiles`). |
+| `incidence_type`| ENUM | falta, retardo, permiso, incapacidad. |
+| `date` | DATE | Fecha de la incidencia. |
+| `justified` | TINYINT(1) | Si cuenta con justificante aprobado. |
+| `status` | ENUM | pendiente, aprobado, rechazado, aplicado. |
+| `notes` | TEXT | Comentarios o motivo del rechazo. |
+| `created_at` / `updated_at` / `deleted_at` | DATETIME | Auditoría completa. |
+
+### `hr_vacation_requests` (Solicitudes de Vacaciones)
+Gestión de días de descanso según la LFT.
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INT(11) PK | Identificador único. |
+| `profile_id` | INT(11) FK | Trabajador (`hr_profiles`). |
+| `start_date` | DATE | Fecha de inicio de vacaciones. |
+| `end_date` | DATE | Fecha de fin de vacaciones. |
+| `days_requested`| INT | Total de días hábiles solicitados. |
+| `status` | ENUM | pendiente, aprobado, rechazado. |
+| `approver_id` | INT(11) FK | Usuario que aprobó/rechazó (`users.id`). |
+| `notes` | TEXT | Comentarios de la solicitud o rechazo. |
+| `created_at` / `updated_at` / `deleted_at` | DATETIME | Auditoría completa. |
+
+---
+
+## 5. Sistema de Notificaciones
+
+### `sys_notifications`
+Tabla transversal para alertas de todo el sistema.
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | BIGINT PK | Identificador único. |
+| `user_id` | INT(11) FK | Usuario que recibe la notificación (`users.id`). |
+| `title` | VARCHAR(150) | Título de la alerta. |
+| `message` | TEXT | Contenido de la notificación. |
+| `type` | VARCHAR(50) | Categoría (vacation, incidence, contract, info). |
+| `is_read` | TINYINT(1) | Estatus de lectura. |
+| `target_url` | VARCHAR(255) | Link directo a la acción. |
+| `created_at` | DATETIME | Fecha de emisión. |
+

@@ -55,22 +55,28 @@
             <!-- ── Cards de Indicadores ── -->
             <div class="px-4 py-3 border-bottom bg-light">
                 <div class="row g-2 text-center">
-                    <div class="col-4">
-                        <div class="card card-body py-2 px-1 h-100 border-0 shadow-sm">
-                            <div class="fs-4 fw-bold text-success" id="oc-w-vacation-days">—</div>
-                            <div class="small text-muted">Días Vacac.</div>
+                    <div class="col-3">
+                        <div class="card card-body py-2 px-0 h-100 border-0 shadow-sm">
+                            <div class="fs-5 fw-bold text-success" id="oc-w-vacation-days">—</div>
+                            <div class="small text-muted" style="font-size: 0.65rem;">Vacaciones</div>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="card card-body py-2 px-1 h-100 border-0 shadow-sm">
-                            <div class="fs-4 fw-bold text-warning" id="oc-w-seniority">—</div>
-                            <div class="small text-muted">Antigüedad</div>
+                    <div class="col-3">
+                        <div class="card card-body py-2 px-0 h-100 border-0 shadow-sm">
+                            <div class="fs-5 fw-bold text-danger" id="oc-w-incidences-count">—</div>
+                            <div class="small text-muted" style="font-size: 0.65rem;">Incidencias</div>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="card card-body py-2 px-1 h-100 border-0 shadow-sm">
-                            <div class="fs-4 fw-bold text-info" id="oc-w-contracts-count">—</div>
-                            <div class="small text-muted">Contratos</div>
+                    <div class="col-3">
+                        <div class="card card-body py-2 px-0 h-100 border-0 shadow-sm">
+                            <div class="fs-5 fw-bold text-warning" id="oc-w-seniority">—</div>
+                            <div class="small text-muted" style="font-size: 0.65rem;">Antigüedad</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card card-body py-2 px-0 h-100 border-0 shadow-sm">
+                            <div class="fs-5 fw-bold text-info" id="oc-w-contracts-count">—</div>
+                            <div class="small text-muted" style="font-size: 0.65rem;">Contratos</div>
                         </div>
                     </div>
                 </div>
@@ -100,6 +106,12 @@
                     <button class="nav-link" id="oc-tab-documentos-tab" data-bs-toggle="tab"
                         data-bs-target="#oc-tab-documentos" type="button" role="tab">
                         <i class="fas fa-folder-open fa-fw me-1"></i>Documentos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-success" id="oc-tab-vacaciones-tab" data-bs-toggle="tab"
+                        data-bs-target="#oc-tab-vacaciones" type="button" role="tab">
+                        <i class="fas fa-umbrella-beach fa-fw me-1"></i>Vacaciones
                     </button>
                 </li>
             </ul>
@@ -192,23 +204,56 @@
                         </tbody>
                     </table>
 
-                    <!-- Horario laboral (placeholder) -->
+                    <!-- Horario laboral -->
                     <div class="border-top pt-3 mt-3">
                         <p class="text-muted small fw-semibold text-uppercase mb-2">
-                            <i class="fas fa-clock me-1"></i>Horario Laboral
+                            <i class="fas fa-clock me-1 text-primary"></i>Horario Laboral
                         </p>
-                        <div class="text-muted small fst-italic" id="oc-w-schedule">
-                            Sin horario asignado.
+                        <div id="oc-w-schedule-container" class="card border-0 bg-subtle-primary p-2">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div id="oc-w-schedule-name" class="fw-bold small">Sin horario asignado</div>
+                                <div id="oc-w-schedule-time" class="small text-primary fw-semibold"></div>
+                            </div>
+                            <div id="oc-w-schedule-days" class="text-muted" style="font-size: 0.7rem;"></div>
                         </div>
                     </div>
 
-                    <!-- Incidencias (placeholder) -->
+                    <!-- Incidencias -->
                     <div class="border-top pt-3 mt-3">
-                        <p class="text-muted small fw-semibold text-uppercase mb-2">
-                            <i class="fas fa-exclamation-triangle me-1"></i>Últimas Incidencias
-                        </p>
-                        <div class="text-muted small fst-italic" id="oc-w-incidents">
-                            Sin incidencias registradas.
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <p class="text-muted small fw-semibold text-uppercase mb-0">
+                                <i class="fas fa-exclamation-triangle me-1 text-danger"></i>Incidencias Recientes
+                            </p>
+                            <button class="btn btn-xs btn-outline-danger py-0 px-1" onclick="openNewIncidenceModal()" style="font-size: 0.65rem;">
+                                <i class="fas fa-plus me-1"></i>Reportar
+                            </button>
+                        </div>
+                        <div id="oc-w-incidences-list" class="small">
+                            <div class="text-muted small fst-italic">Cargando incidencias...</div>
+                        </div>
+                    </div>
+
+                    <!-- Vacaciones Summary -->
+                    <div class="border-top pt-3 mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <p class="text-muted small fw-semibold text-uppercase mb-0">
+                                <i class="fas fa-umbrella-beach me-1 text-success"></i>Resumen de Vacaciones
+                            </p>
+                            <button class="btn btn-xs btn-outline-success py-0 px-1" onclick="openVacationRequestModal()" style="font-size: 0.65rem;">
+                                <i class="fas fa-paper-plane me-1"></i>Solicitar
+                            </button>
+                        </div>
+                        <div class="card border-0 bg-subtle-success p-2">
+                            <div class="row g-2 text-center">
+                                <div class="col-6 border-end">
+                                    <div class="small text-muted">Ganadas</div>
+                                    <div class="fw-bold text-success" id="oc-w-vac-earned">0</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="small text-muted">Disfrutadas</div>
+                                    <div class="fw-bold text-danger" id="oc-w-vac-taken">0</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -276,6 +321,64 @@
                         trabajador. Para editar un documento, dirígete a la pestaña de edición de trabajador.
                     </div>
                 </div>
+                <!-- ── Tab: Vacaciones (Fase 3) ── -->
+                <div class="tab-pane fade" id="oc-tab-vacaciones" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 small fw-bold text-uppercase">
+                            <i class="fas fa-umbrella-beach me-1 text-success"></i>Control de Vacaciones
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="openAddVacationModal(document.getElementById('offcanvasWorker').dataset.profileId)">
+                            <i class="fas fa-plus me-1"></i>Registrar
+                        </button>
+                    </div>
+
+                    <!-- Panel Resumen -->
+                    <div class="row g-2 mb-3 text-center" id="oc-vacations-summary">
+                        <div class="col-3">
+                            <div class="bg-light border rounded py-2">
+                                <div class="fs-5 fw-bold text-dark" id="oc-vac-entitled">-</div>
+                                <div class="small text-muted" style="font-size: 0.6rem;">Generados</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="bg-light border rounded py-2">
+                                <div class="fs-5 fw-bold text-danger" id="oc-vac-taken">-</div>
+                                <div class="small text-muted" style="font-size: 0.6rem;">Gozados</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="bg-light border rounded py-2">
+                                <div class="fs-5 fw-bold text-secondary" id="oc-vac-expired">-</div>
+                                <div class="small text-muted" style="font-size: 0.6rem;">Caducados</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="bg-light border rounded py-2">
+                                <div class="fs-5 fw-bold text-success" id="oc-vac-available">-</div>
+                                <div class="small text-muted" style="font-size: 0.6rem;">Disponibles</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 border-0 small d-flex align-items-center mb-0 shadow-sm">
+                        <i class="fas fa-info-circle me-3 fa-lg text-primary"></i>
+                        <span>
+                            El cálculo se basa en la fecha de contratación original 
+                            (<strong id="oc-w-hiring-date-vac" class="text-nowrap">—</strong>) 
+                            según la LFT (Reforma 2023). 
+                            <br>
+                            <span class="text-muted" style="font-size: 0.7rem;">
+                                <i class="fas fa-clock me-1"></i> Los días generados caducan legalmente tras 18 meses (6 meses para asignación + 1 año para reclamar).
+                            </span>
+                        </span>
+                    </div>
+
+                    <!-- Historial -->
+                    <h6 class="small fw-bold mb-2">Historial de Periodos</h6>
+                    <div id="oc-vacations-list" class="list-group list-group-flush border rounded overflow-hidden">
+                        <!-- Se puebla vía JS -->
+                    </div>
+                </div>
 
             </div><!-- /tab-content -->
 
@@ -341,8 +444,13 @@
                     seniority = years < 1 ? '< 1 año' : years + (years === 1 ? ' año' : ' años');
                 }
                 document.getElementById('oc-w-seniority').textContent = seniority;
-                document.getElementById('oc-w-vacation-days').textContent = '—';   // Se completará con el módulo de vacaciones
-                document.getElementById('oc-w-contracts-count').textContent = '—';   // Se completará con el módulo de contratos
+                document.getElementById('oc-w-vacation-days').textContent = w.vacation_balance || '0';
+                document.getElementById('oc-w-incidences-count').textContent = w.incidences_count || '0';
+                document.getElementById('oc-w-contracts-count').textContent = w.contracts_count || '0';
+
+                // ── Vacaciones Resumen ──
+                document.getElementById('oc-w-vac-earned').textContent = w.vacation_earned || '0';
+                document.getElementById('oc-w-vac-taken').textContent = w.vacation_taken || '0';
 
                 // ── Tab Personal ─────────────────────────────────────────────────────
                 const genderMap = { M: 'Masculino', F: 'Femenino', O: 'Otro' };
@@ -365,6 +473,9 @@
                 const fmt = v => v ? '$' + parseFloat(v).toLocaleString('es-MX', { minimumFractionDigits: 2 }) : '—';
 
                 document.getElementById('oc-w-hiring-date').textContent = w.hiring_date || '—';
+                if (document.getElementById('oc-w-hiring-date-vac')) {
+                    document.getElementById('oc-w-hiring-date-vac').textContent = w.hiring_date || '—';
+                }
                 document.getElementById('oc-w-worker-type').textContent = workerTypeMap[w.worker_type] || w.worker_type || '—';
                 document.getElementById('oc-w-manager').textContent = w.manager_name || '—';
                 document.getElementById('oc-w-corporate-email').textContent = w.corporate_email || '—';
@@ -373,6 +484,22 @@
                 document.getElementById('oc-w-status-text').innerHTML =
                     '<span class="badge badge-subtle-' + (statusColors[st] || 'secondary') + '">' +
                     (statusLabels[st] || st) + '</span>';
+
+                // ── Horario Laboral ──
+                if (w.schedule) {
+                    document.getElementById('oc-w-schedule-name').textContent = w.schedule.name;
+                    document.getElementById('oc-w-schedule-time').textContent = w.schedule.start_time.substring(0,5) + ' - ' + w.schedule.end_time.substring(0,5);
+                    const daysMap = { '1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom' };
+                    const days = w.schedule.work_days.split(',').map(d => daysMap[d] || d).join(', ');
+                    document.getElementById('oc-w-schedule-days').textContent = days;
+                } else {
+                    document.getElementById('oc-w-schedule-name').textContent = 'Sin horario asignado';
+                    document.getElementById('oc-w-schedule-time').textContent = '';
+                    document.getElementById('oc-w-schedule-days').textContent = '';
+                }
+
+                // ── Incidencias ──
+                renderIncidences(w.incidences || []);
 
                 // ── Tab Contratos (Historial) ────────────────────────────────────────
                 document.getElementById('oc-w-contracts-count').textContent = w.contracts_count || '0';
@@ -432,7 +559,7 @@
                     <?php endif; ?>
                     <?php if (auth()->user()->can('hr.delete')): ?>
                         actionsHtml += `
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteWorkerFromOffcanvas(${w.profile_id})">
+                <button class="btn btn-sm btn-outline-danger" onclick="openSettlementCalculator(${w.profile_id})">
                     <i class="fas fa-fw fa-user-times me-1"></i>Dar de Baja
                 </button>`;
                     <?php endif; ?>
@@ -677,7 +804,61 @@
             });
     }
 
-    // Event Listeners para Contratos
+    /**
+     * renderIncidences(incidences)
+     */
+    function renderIncidences(incidences) {
+        const container = document.getElementById('oc-w-incidences-list');
+        if (!container) return;
+
+        if (!incidences || incidences.length === 0) {
+            container.innerHTML = '<div class="text-muted small fst-italic">Sin incidencias registradas.</div>';
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush border rounded overflow-hidden mt-1">';
+        incidences.forEach(inc => {
+            const dateStr = new Date(inc.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+            
+            const typeIcons = { falta: 'fa-user-times', retardo: 'fa-clock', permiso: 'fa-hand-paper', incapacidad: 'fa-medkit' };
+            const statusIcons = { 
+                pendiente: 'fa-hourglass-half text-warning', 
+                justificada: 'fa-check-circle text-success', 
+                descontada: 'fa-minus-circle text-danger', 
+                rechazada: 'fa-times-circle text-secondary' 
+            };
+            const typeLabels = { falta: 'Falta', retardo: 'Retardo', permiso: 'Permiso', incapacidad: 'Incapacidad' };
+
+            html += `
+                <div class="list-group-item px-2 py-1 border-0 border-bottom d-flex align-items-center justify-content-between" style="font-size: 0.75rem;">
+                    <div>
+                        <i class="fas ${typeIcons[inc.incidence_type] || 'fa-exclamation'} me-1 text-muted"></i>
+                        <span class="fw-semibold">${typeLabels[inc.incidence_type] || inc.incidence_type}</span>
+                        <span class="text-muted mx-1">·</span>
+                        <span>${dateStr}</span>
+                    </div>
+                    <i class="fas ${statusIcons[inc.status] || 'fa-question-circle'}" title="${inc.status}"></i>
+                </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    /**
+     * Placeholder para reporte de incidencias
+     */
+    function openNewIncidenceModal() {
+        if (typeof notifyShow === 'function') notifyShow('Funcionalidad de reporte de incidencias en desarrollo.', 'info');
+    }
+
+    /**
+     * Placeholder para solicitud de vacaciones
+     */
+    function openVacationRequestModal() {
+        if (typeof notifyShow === 'function') notifyShow('Funcionalidad de solicitud de vacaciones en desarrollo.', 'info');
+    }
+
+    // Event Listeners para Contratos y Vacaciones
     document.addEventListener('DOMContentLoaded', function () {
         const btnFilter = document.getElementById('oc-btn-filter-contracts');
         if (btnFilter) {
@@ -686,11 +867,434 @@
                 if (profileId) loadContractsHistory(profileId);
             });
         }
+
+        // Cargar datos al cambiar de pestaña
+        const vacTab = document.getElementById('oc-tab-vacaciones-tab');
+        if (vacTab) {
+            vacTab.addEventListener('shown.bs.tab', function (e) {
+                const profileId = document.getElementById('offcanvasWorker').dataset.profileId;
+                if (profileId) loadVacationsTab(profileId);
+            });
+        }
     });
 
     // Función para previsualizar el contrato
     function previewContract(contractId) {
         if (typeof notifyShow === 'function') notifyShow('Abriendo previsualización...', 'primary');
         window.open('<?= base_url('nat/hr/contracts/download/') ?>' + contractId + '?action=view', '_blank');
+    }
+
+    /**
+     * loadVacationsTab(profileId)
+     */
+    function loadVacationsTab(profileId) {
+        const container = document.getElementById('oc-vacations-list');
+        container.innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><br><span class="small">Cargando vacaciones...</span></div>';
+
+        fetch('<?= route_to('hr.worker.vacations.get', 0) ?>'.replace('/0', '/' + profileId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                container.innerHTML = `<div class="p-3 text-danger text-center small">${data.message || 'Error al cargar vacaciones.'}</div>`;
+                return;
+            }
+
+            const info = data.response;
+
+            // Actualizar panel resumen
+            document.getElementById('oc-vac-entitled').textContent = info.total_entitled;
+            document.getElementById('oc-vac-taken').textContent = info.total_taken;
+            document.getElementById('oc-vac-expired').textContent = info.expired;
+            document.getElementById('oc-vac-available').textContent = info.available;
+            
+            // Actualizar indicador superior del offcanvas
+            const topIndicator = document.getElementById('oc-w-vacation-days');
+            if(topIndicator) topIndicator.textContent = info.available;
+
+            const dateHiringObj = new Date(info.hiring_date);
+            if (document.getElementById('oc-w-hiring-date-vac')) {
+                document.getElementById('oc-w-hiring-date-vac').textContent = dateHiringObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+
+            // Historial
+            if (!info.history || info.history.length === 0) {
+                container.innerHTML = `<div class="p-3 text-center text-muted small bg-light"><i class="fas fa-info-circle me-1"></i> No hay registros de vacaciones.</div>`;
+                return;
+            }
+
+            let html = '';
+            info.history.forEach(v => {
+                const startObj = new Date(v.start_date);
+                const endObj = new Date(v.end_date);
+                const startStr = startObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                const endStr = endObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+                
+                const statusBadge = v.status === 'aprobado' ? 'bg-success' : (v.status === 'rechazado' ? 'bg-danger' : 'bg-warning text-dark');
+
+                html += `
+                    <div class="list-group-item px-3 py-2 border-0 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold small">
+                                    <i class="far fa-calendar-check me-1 text-primary"></i> ${startStr} al ${endStr}
+                                </div>
+                                <div class="text-muted" style="font-size: 0.7rem;">
+                                    ${v.total_days} días hábiles tomados
+                                    ${v.notes ? `<br><i class="far fa-comment-dots me-1"></i>${v.notes}` : ''}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge ${statusBadge} small">${v.status.toUpperCase()}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        })
+        .catch(err => {
+            console.error(err);
+            container.innerHTML = '<div class="p-3 text-danger text-center small">Error de conexión.</div>';
+        });
+    }
+
+    /**
+     * openAddVacationModal(profileId)
+     */
+    function openAddVacationModal(profileId) {
+        document.getElementById('vac_profile_id').value = profileId;
+        document.getElementById('formAddVacation').reset();
+        const modal = new bootstrap.Modal(document.getElementById('modalAddVacation'));
+        modal.show();
+    }
+
+    // Submit formulario Vacaciones dentro de DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function () {
+        const formVac = document.getElementById('formAddVacation');
+        if (formVac) {
+            formVac.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('btnSubmitVacation');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+                const formData = new FormData(this);
+                const csrfInput = document.getElementById('csrf_token');
+                if (csrfInput) formData.append('<?= csrf_token() ?>', csrfInput.value);
+
+                fetch('<?= route_to('hr.worker.vacations.add') ?>', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                })
+                .then(r => {
+                    const c = r.headers.get('<?= csrf_header() ?>');
+                    if (c && csrfInput) csrfInput.value = c;
+                    return r.json();
+                })
+                .then(data => {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Guardar Registro';
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('modalAddVacation')).hide();
+                        if (typeof notifyShow === 'function') notifyShow(data.message, 'success');
+                        const profileId = document.getElementById('vac_profile_id').value;
+                        loadVacationsTab(profileId);
+                    } else {
+                        if (typeof notifyShow === 'function') notifyShow(data.message || 'Error al guardar', 'danger');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    btn.disabled = false;
+                    btn.innerHTML = 'Guardar Registro';
+                    if (typeof notifyShow === 'function') notifyShow('Error de conexión', 'danger');
+                });
+            });
+        }
+    });
+
+</script>
+
+<!-- Modal: Registrar Vacaciones -->
+<div class="modal fade" id="modalAddVacation" tabindex="-1" aria-labelledby="modalAddVacationLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAddVacationLabel"><i class="fas fa-umbrella-beach text-success me-2"></i>Registrar Vacaciones</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAddVacation">
+                <div class="modal-body">
+                    <input type="hidden" id="vac_profile_id" name="profile_id">
+                    
+                    <div class="alert alert-warning small py-2 border-0 shadow-none">
+                        <i class="fas fa-exclamation-triangle me-1"></i> El sistema calculará automáticamente los días hábiles (Lunes a Viernes) en el rango seleccionado.
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Fecha de Inicio</label>
+                            <input type="date" class="form-control" name="start_date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Fecha de Fin</label>
+                            <input type="date" class="form-control" name="end_date" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Notas o Comentarios (Opcional)</label>
+                            <textarea class="form-control" name="notes" rows="2" placeholder="Ej. Vacaciones de verano..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btnSubmitVacation">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Calculadora de Finiquito / Liquidación -->
+<div class="modal fade" id="modalSettlement" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white py-3">
+                <h5 class="modal-title text-white"><i class="fas fa-calculator me-2"></i>Calculadora de Finiquito / Liquidación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="settlement_profile_id">
+                
+                <div class="row g-4">
+                    <!-- Configuración -->
+                    <div class="col-md-5 border-end">
+                        <h6 class="fw-bold text-uppercase small text-muted mb-3">Parámetros de Baja</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Tipo de Proceso</label>
+                            <select class="form-select form-select-sm" id="settlement_type" onchange="calculateSettlement()">
+                                <option value="finiquito">Finiquito (Renuncia Voluntaria)</option>
+                                <option value="liquidacion">Liquidación (Despido Injustificado)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Fecha Efectiva de Baja</label>
+                            <input type="date" class="form-control form-control-sm" id="settlement_date" value="<?= date('Y-m-d') ?>" onchange="calculateSettlement()">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Días laborados no pagados</label>
+                            <input type="number" class="form-control form-control-sm" id="settlement_extra_days" value="0" min="0" onchange="calculateSettlement()">
+                            <div class="form-text small">Días de la quincena/semana actual pendientes de pago.</div>
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 border-0 small mt-4">
+                            <i class="fas fa-info-circle me-1"></i> Los cálculos se basan en la LFT y las configuraciones del sistema (Salario Mínimo 2024: $248.93).
+                        </div>
+                    </div>
+
+                    <!-- Resultados -->
+                    <div class="col-md-7">
+                        <div id="settlement_results_loading" style="display:none;" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-muted small">Calculando montos...</p>
+                        </div>
+
+                        <div id="settlement_results_content">
+                            <h6 class="fw-bold text-uppercase small text-muted mb-3">Desglose Estimado</h6>
+                            
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="p-2 border rounded bg-light">
+                                        <div class="small text-muted" style="font-size: 0.65rem;">Salario Diario (SD)</div>
+                                        <div class="fw-bold text-dark" id="settlement_sd_val">$ 0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-2 border rounded bg-light">
+                                        <div class="small text-muted" style="font-size: 0.65rem;">S. D. Integrado (SDI)</div>
+                                        <div class="fw-bold text-primary" id="settlement_sdi_val">$ 0.00</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle border-bottom">
+                                    <tbody id="settlement_table_body">
+                                        <!-- Dinámico -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-dark">
+                                            <th class="ps-3 py-2">TOTAL ESTIMADO</th>
+                                            <th class="pe-3 py-2 text-end" id="settlement_total_amount">$ 0.00</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <div class="mt-3 text-muted" style="font-size: 0.75rem;">
+                                <i class="fas fa-history me-1"></i> Antigüedad: <span id="settlement_seniority_text">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmBaja" onclick="processOfficialBaja()">
+                    <i class="fas fa-user-times me-1"></i> Confirmar y Aplicar Baja
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * openSettlementCalculator
+     */
+    function openSettlementCalculator(profileId) {
+        document.getElementById('settlement_profile_id').value = profileId;
+        const modal = new bootstrap.Modal(document.getElementById('modalSettlement'));
+        modal.show();
+        calculateSettlement();
+    }
+
+    /**
+     * calculateSettlement
+     */
+    function calculateSettlement() {
+        const profileId = document.getElementById('settlement_profile_id').value;
+        const type = document.getElementById('settlement_type').value;
+        const date = document.getElementById('settlement_date').value;
+        const extraDays = document.getElementById('settlement_extra_days').value;
+
+        const loading = document.getElementById('settlement_results_loading');
+        const content = document.getElementById('settlement_results_content');
+        
+        loading.style.display = 'block';
+        content.style.opacity = '0.4';
+
+        fetch(`<?= route_to('hr.worker.settlement.calculate', 0) ?>`.replace('/0', '/' + profileId) + `?type=${type}&date=${date}&extra_days=${extraDays}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(resp => {
+            loading.style.display = 'none';
+            content.style.opacity = '1';
+
+            if (!resp.success) {
+                alert(resp.message);
+                return;
+            }
+
+            const data = resp.response;
+            const fmt = v => '$' + parseFloat(v).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            
+            // Mostrar Salarios base detectados
+            document.getElementById('settlement_sd_val').textContent = fmt(data.salaries.sd);
+            document.getElementById('settlement_sdi_val').textContent = fmt(data.salaries.sdi);
+
+            let html = '';
+            
+            // Conceptos de Finiquito
+            Object.values(data.concepts).forEach(c => {
+                html += `<tr>
+                    <td class="ps-2 py-2">
+                        <div class="fw-bold small text-dark">${c.label}</div>
+                        ${c.days ? `<small class="text-muted">${c.days} días prop.</small>` : ''}
+                    </td>
+                    <td class="pe-2 text-end fw-semibold text-primary">${fmt(c.amount)}</td>
+                </tr>`;
+            });
+
+            // Indemnizaciones (si aplica)
+            if (data.indemnities) {
+                html += `<tr class="table-light"><td colspan="2" class="small fw-bold text-uppercase py-1 ps-2">Indemnizaciones LFT</td></tr>`;
+                Object.values(data.indemnities).forEach(i => {
+                    html += `<tr>
+                        <td class="ps-2 py-2">
+                            <div class="fw-bold small text-dark">${i.label}</div>
+                        </td>
+                        <td class="pe-2 text-end fw-semibold text-danger">${fmt(i.amount)}</td>
+                    </tr>`;
+                });
+            }
+
+            document.getElementById('settlement_table_body').innerHTML = html;
+            document.getElementById('settlement_total_amount').textContent = fmt(data.total);
+            document.getElementById('settlement_seniority_text').textContent = `${data.seniority.years} años, ${data.seniority.months} meses y ${data.seniority.days} días`;
+        })
+        .catch(err => {
+            console.error(err);
+            loading.style.display = 'none';
+            content.style.opacity = '1';
+        });
+    }
+
+    /**
+     * processOfficialBaja
+     */
+    function processOfficialBaja() {
+        const profileId = document.getElementById('settlement_profile_id').value;
+        const type = document.getElementById('settlement_type').value;
+        const date = document.getElementById('settlement_date').value;
+        const total = document.getElementById('settlement_total_amount').textContent;
+        
+        // Generar resumen para las notas
+        let summary = `Resumen Económico:\n`;
+        const rows = document.querySelectorAll('#settlement_table_body tr');
+        rows.forEach(r => {
+            const label = r.querySelector('.fw-bold')?.textContent;
+            const amount = r.querySelector('.text-end')?.textContent;
+            if(label && amount) summary += `- ${label}: ${amount}\n`;
+        });
+        summary += `TOTAL: ${total}\nTipo: ${type.toUpperCase()}`;
+
+        if (!confirm('¿CONFIRMAR BAJA? Esta acción marcará al trabajador como inactivo y registrará los montos del finiquito en sus notas.')) return;
+
+        const btn = document.getElementById('btnConfirmBaja');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+
+        const csrfInput = document.getElementById('csrf_token');
+        const formData = new FormData();
+        formData.append('termination_date', date);
+        formData.append('type', type);
+        formData.append('summary', summary);
+        if (csrfInput) formData.append('<?= csrf_token() ?>', csrfInput.value);
+
+        fetch(`<?= route_to('hr.worker.settlement.process_baja', 0) ?>`.replace('/0', '/' + profileId), {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(r => {
+            const c = r.headers.get('<?= csrf_header() ?>');
+            if (c && csrfInput) csrfInput.value = c;
+            return r.json();
+        })
+        .then(data => {
+            if (data.success) {
+                if (typeof notifyShow === 'function') notifyShow(data.message, 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalSettlement'));
+                modal.hide();
+                openWorkerOffcanvas(profileId); // Recargar perfil
+                if (window.workersDataTable) window.workersDataTable.ajax.reload(null, false);
+            } else {
+                alert(data.message || 'Error al procesar baja');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-times me-1"></i> Confirmar y Aplicar Baja';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-user-times me-1"></i> Confirmar y Aplicar Baja';
+        });
     }
 </script>

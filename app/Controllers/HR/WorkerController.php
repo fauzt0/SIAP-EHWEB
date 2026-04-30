@@ -20,36 +20,10 @@ use App\Models\HR\HrJobModel;
 use App\Models\OrgBranchModel;
 use App\Models\HR\HrContractTypeModel;
 
-class WorkerController extends BaseController
+class WorkerController extends BaseHrController
 {
-    protected $helpers    = ['form', 'url'];
-    protected $breadcrumb;
-
-    // Modelos instanciados en el constructor para reuso entre métodos
-    protected $profileModel;
-    protected $employmentModel;
-
-    /**
-     * initController()
-     * Inicializa variables compartidas entre todos los métodos del controlador.
-     */
-    public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger)
-    {
-        parent::initController($request, $response, $logger);
-
-        // Instanciar modelos principales
-        $this->profileModel    = new HrProfileModel();
-        $this->employmentModel = new HrEmploymentModel();
-
-        // Breadcrumb base del módulo
-        $this->breadcrumb = new Breadcrumb([
-            'Inicio'             => base_url(),
-            'Recursos Humanos'   => route_to('hr.workers'),
-        ]);
-
-        // Título y cabecera por defecto del módulo
-        $this->setPageTittleAhead('Recursos Humanos', 'Gestión de Recursos Humanos');
-    }
+    // Las propiedades compartidas ($profileModel, $employmentModel, $breadcrumb, etc.)
+    // y el método initController() han sido movidos a BaseHrController para respetar el DRY.
 
     public function index(): string
     {
@@ -61,11 +35,39 @@ class WorkerController extends BaseController
             'Recursos Humanos' => route_to('hr.workers'),
         ]);
 
+        // --- Estadísticas del Dashboard (con Caché 10 min) ---
+        $stats = cache()->get('hr_dashboard_stats');
+        if (!$stats) {
+            $incidenceModel = new \App\Models\HR\HrIncidenceModel();
+            $vacationModel = new \App\Models\HR\HrVacationModel();
+            
+            $totalActive   = $this->employmentModel->where('status', 'active')->countAllResults();
+            $totalInactive = $this->employmentModel->whereIn('status', ['inactive', 'suspended'])->countAllResults();
+            $totalEmployees = $totalActive + $totalInactive;
+            
+            $newHires    = $this->employmentModel->where('hiring_date >=', date('Y-m-01'))->countAllResults();
+            $totalSalary = $this->employmentModel->where('status', 'active')->selectSum('current_salary')->first()->current_salary ?? 0;
+            $pendingInc  = $incidenceModel->where('status', 'pendiente')->countAllResults();
+            $pendingVac  = $vacationModel->where('status', 'pendiente')->countAllResults();
+
+            $stats = [
+                'total_active'    => (int)$totalActive,
+                'total_inactive'  => (int)$totalInactive,
+                'total_employees' => (int)$totalEmployees,
+                'new_hires'       => (int)$newHires,
+                'total_payroll'   => (float)$totalSalary,
+                'pending_incid'   => (int)$pendingInc,
+                'pending_vac'     => (int)$pendingVac
+            ];
+            cache()->save('hr_dashboard_stats', $stats, 600);
+        }
+
         $this->viewData['response'] = [
-            'responseMessage' => 'Listado de Trabajadores',
-            'departments'     => (new HrDepartmentModel())->findAll(),
-            'locations'       => (new OrgBranchModel())->getActive(),
+            'responseMessage'    => 'Listado de Trabajadores',
+            'departments'        => (new HrDepartmentModel())->findAll(),
+            'locations'          => (new OrgBranchModel())->getActive(),
             'contract_templates' => (new \App\Models\HR\ContractTemplateModel())->findAll(),
+            'stats'              => $stats
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/main_workers');
@@ -257,6 +259,30 @@ class WorkerController extends BaseController
             // Historial de contratos
             'contracts'          => (new \App\Models\HR\WorkerContractModel())->getHistoryByProfile($profileId),
             'contracts_count'    => (new \App\Models\HR\WorkerContractModel())->where('profile_id', $profileId)->countAllResults(),
+            // Horario Laboral (Fase 2)
+            'schedule'           => (new \App\Models\HR\HrWorkerScheduleModel())
+                                    ->select('hr_worker_schedules.*, hr_cat_shifts.name, hr_cat_shifts.start_time, hr_cat_shifts.end_time, hr_cat_shifts.work_days')
+                                    ->join('hr_cat_shifts', 'hr_cat_shifts.id = hr_worker_schedules.shift_id')
+                                    ->where('hr_worker_schedules.profile_id', $profileId)
+                                    ->orderBy('hr_worker_schedules.start_date', 'DESC')
+                                    ->first(),
+            // Incidencias (Fase 2)
+            'incidences'         => (new \App\Models\HR\HrIncidenceModel())
+                                    ->where('profile_id', $profileId)
+                                    ->orderBy('date', 'DESC')
+                                    ->limit(5)
+                                    ->findAll(),
+            'incidences_count'   => (new \App\Models\HR\HrIncidenceModel())
+                                    ->where('profile_id', $profileId)
+                                    ->where('status !=', 'rechazada')
+                                    ->countAllResults(),
+            // Vacaciones (Fase 2 - Placeholder hasta Sprint 3)
+            'vacation_balance'   => 0,
+            'vacation_earned'    => 0,
+            'vacation_taken'     => (new \App\Models\HR\HrVacationRequestModel())
+                                    ->where('profile_id', $profileId)
+                                    ->where('status', 'aprobado')
+                                    ->first()->days_requested ?? 0,
         ];
 
         return $this->response->setJSON($this->outputData);
@@ -627,395 +653,7 @@ class WorkerController extends BaseController
         $logModel = new \App\Models\Users\UserActivityLogsModel();
         $logModel->logActivity('restore_worker', 'Restauró al trabajador con profile_id: ' . $profileId);
 
-            $this->setOutputSuccess('Trabajador restaurado correctamente.');
-        return $this->response->setJSON($this->outputData);
-    }
-
-    public function contractHistory(int $profileId)
-    {
-        $profile = $this->profileModel->find($profileId);
-        if (!$profile) {
-            return redirect()->to(route_to('hr.workers'))->with('error', 'Trabajador no encontrado.');
-        }
-
-        $this->setViewSuccess('Historial de Contratos');
-        $this->setPageTittleAhead('Historial de Contratos', 'Empleado: ' . esc($profile->first_name . ' ' . $profile->last_name));
-
-        $this->viewData['breadcrumb'] = $this->breadcrumb->getBreadCrumbHtml([
-            'Inicio'           => route_to('dashboard.index'),
-            'Recursos Humanos' => route_to('hr.workers'),
-            'Historial'        => '',
-        ]);
-
-        $this->viewData['response'] = [
-            'profile_id'  => $profileId,
-            'worker_name' => $profile->first_name . ' ' . $profile->last_name,
-            'contracts'   => (new \App\Models\HR\WorkerContractModel())->getHistoryByProfile($profileId),
-        ];
-
-        return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/contracts/worker_contracts_history');
-    }
-
-    public function getContracts(int $profileId)
-    {
-        if (!$this->request->isAJAX()) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $startDate = $this->request->getGet('start_date');
-        $endDate   = $this->request->getGet('end_date');
-
-        $workerContractModel = new \App\Models\HR\WorkerContractModel();
-        
-        $query = $workerContractModel->select('hr_contracts.*, hr_cat_contract_types.name as contract_type_name, hr_cat_contract_templates.name as template_name')
-                                     ->join('hr_cat_contract_types', 'hr_cat_contract_types.id = hr_contracts.contract_type_id', 'left')
-                                     ->join('hr_cat_contract_templates', 'hr_cat_contract_templates.id = hr_contracts.template_id', 'left')
-                                     ->where('hr_contracts.profile_id', $profileId)
-                                     ->orderBy('hr_contracts.created_at', 'DESC');
-                                     
-        if (!empty($startDate)) {
-            $query->where('DATE(hr_contracts.created_at) >=', $startDate);
-        }
-        if (!empty($endDate)) {
-            $query->where('DATE(hr_contracts.created_at) <=', $endDate);
-        }
-
-        $contracts = $query->findAll();
-        $documents = (new \App\Models\HR\HrDocumentModel())->where('profile_id', $profileId)->findAll();
-
-        return $this->response->setJSON(['success' => true, 'data' => $contracts, 'documents' => $documents]);
-    }
-
-    public function downloadContract(int $contractId)
-    {
-        $action  = $this->request->getGet('action') === 'view' ? 'I' : 'D';
-        $service = new \App\Services\ContractService();
-        $pdfData = $service->exportToPdf($contractId);
-        
-        $response = $this->response
-            ->setHeader('Content-Type', 'application/pdf')
-            ->setHeader('Content-Disposition', ($action === 'I' ? 'inline' : 'attachment') . '; filename="' . $pdfData['filename'] . '"')
-            ->setBody($pdfData['content']);
-
-        return $response;
-    }
-
-    /**
-     * Descarga segura de un documento del expediente digital.
-     */
-    public function downloadDocument(int $documentId)
-    {
-        $docModel = new \App\Models\HR\HrDocumentModel();
-        $document = $docModel->find($documentId);
-
-        if (!$document) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Documento no encontrado.');
-        }
-
-        $filePath = WRITEPATH . 'uploads/' . $document->file_path;
-
-        if (!file_exists($filePath)) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('El archivo físico no existe.');
-        }
-
-        $mimeType = mime_content_type($filePath);
-        $action   = $this->request->getGet('action') === 'view' ? 'inline' : 'attachment';
-
-        return $this->response->download($filePath, null)
-            ->setFileName(basename($document->file_path))
-            ->setHeader('Content-Type', $mimeType)
-            ->setHeader('Content-Disposition', $action . '; filename="' . basename($document->file_path) . '"');
-    }
-
-    /**
-     * Elimina un documento (Soft Delete)
-     */
-    public function deleteDocument(int $documentId)
-    {
-        $docModel = new \App\Models\HR\HrDocumentModel();
-        if ($docModel->delete($documentId)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Documento eliminado correctamente.']);
-        }
-        return $this->response->setJSON(['success' => false, 'message' => 'No se pudo eliminar el documento.']);
-    }
-
-    /**
-     * Restaura un documento eliminado
-     */
-    public function restoreDocument(int $documentId)
-    {
-        $docModel = new \App\Models\HR\HrDocumentModel();
-        // Se requiere withDeleted() para actualizar un registro ya eliminado
-        if ($docModel->withDeleted()->update($documentId, ['deleted_at' => null])) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Documento restaurado correctamente.']);
-        }
-        return $this->response->setJSON(['success' => false, 'message' => 'No se pudo restaurar el documento.']);
-    }
-
-    /**
-     * Actualiza un documento (Metadatos y/o reemplazo de archivo)
-     */
-    public function updateDocument(int $documentId)
-    {
-        $docModel = new \App\Models\HR\HrDocumentModel();
-        $oldDoc   = $docModel->find($documentId);
-
-        if (!$oldDoc) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Documento no encontrado.']);
-        }
-
-        $data = [
-            'document_type_id' => $this->request->getPost('document_type_id'),
-            'notes'            => $this->request->getPost('notes'),
-        ];
-
-        // Manejo de reemplazo de archivo
-        $newFile = $this->request->getFile('document_file');
-        if ($newFile && $newFile->isValid() && !$newFile->hasMoved()) {
-            $uploadPath = WRITEPATH . 'uploads/hr/documents/' . $oldDoc->profile_id;
-            
-            // Asegurar que el directorio existe
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0777, true);
-            }
-
-            // Generar nombre y mover
-            $newName = $newFile->getRandomName();
-            $newFile->move($uploadPath, $newName);
-            
-            $data['file_path'] = 'hr/documents/' . $oldDoc->profile_id . '/' . $newName;
-
-            // ELIMINAR FÍSICAMENTE EL ARCHIVO ANTERIOR PARA AHORRAR ESPACIO
-            $oldFullPath = WRITEPATH . 'uploads/' . $oldDoc->file_path;
-            if (file_exists($oldFullPath) && is_file($oldFullPath)) {
-                unlink($oldFullPath);
-            }
-        }
-
-        if ($docModel->update($documentId, $data)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Documento actualizado correctamente.']);
-        }
-        return $this->response->setJSON(['success' => false, 'message' => 'No se pudo actualizar el documento.']);
-    }
-    
-    /**
-     * Agrega un documento individual vía AJAX (solo en edición)
-     */
-    public function addDocumentAjax(int $profileId)
-    {
-        if (!$this->request->isAJAX() || !$this->request->is('post')) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Petición denegada.']);
-        }
-
-        $file = $this->request->getFile('document_file');
-        if (!$file || !$file->isValid()) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Archivo no válido.']);
-        }
-
-        $typeId = $this->request->getPost('document_type_id');
-        $notes  = $this->request->getPost('notes');
-
-        $uploadPath = WRITEPATH . 'uploads/hr/documents/' . $profileId;
-
-        // Asegurar que el directorio existe
-        if (!is_dir($uploadPath)) {
-            mkdir($uploadPath, 0777, true);
-        }
-
-        $newName = $file->getRandomName();
-        
-        if ($file->move($uploadPath, $newName)) {
-            $docModel = new \App\Models\HR\HrDocumentModel();
-            $docId = $docModel->insert([
-                'profile_id'       => $profileId,
-                'document_type_id' => !empty($typeId) ? (int)$typeId : null,
-                'file_path'        => 'hr/documents/' . $profileId . '/' . $newName,
-                'notes'            => $notes,
-            ]);
-
-            $typeModel = new \App\Models\HR\HrDocumentTypeModel();
-            $typeName = $typeModel->find($typeId)->name ?? 'Otro';
-
-            return $this->response->setJSON([
-                'success' => true, 
-                'message' => 'Documento subido correctamente.',
-                'document' => [
-                    'id'        => $docId,
-                    'type_name' => $typeName,
-                    'file_path' => $newName,
-                    'notes'     => $notes
-                ]
-            ]);
-        }
-
-        return $this->response->setJSON(['success' => false, 'message' => 'Error al mover el archivo.']);
-    }
-
-    public function generateContractView(int $profileId, int $contractId = 0)
-    {
-        $profile = $this->profileModel->find($profileId);
-        if (!$profile) {
-            return redirect()->to(route_to('hr.workers'))->with('error', 'Trabajador no encontrado.');
-        }
-
-        $editContent = '';
-        $editType = '';
-        if ($contractId > 0) {
-            $contractModel = new \App\Models\HR\WorkerContractModel();
-            $contract = $contractModel->find($contractId);
-            if ($contract && $contract->profile_id == $profileId) {
-                $editContent = $contract->content_snapshot;
-                // Intentar extraer el tipo de contrato del reason
-                if (strpos($contract->reason, ' - ') !== false) {
-                    $parts = explode(' - ', $contract->reason, 2);
-                    $editType = $parts[0];
-                }
-            }
-        }
-
-        $this->setViewSuccess('Generar Contrato Manual');
-        $this->setPageTittleAhead('Generar Nuevo Contrato', 'Empleado: ' . esc($profile->first_name . ' ' . $profile->last_name));
-
-        $this->viewData['breadcrumb'] = $this->breadcrumb->getBreadCrumbHtml([
-            'Inicio'           => route_to('dashboard.index'),
-            'Recursos Humanos' => route_to('hr.workers'),
-            'Generar Contrato' => '',
-        ]);
-
-        $this->viewData['response'] = [
-            'profile_id'         => $profileId,
-            'worker_name'        => $profile->first_name . ' ' . $profile->last_name,
-            'contract_templates' => (new \App\Models\HR\ContractTemplateModel())->findAll(),
-            'contract_types'     => (new \App\Models\HR\HrContractTypeModel())->findAll(),
-            'edit_content'       => $editContent,
-            'edit_type'          => $editType,
-        ];
-
-        return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/contracts/worker_contract_generate');
-    }
-
-    public function getRenderedTemplateAjax()
-    {
-        if (!$this->request->isAJAX()) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $profileId  = (int) $this->request->getPost('profile_id');
-        $templateId = $this->request->getPost('template_id');
-
-        if (empty($profileId) || empty($templateId)) {
-            $this->setOutputError('Datos incompletos.');
-            return $this->response->setJSON($this->outputData);
-        }
-
-        try {
-            $contractService = new \App\Services\ContractService();
-            // LFT is a special case. Let's assume if templateId is 'lft', we load a default text.
-            if ($templateId === 'lft') {
-                $html = $contractService->getLftTemplateHtml($profileId); // We will implement this or just return static text
-            } else {
-                $html = $contractService->previewTemplateRender($profileId, (int)$templateId);
-            }
-            
-            $this->setOutputSuccess('Plantilla cargada.');
-            $this->outputData['html'] = $html;
-        } catch (\Exception $e) {
-            log_message('error', 'Error al renderizar plantilla: ' . $e->getMessage());
-            $this->setOutputError('Error interno al renderizar la plantilla.');
-        }
-
-        $this->outputData['csrf'] = csrf_hash();
-        return $this->response->setJSON($this->outputData);
-    }
-
-    public function previewPdfRaw()
-    {
-        $html = $this->request->getPost('content');
-        if (empty($html)) {
-            return "No hay contenido para previsualizar.";
-        }
-
-        // Generar PDF al vuelo
-        try {
-            $pdf = new \App\Libraries\PdfLibrary([
-                'format' => 'Letter'
-            ]);
-
-            $pdf->loadHtml($html);
-            $binary = $pdf->getAsString();
-
-            return $this->response
-                ->setHeader('Content-Type', 'application/pdf')
-                ->setHeader('Content-Disposition', 'inline; filename="Previsualizacion_Contrato.pdf"')
-                ->setBody($binary);
-
-        } catch (\Exception $e) {
-            log_message('error', 'Error mPDF preview: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setBody("Error al generar la previsualización del PDF.");
-        }
-    }
-
-    public function saveManualContract(int $profileId)
-    {
-        if (!$this->request->isAJAX()) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
-        }
-
-        $typeId       = $this->request->getPost('contract_type_id');
-        $templateId   = $this->request->getPost('template_id');
-        $reason       = $this->request->getPost('reason') ?: 'Generación manual';
-        $content      = $this->request->getPost('content');
-        $saveTemplate = $this->request->getPost('save_as_template');
-
-        if (empty($typeId) || empty($content)) {
-            $this->setOutputError('El tipo de contrato y el contenido son obligatorios.');
-            return $this->response->setJSON($this->outputData);
-        }
-
-        try {
-            // Guardar el snapshot en worker_contracts
-            $workerContractModel = new \App\Models\HR\WorkerContractModel();
-            
-            $contractData = [
-                'profile_id'       => $profileId,
-                'template_id'      => $templateId ?: null,
-                'contract_type_id' => $typeId,
-                'content_snapshot' => $content,
-                'reason'           => $reason,
-                'status'           => 'active'
-            ];
-
-            if (!$workerContractModel->insert($contractData)) {
-                $this->setOutputError('Error de validación al guardar contrato.', $workerContractModel->errors());
-                $this->outputData['csrf'] = csrf_hash();
-                return $this->response->setJSON($this->outputData);
-            }
-
-            // Guardar como nueva plantilla global si se solicitó
-            if ($saveTemplate === 'true' || $saveTemplate === '1' || $saveTemplate === 'on') {
-                $templateModel = new \App\Models\HR\ContractTemplateModel();
-                $typeModel = new \App\Models\HR\HrContractTypeModel();
-                $typeData = $typeModel->find($typeId);
-                $typeName = $typeData ? $typeData->name : 'Manual';
-                $templateData = [
-                    'name'        => substr('Plantilla: ' . $typeName . ' (' . date('Y-m-d H:i') . ')', 0, 99),
-                    'description' => 'Plantilla generada a partir de un contrato manual.',
-                    'content'     => $content,
-                    'base_model'  => 'corporate' // Valor por defecto para pasar validación
-                ];
-
-                if (!$templateModel->insert($templateData)) {
-                    log_message('error', 'Error al guardar plantilla: ' . json_encode($templateModel->errors()));
-                    // No detenemos el proceso, solo logueamos, el contrato ya se guardó
-                }
-            }
-
-            $this->setOutputSuccess('Contrato generado y guardado correctamente.');
-        } catch (\Exception $e) {
-            log_message('error', 'Error en saveManualContract: ' . $e->getMessage());
-            $this->setOutputError('Error interno al guardar el contrato.');
-        }
-        $this->outputData['csrf'] = csrf_hash();
+        $this->setOutputSuccess('Trabajador restaurado correctamente.');
         return $this->response->setJSON($this->outputData);
     }
 }

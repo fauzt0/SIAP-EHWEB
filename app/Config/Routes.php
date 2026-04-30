@@ -69,10 +69,26 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
 
       // Perfil de trabajador (Offcanvas + vista completa)
       $routes->get('worker/show_ajax/(:num)', 'HR\WorkerController::show_ajax/$1', ['as' => 'hr.worker.show_ajax', 'filter' => 'permission:hr.view']);
-      $routes->get('documents/download/(:num)', 'HR\WorkerController::downloadDocument/$1', ['as' => 'hr.documents.download', 'filter' => 'permission:hr.view']);
-      $routes->post('documents/delete/(:num)', 'HR\WorkerController::deleteDocument/$1', ['as' => 'hr.documents.delete', 'filter' => 'permission:hr.edit']);
-      $routes->post('documents/restore/(:num)', 'HR\WorkerController::restoreDocument/$1', ['as' => 'hr.documents.restore', 'filter' => 'permission:hr.edit']);
-      $routes->post('documents/update/(:num)', 'HR\WorkerController::updateDocument/$1', ['as' => 'hr.documents.update', 'filter' => 'permission:hr.edit']);
+      
+      // Gestión de Incidencias (Fase 2)
+      $routes->post('worker/incidence/add', 'HR\WorkerIncidenceController::addIncidenceAjax', ['as' => 'hr.worker.incidence.add', 'filter' => 'permission:hr.edit']);
+      $routes->post('worker/incidence/update_status', 'HR\WorkerIncidenceController::updateIncidenceStatusAjax', ['as' => 'hr.worker.incidence.update', 'filter' => 'permission:hr.edit']);
+      
+      // Gestión de Vacaciones (Fase 3)
+      $routes->get('worker/vacations/global', 'HR\WorkerVacationController::getGlobalVacations', ['as' => 'hr.worker.vacations.global', 'filter' => 'permission:hr.view']);
+      $routes->get('worker/vacations/get/(:num)', 'HR\WorkerVacationController::getVacations/$1', ['as' => 'hr.worker.vacations.get', 'filter' => 'permission:hr.view']);
+      $routes->post('worker/vacations/add', 'HR\WorkerVacationController::addVacationAjax', ['as' => 'hr.worker.vacations.add', 'filter' => 'permission:hr.edit']);
+      $routes->post('worker/vacations/update_status/(:num)', 'HR\WorkerVacationController::updateStatusAjax/$1', ['as' => 'hr.worker.vacations.update_status', 'filter' => 'permission:hr.edit']);
+      $routes->post('worker/vacations/delete/(:num)', 'HR\WorkerVacationController::deleteAjax/$1', ['as' => 'hr.worker.vacations.delete', 'filter' => 'permission:hr.edit']);
+
+      // Finiquitos y Bajas (Fase 4)
+      $routes->get('worker/settlement/calculate/(:num)', 'HR\WorkerSettlementController::calculateAjax/$1', ['as' => 'hr.worker.settlement.calculate', 'filter' => 'permission:hr.view']);
+      $routes->post('worker/settlement/process_baja/(:num)', 'HR\WorkerSettlementController::processBajaAjax/$1', ['as' => 'hr.worker.settlement.process_baja', 'filter' => 'permission:hr.edit']);
+
+      $routes->get('documents/download/(:num)', 'HR\WorkerDocumentController::downloadDocument/$1', ['as' => 'hr.documents.download', 'filter' => 'permission:hr.view']);
+      $routes->post('documents/delete/(:num)', 'HR\WorkerDocumentController::deleteDocument/$1', ['as' => 'hr.documents.delete', 'filter' => 'permission:hr.edit']);
+      $routes->post('documents/restore/(:num)', 'HR\WorkerDocumentController::restoreDocument/$1', ['as' => 'hr.documents.restore', 'filter' => 'permission:hr.edit']);
+      $routes->post('documents/update/(:num)', 'HR\WorkerDocumentController::updateDocument/$1', ['as' => 'hr.documents.update', 'filter' => 'permission:hr.edit']);
 
       // Alta de trabajador
       $routes->get('worker/new', 'HR\WorkerController::new_worker', ['as' => 'hr.worker.new', 'filter' => 'permission:hr.create']);
@@ -112,16 +128,16 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
           $routes->post('templates/delete/(:num)', 'HR\ContractTemplateController::delete/$1', ['as' => 'hr.contracts.templates.delete']);
 
           // Descarga y Gestión de Contratos del Trabajador
-          $routes->get('download/(:num)', 'HR\WorkerController::downloadContract/$1', ['as' => 'hr.contracts.download']);
-          $routes->get('history/(:num)', 'HR\WorkerController::contractHistory/$1', ['as' => 'hr.contracts.history']);
-          $routes->get('get_contracts/(:num)', 'HR\WorkerController::getContracts/$1');
+          $routes->get('download/(:num)', 'HR\WorkerContractController::downloadContract/$1', ['as' => 'hr.contracts.download']);
+          $routes->get('history/(:num)', 'HR\WorkerContractController::contractHistory/$1', ['as' => 'hr.contracts.history']);
+          $routes->get('get_contracts/(:num)', 'HR\WorkerContractController::getContracts/$1');
           
           // Generación Manual Avanzada
-          $routes->get('generate/(:num)', 'HR\WorkerController::generateContractView/$1', ['as' => 'hr.contracts.generate']);
-          $routes->get('generate/(:num)/(:num)', 'HR\WorkerController::generateContractView/$1/$2', ['as' => 'hr.contracts.generate_edit']);
-          $routes->post('render-template', 'HR\WorkerController::getRenderedTemplateAjax', ['as' => 'hr.contracts.render_template']);
-          $routes->post('preview-raw', 'HR\WorkerController::previewPdfRaw', ['as' => 'hr.contracts.preview_raw']);
-          $routes->post('save-manual/(:num)', 'HR\WorkerController::saveManualContract/$1', ['as' => 'hr.contracts.save_manual']);
+          $routes->get('generate/(:num)', 'HR\WorkerContractController::generateContractView/$1', ['as' => 'hr.contracts.generate']);
+          $routes->get('generate/(:num)/(:num)', 'HR\WorkerContractController::generateContractView/$1/$2', ['as' => 'hr.contracts.generate_edit']);
+          $routes->post('render-template', 'HR\WorkerContractController::getRenderedTemplateAjax', ['as' => 'hr.contracts.render_template']);
+          $routes->post('preview-raw', 'HR\WorkerContractController::previewPdfRaw', ['as' => 'hr.contracts.preview_raw']);
+          $routes->post('save-manual/(:num)', 'HR\WorkerContractController::saveManualContract/$1', ['as' => 'hr.contracts.save_manual']);
       });
 
     }); // fin del grupo hr

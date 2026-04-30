@@ -131,3 +131,4 @@ stats/
 # Imágenes auxiliares de referencia del TODO.md (no son parte del proyecto)
 /image*.png
 /tablas_recursos_humanos.md
+history/

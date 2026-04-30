@@ -24,14 +24,15 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
     - [ ] Modal general con alertas de solicitudes de vacaciones, aprovaciones, rechazados, etc. Contralores y metodos del backend y del modelo para aprobar, rechazar, filtrar y notificar a los usuarios. * Esto en el listado general de trabajadores.
     ![alt text](image-1.png) 
 - [ ] **Gestión de Finiquitos y Liquidaciones:**
-    - [ ] Calculadora automática de finiquito (aguinaldo, vacaciones y prima vacacional proporcional). ![alt text](image-13.png)
-    - [ ] Calculadora de liquidación (indemnización 3 meses, 20 días por año, prima de antigüedad).
+    - [x] Calculadora automática de finiquito (aguinaldo, vacaciones y prima vacacional proporcional). ![alt text](image-13.png)
+    - [x] Calculadora de liquidación (indemnización 3 meses, 20 días por año, prima de antigüedad).
     - [ ] Generación de formatos PDF de baja: Carta de renuncia y Recibo de finiquito/liquidación. Este a diferencia del contrato, no se podra editar, solo genera el documento sin almacenarlo en base de datos o ruta interna del sistema. 
     
-- [ ] Cards informativos en la parte superior del listado de trabajadores "/nat/hr/workers", con datos "total de empleados", "nuevos (30d)", "nómina mensual", "incidencias (pendientes, vacaciones, etc)".![alt text](image-12.png). Implementar algun sistema de consulta rapida o cache, etc, para prevenir consuiltas constantes a la base de datos para obtener estos datos. (cache de codeigniter o algo similar).
+- [x] Cards informativos en la parte superior del listado de trabajadores "/nat/hr/workers", con datos "total de empleados", "nuevos (30d)", "nómina mensual", "incidencias (pendientes, vacaciones, etc)".![alt text](image-12.png). Implementar algun sistema de consulta rapida o cache, etc, para prevenir consuiltas constantes a la base de datos para obtener estos datos. (cache de codeigniter o algo similar).
     
 
 ## 🛠️ Mejoras y Refactorización
+- [x] **[ARQUITECTURA] Refactorización de Servicios:** Migrar la lógica de `app/Services/ContractService.php` directamente al `WorkerController` (o controlador especializado) para seguir los estándares nativos de CI4 y eliminar la carpeta personalizada `/Services`.
 - [ ] **[CONTRATOS] Optimización del Sistema de Plantillas:**
     - [ ] Mejorar el editor de plantillas para soportar bloques condicionales.
     - [ ] Implementar previsualización en tiempo real con datos de prueba.
@@ -52,11 +53,15 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
 - [ ] Implementar módulo de Reportes base.
 
 ## Módulo de notificaciones.
-- [ ] Implementar base de datos para notificaciones.
-- [ ] Implementar metodos del backend para notificaciones.
-- [ ] Implementar metodos del frontend para notificaciones.
-- [ ] Implementar o extender las notificaciones para solicitudes de vacaciones y respuestas a los trabajadores/usuarios
-- [ ] Alertas para usuarios sin NSS, contratos, o datos importantes faltantes dentro de HR.
+- [ ] Implementar base de datos para notificaciones (tabla `sys_notifications`).
+- [ ] Implementar métodos del backend para el envío de notificaciones (Servicio de Notificaciones).
+- [ ] Implementar componentes del frontend para visualizar alertas en tiempo real.
+- [ ] **Integración de Vacaciones:** Extender el sistema para notificar solicitudes y respuestas (aprobado/rechazado) a los trabajadores involucrados.
+- [ ] **Notificaciones vía Email:** Configurar el envío automático de correos electrónicos para avisar a RRHH de nuevas solicitudes y a los empleados de sus resoluciones.
+- [ ] **Alertas de Caducidad:** Generar una alerta en el sistema 2 meses antes de que un periodo vacacional expire, notificando al administrador que es un derecho del trabajador y debe ser programado.
+- [ ] **Acceso Usuario:** Habilitar en el perfil de usuario (vista trabajador) el acceso a sus propias solicitudes de vacaciones e historial.
+- [ ] **Integración Contable:** Vincular el módulo de sueldos y finiquitos con las tablas de contabilidad existentes para automatizar el registro de egresos por nómina.
+- [ ] Alertas preventivas para usuarios con datos críticos faltantes (NSS, Contratos vencidos, etc.).
 
 
 ---
