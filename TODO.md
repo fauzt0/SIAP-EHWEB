@@ -6,6 +6,11 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
 ## ❌ Tareas por hacer
 
 - [ ] Generación de formatos PDF de baja: Carta de renuncia y Recibo de finiquito/liquidación. Este a diferencia del contrato, no se podra editar, solo genera el documento sin almacenarlo en base de datos o ruta interna del sistema. 
+- [ ] **[RRHH] Gestión Avanzada de Incidencias:**
+    - [ ] Implementar registro de retardos, faltas por enfermedad y permisos especiales.
+    - [ ] Sistema de justificaciones (carga de archivos/recetas médicas).
+    - [ ] Flujo de aprobación/rechazo por parte del administrador.
+    - [ ] Reporte mensual de incidencias por trabajador para prenómina.
 
 ## 🛠️ Mejoras y Refactorización
 
