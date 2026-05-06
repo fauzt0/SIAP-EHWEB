@@ -32,4 +32,5 @@ Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes,
 - [ ] Módulo de proveedores.
 - [ ] Módulo de productos y servicios.
 - [ ] Módulo de contabilidad. 
+- [ ] Módulo de Provisionamiento/Servicios Activos
 - [ ] Implementar módulo de Reportes base.
