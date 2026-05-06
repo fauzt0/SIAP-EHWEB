@@ -133,6 +133,8 @@
 
     </div>
 </main>
+
+<?= $this->include('Catalog/Partials/offcanvas_plans') ?>
 <?php $this->endSection() ?>
 
 <?php $this->section('pageFooterScripts'); ?>

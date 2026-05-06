@@ -285,6 +285,95 @@
                 </div>
 
             </div>{{-- /col-lg-4 --}}
+            <?php if ($response['isEdit']): ?>
+            <div class="col-12">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <ul class="nav nav-tabs card-header-tabs" id="plans-relations-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#tab-plans">
+                                    <i class="fas fa-tags me-1 text-primary"></i>Planes de Precios
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab-relations">
+                                    <i class="fas fa-link me-1 text-info"></i>Relaciones / Bundles
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="tab-content">
+
+                            <div class="tab-pane fade show active" id="tab-plans">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <p class="text-muted small mb-0">Ciclos de cobro y precios para este producto.</p>
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-manage-plans"
+                                            data-id="<?= $response['product']->id ?>"
+                                            data-name="<?= esc($response['product']->commercial_name) ?>">
+                                        <i class="fas fa-plus me-1"></i>Gestionar Planes
+                                    </button>
+                                </div>
+                                <div id="inline-plans-list">
+                                    <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i></div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="tab-relations">
+                                <p class="text-muted small mb-3">
+                                    <i class="fas fa-info-circle me-1 text-info"></i>
+                                    Los <strong>gifts/bundles</strong> con período gratuito &gt; 0 aplican gratis solo ese tiempo. Después se cobran como servicio adicional.
+                                </p>
+                                <form id="relation-form" class="border rounded p-3 bg-light mb-3">
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small">Producto Relacionado</label>
+                                            <select class="form-select form-select-sm" id="related-product-id" name="related_product_id">
+                                                <option value="">Selecciona un producto...</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-semibold small">Tipo</label>
+                                            <select class="form-select form-select-sm" id="relation-type" name="relation_type">
+                                                <option value="gift">Gift (Regalo)</option>
+                                                <option value="bundle">Bundle (Paquete)</option>
+                                                <option value="upsell">Upsell (Mejora)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2" id="duration-group">
+                                            <label class="form-label fw-semibold small">
+                                                Per. Gratuito <i class="fas fa-info-circle text-muted" title="Meses gratis. 0 = Permanente."></i>
+                                            </label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="duration_months" id="duration-months" min="0" value="0">
+                                                <span class="input-group-text">mes(es)</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label fw-semibold small">Override $</label>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" name="override_price" id="override-price" min="0" step="0.01" value="0.00">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button type="submit" class="btn btn-primary btn-sm w-100" title="Agregar relación">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div id="relations-list">
+                                    <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
         </div>{{-- /row --}}
         </form>
 
@@ -521,4 +610,191 @@ function initFormSubmit() {
     });
 }
 </script>
+
+<?php if ($response['isEdit']): ?>
+<script>
+const PRODUCT_ID_EDIT  = <?= $response['product']->id ?>;
+const RELATIONS_BASE   = '<?= base_url('nat/catalog/products/') ?>';
+const RELATIONS_DELETE = '<?= route_to('catalog.relations.delete', 0) ?>'.replace('/0', '/');
+
+// ── Carga inline de planes en el tab ────────────────────
+(function loadInlinePlans() {
+    fetch(RELATIONS_BASE + PRODUCT_ID_EDIT + '/plans', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('inline-plans-list');
+        if (!data.success || !data.response.plans.length) {
+            container.innerHTML = '<p class="text-muted fst-italic small">Sin planes. Haz clic en "Gestionar Planes".</p>';
+            return;
+        }
+        const cycleMap = { monthly: 'Mensual', yearly: 'Anual', one_time: 'Pago Único', custom: 'Personalizado' };
+        container.innerHTML = `<div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light small text-uppercase">
+                    <tr><th>Plan</th><th>Ciclo</th><th>Venta</th><th>Renovación</th><th>Setup Fee</th><th>Estado</th></tr>
+                </thead>
+                <tbody>
+                    ${data.response.plans.map(p => `
+                    <tr>
+                        <td class="fw-semibold">${p.plan_name}</td>
+                        <td><span class="badge badge-subtle-secondary">${cycleMap[p.billing_cycle] || p.billing_cycle}</span></td>
+                        <td class="fw-bold">$${parseFloat(p.sale_price).toFixed(2)}</td>
+                        <td class="text-muted">${p.billing_cycle !== 'one_time' ? '$' + parseFloat(p.renewal_price).toFixed(2) : '—'}</td>
+                        <td class="text-muted">${parseFloat(p.setup_fee) > 0 ? '$' + parseFloat(p.setup_fee).toFixed(2) : '—'}</td>
+                        <td><span class="badge badge-subtle-${p.is_active ? 'success' : 'secondary'}">${p.is_active ? 'Activo' : 'Inactivo'}</span></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table></div>`;
+    })
+    .catch(() => {});
+})();
+
+// ── Select2 para búsqueda de producto relacionado ─────────────
+// Sección 10 DOCUMENTACION_TECNICA.md: dropdownParent para z-index
+document.querySelector('[href="#tab-relations"]')?.addEventListener('shown.bs.tab', function () {
+    if (typeof $ !== 'undefined' && $('#related-product-id').data('select2') === undefined) {
+        $('#related-product-id').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Buscar producto...',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#related-product-id').parent(),
+            ajax: {
+                url: '<?= base_url('nat/catalog/products/list_ajax') ?>',
+                type: 'POST',
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    return {
+                        '<?= csrf_token() ?>': document.getElementById('csrf_token').value,
+                        search: { value: params.term || '' },
+                        start: 0, length: 20, draw: 1, filter_active: '1'
+                    };
+                },
+                processResults: function (data) {
+                    if (!data.data) return { results: [] };
+                    return {
+                        results: data.data.map(function (row) {
+                            const tmp = document.createElement('div');
+                            tmp.innerHTML = row[1];
+                            const name = tmp.querySelector('.fw-semibold')?.textContent?.trim() || 'Producto';
+                            const sku  = tmp.querySelector('.font-monospace')?.textContent?.trim() || '';
+                            // Excluir el producto actual de la lista
+                            return { id: row[0] === PRODUCT_ID_EDIT ? null : (row[0] || ''), text: name + (sku ? ' [' + sku + ']' : '') };
+                        }).filter(r => r.id)
+                    };
+                }
+            }
+        });
+        loadRelations();
+    }
+});
+
+// ── Cargar relaciones ─────────────────────────────────────────
+function loadRelations() {
+    const container = document.getElementById('relations-list');
+    fetch(RELATIONS_BASE + PRODUCT_ID_EDIT + '/relations', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success || !data.response.length) {
+            container.innerHTML = '<p class="text-muted fst-italic small">Sin relaciones configuradas.</p>';
+            return;
+        }
+        const typeMap = { gift: ['Regalo', 'success'], bundle: ['Bundle', 'primary'], upsell: ['Upsell', 'warning'] };
+        container.innerHTML = data.response.map(rel => {
+            const [label, color] = typeMap[rel.relation_type] || ['N/A', 'secondary'];
+            const period = parseInt(rel.duration_months) === 0 ? 'Permanente' : rel.duration_months + ' mes(es) gratis';
+            const price  = parseFloat(rel.override_price) > 0 ? '$' + parseFloat(rel.override_price).toFixed(2) : 'Precio original';
+            return `
+            <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2 bg-white">
+                <div class="d-flex gap-3 align-items-center">
+                    <span class="badge badge-subtle-${color}">${label}</span>
+                    <div>
+                        <div class="fw-semibold small">${rel.related_name || 'Producto'}</div>
+                        <small class="text-muted">${rel.related_sku} · <strong>${period}</strong> · ${price}</small>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger btn-delete-relation" data-id="${rel.id}" title="Eliminar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>`;
+        }).join('');
+    })
+    .catch(() => {});
+}
+
+// ── Guardar relación ──────────────────────────────────────────
+document.getElementById('relation-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.set('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+
+    const select2Val = typeof $ !== 'undefined' ? $('#related-product-id').val() : document.getElementById('related-product-id').value;
+    formData.set('related_product_id', select2Val || '');
+
+    if (!select2Val) { notifyShow('Selecciona un producto relacionado.', 'warning'); return; }
+
+    fetch(RELATIONS_BASE + PRODUCT_ID_EDIT + '/relations/store', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => {
+        const t = r.headers.get('<?= csrf_header() ?>');
+        if (t) document.getElementById('csrf_token').value = t;
+        return r.json();
+    })
+    .then(data => {
+        if (data.success) {
+            notifyShow(data.message, 'success');
+            loadRelations();
+            this.reset();
+            if (typeof $ !== 'undefined') $('#related-product-id').val(null).trigger('change');
+        } else {
+            notifyShow(data.message || 'Error al crear la relación', 'danger');
+        }
+    })
+    .catch(() => notifyShow('Error de conexión', 'danger'));
+});
+
+// ── Eliminar relación ─────────────────────────────────────────
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.btn-delete-relation');
+    if (!btn) return;
+    if (!confirm('¿Eliminar esta relación?')) return;
+
+    const formData = new FormData();
+    formData.append('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+
+    fetch(RELATIONS_DELETE + btn.dataset.id, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+    })
+    .then(r => {
+        const t = r.headers.get('<?= csrf_header() ?>');
+        if (t) document.getElementById('csrf_token').value = t;
+        return r.json();
+    })
+    .then(data => {
+        if (data.success) { notifyShow(data.message, 'success'); loadRelations(); }
+        else notifyShow(data.message || 'Error', 'danger');
+    })
+    .catch(() => notifyShow('Error de conexión', 'danger'));
+});
+
+// ── Ocultar duration_months para upsell ──────────────────────
+document.getElementById('relation-type').addEventListener('change', function () {
+    const isUpsell = this.value === 'upsell';
+    document.getElementById('duration-group').style.display = isUpsell ? 'none' : '';
+    if (isUpsell) document.getElementById('duration-months').value = '0';
+});
+</script>
+
+<?= $this->include('Catalog/Partials/offcanvas_plans') ?>
+<?php endif; ?>
 <?php $this->endSection(); ?>

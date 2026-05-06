@@ -162,7 +162,20 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
           // Imágenes de producto
           $routes->post('products/images/delete/(:num)', 'Catalog\CatalogProductController::delete_image/$1', ['as' => 'catalog.products.image.delete']);
           $routes->post('products/images/set_main/(:num)', 'Catalog\CatalogProductController::set_main_image/$1', ['as' => 'catalog.products.image.set_main']);
+
+          // ── Planes de Precios (Motor de Precios) ──
+          $routes->get('products/(:num)/plans', 'Catalog\CatalogPlanController::getPlans/$1', ['as' => 'catalog.plans.list']);
+          $routes->post('products/(:num)/plans/store', 'Catalog\CatalogPlanController::storePlan/$1', ['as' => 'catalog.plans.store']);
+          $routes->post('plans/update/(:num)', 'Catalog\CatalogPlanController::updatePlan/$1', ['as' => 'catalog.plans.update']);
+          $routes->post('plans/delete/(:num)', 'Catalog\CatalogPlanController::deletePlan/$1', ['as' => 'catalog.plans.delete']);
+          $routes->post('plans/toggle/(:num)', 'Catalog\CatalogPlanController::togglePlan/$1', ['as' => 'catalog.plans.toggle']);
+
+          // ── Relaciones de Productos (Bundles / Gifts / Upsells) ──
+          $routes->get('products/(:num)/relations', 'Catalog\CatalogPlanController::getRelations/$1', ['as' => 'catalog.relations.list']);
+          $routes->post('products/(:num)/relations/store', 'Catalog\CatalogPlanController::storeRelation/$1', ['as' => 'catalog.relations.store']);
+          $routes->post('relations/delete/(:num)', 'Catalog\CatalogPlanController::deleteRelation/$1', ['as' => 'catalog.relations.delete']);
       });
+
 
     }); // fin del grupo hr
 
