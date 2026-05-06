@@ -65,6 +65,24 @@
         </li>
       <?php endif; ?>
 
+      <?php if (auth()->user()->can('catalog.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/catalog*') ? 'active' : '' ?>">
+          <a data-bs-target="#catalog-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/catalog*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-boxes align-middle me-1"></i> <span class="align-middle">Catálogo</span>
+          </a>
+          <ul id="catalog-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/catalog*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/catalog/products*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/catalog/products') ?>">Productos</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/catalog/categories*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/catalog/categories') ?>">Categorías</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
       <li class="sidebar-header">
         Apps
       </li>

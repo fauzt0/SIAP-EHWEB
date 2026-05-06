@@ -3,34 +3,39 @@
 Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes, correcciones y próximos hitos del proyecto. Toda la referencia técnica ha sido trasladada a [DOCUMENTACION_TECNICA.md]
 ---
 
-## ❌ Tareas por hacer
+## 🛠️ En Desarrollo: Módulo de Productos y Servicios (Fase 1)
 
-- [ ] Generación de formatos PDF de baja: Carta de renuncia y Recibo de finiquito/liquidación. Este a diferencia del contrato, no se podra editar, solo genera el documento sin almacenarlo en base de datos o ruta interna del sistema. 
+- [ ] **[CATÁLOGO] Estructura Base:**
+    - [ ] Migración de `catalog_product_images`.
+    - [ ] Implementación de Modelos CI4 (Products, Categories, Plans, Attributes, Stock, Movements).
+    - [ ] CRUD de Categorías (Vista jerárquica y lógica de slugs).
+- [ ] **[PRODUCTOS] Gestión Maestra:**
+    - [ ] Listado de Productos (DataTables Server-Side).
+    - [ ] Formulario dinámico de Producto (Físico vs Servicio).
+    - [ ] Galería de imágenes con Glassmorphism UI.
+
+## ❌ Pendientes de Recursos Humanos
+
 - [ ] **[RRHH] Gestión Avanzada de Incidencias:**
-    - [ ] Implementar registro de retardos, faltas por enfermedad y permisos especiales.
-    - [ ] Sistema de justificaciones (carga de archivos/recetas médicas).
-    - [ ] Flujo de aprobación/rechazo por parte del administrador.
-    - [ ] Reporte mensual de incidencias por trabajador para prenómina.
+    - [ ] Registro de retardos, faltas por enfermedad y permisos.
+    - [ ] Carga de justificaciones y recetas médicas.
+    - [ ] Reporte mensual para prenómina.
+- [ ] Generación de formatos PDF de baja (Renuncia/Finiquito).
 
-## 🛠️ Mejoras y Refactorización
+## 🚀 Próximos Hitos
 
-- [ ] **[CONTRATOS] Optimización del Sistema de Plantillas:**
-    - [ ] Mejorar el editor de plantillas para soportar bloques condicionales.
-    - [ ] Implementar previsualización en tiempo real con datos de prueba.
-    - [ ] Versionado de plantillas base.
-
-- [ ] **[USUARIOS] Sección de Mi perfil:** Acceso directo a solicitud de vacaciones, alta de incidencias, acceso a historial de contratos, datos del usuario y formulario para actualizar ciertos datos (email, teléfono, datos del perfil). Los datos sensibles o laborales no se podrán actualizar, solo estarán disponibles para consulta.
-
-- [ ] **[UI/ESTÁNDAR] Estandarizar diseño de tablas (table-striped):** Asegurar que todas las tablas del sistema utilicen la clase `table-striped`.
-
-- [ ] **[TÉCNICO/CSRF] Corregir dependencia frágil del #csrf_token en `main_users.php`** (Ver detalles en TODO anterior).
+- [ ] Módulo de Ventas, Renovaciones y POS.
+- [ ] Módulo de Clientes / CRM.
+- [ ] Módulo de Proveedores.
+- [ ] Módulo de Contabilidad.
+- [ ] Módulo de Notificaciones.
+- [ ] Implementar módulo de Reportes base.
 
 ---
 
-## 🚀 Hitos Próximos
-- [ ] Módulo de notificaciones
-- [ ] Módulo de proveedores.
-- [ ] Módulo de productos y servicios.
-- [ ] Módulo de contabilidad. 
-- [ ] Módulo de Provisionamiento/Servicios Activos
-- [ ] Implementar módulo de Reportes base.
+## ⚙️ Refactorizaciones Pendientes
+
+- [ ] **[CONTRATOS]** Optimización de editor de plantillas y versionado.
+- [ ] **[USUARIOS]** Sección de "Mi Perfil" para empleados.
+- [ ] **[UI]** Estandarizar tablas a `table-striped`.
+- [ ] **[TÉCNICO]** Corregir dependencia de token CSRF en `main_users.php`.
