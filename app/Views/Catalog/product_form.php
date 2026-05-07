@@ -71,17 +71,17 @@
 
         <div class="row g-4">
 
-            {{-- ── COLUMNA PRINCIPAL ── --}}
+            <?php /* ── COLUMNA PRINCIPAL ── */ ?>
             <div class="col-lg-8">
 
-                {{-- Datos Generales --}}
+                <?php /* Datos Generales */ ?>
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom py-3">
                         <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2 text-primary"></i>Información General</h5>
                     </div>
                     <div class="card-body p-4">
 
-                        {{-- Selector de Tipo --}}
+                        <?php /* Selector de Tipo */ ?>
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-muted">Tipo de Producto</label>
                             <div class="d-flex gap-4 border-bottom pb-2" id="type-tabs">
@@ -122,7 +122,7 @@
                                        placeholder="HOST-001">
                                 <div class="form-text">Código único de identificación</div>
                             </div>
-                            {{-- Código de barras: solo para Físicos --}}
+                            <?php /* Código de barras: solo para Físicos */ ?>
                             <div class="col-md-4 section-physical" style="display: <?= ($response['isEdit'] && $response['product']->product_type === 'physical') ? '' : 'none' ?>">
                                 <label class="form-label fw-semibold">Código de Barras</label>
                                 <input type="text" class="form-control font-monospace" name="barcode"
@@ -155,7 +155,7 @@
                     </div>
                 </div>
 
-                {{-- Atributos Dinámicos (EAV) --}}
+                <?php /* Atributos Dinámicos (EAV) */ ?>
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
                         <h5 class="card-title mb-0"><i class="fas fa-list-ul me-2 text-info"></i>Especificaciones Técnicas</h5>
@@ -199,12 +199,12 @@
                     </div>
                 </div>
 
-            </div>{{-- /col-lg-8 --}}
+            </div><?php /* /col-lg-8 */ ?>
 
-            {{-- ── COLUMNA LATERAL ── --}}
+            <?php /* ── COLUMNA LATERAL ── */ ?>
             <div class="col-lg-4">
 
-                {{-- Publicación / Estado --}}
+                <?php /* Publicación / Estado */ ?>
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom py-3">
                         <h5 class="card-title mb-0"><i class="fas fa-toggle-on me-2 text-success"></i>Publicación</h5>
@@ -229,14 +229,14 @@
                     </div>
                 </div>
 
-                {{-- Galería de Imágenes --}}
+                <?php /* Galería de Imágenes */ ?>
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom py-3">
                         <h5 class="card-title mb-0"><i class="fas fa-images me-2 text-warning"></i>Galería</h5>
                     </div>
                     <div class="card-body p-3">
 
-                        {{-- Imágenes existentes --}}
+                        <?php /* Imágenes existentes */ ?>
                         <div class="row g-2 mb-3" id="existing-images">
                             <?php if (!empty($response['images'])): ?>
                                 <?php foreach ($response['images'] as $img): ?>
@@ -265,7 +265,7 @@
                             <?php endif; ?>
                         </div>
 
-                        {{-- Drop zone para nuevas imágenes --}}
+                        <?php /* Drop zone para nuevas imágenes */ ?>
                         <div class="img-gallery-drop d-flex flex-column align-items-center justify-content-center p-3"
                              id="img-dropzone">
                             <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
@@ -278,13 +278,13 @@
                             <p class="text-muted" style="font-size:.7rem;" class="mt-1">JPG, PNG o WEBP — Máx. 2MB c/u</p>
                         </div>
 
-                        {{-- Preview de imágenes a subir --}}
+                        <?php /* Preview de imágenes a subir */ ?>
                         <div class="row g-2 mt-2" id="preview-images"></div>
 
                     </div>
                 </div>
 
-            </div>{{-- /col-lg-4 --}}
+            </div><?php /* /col-lg-4 */ ?>
             <?php if ($response['isEdit']): ?>
             <div class="col-12">
                 <div class="card border-0 shadow-sm mb-4">
@@ -374,7 +374,7 @@
             </div>
             <?php endif; ?>
 
-        </div>{{-- /row --}}
+        </div><?php /* /row */ ?>
         </form>
 
     </div>

@@ -44,7 +44,11 @@ class CatalogCategoryController extends BaseCatalogController
         }
 
         $postData = $this->request->getPost();
-        $list = $this->categoryModel->get_datatables($postData);
+        
+        // Configurar el modelo temporalmente para que devuelva también las que sufrieron soft delete, 
+        // de esta forma podemos ver las inactivas que antes fueron borradas con la papelera
+        $list = $this->categoryModel->withDeleted()->get_datatables($postData);
+        
         $data = [];
         $no   = (int) $this->request->getPost('start');
 
@@ -69,8 +73,12 @@ class CatalogCategoryController extends BaseCatalogController
 
             // Acciones
             $actions = '<div class="d-flex gap-1">';
-            $actions .= '<button class="btn btn-sm btn-outline-warning btn-edit-category" data-id="' . $category->id . '" title="Editar"><i class="fas fa-edit"></i></button>';
-            $actions .= '<button class="btn btn-sm btn-outline-danger btn-delete-category" data-id="' . $category->id . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
+            if ($category->active) {
+                $actions .= '<button class="btn btn-sm btn-outline-warning btn-toggle-status" data-id="' . $category->id . '" data-status="0" title="Desactivar/Suspender"><i class="fas fa-ban"></i></button>';
+            } else {
+                $actions .= '<button class="btn btn-sm btn-outline-success btn-toggle-status" data-id="' . $category->id . '" data-status="1" title="Restaurar/Activar"><i class="fas fa-check-circle"></i></button>';
+            }
+            $actions .= '<button class="btn btn-sm btn-outline-primary btn-edit-category" data-id="' . $category->id . '" title="Editar"><i class="fas fa-edit"></i></button>';
             $actions .= '</div>';
             $row[] = $actions;
 
@@ -79,8 +87,8 @@ class CatalogCategoryController extends BaseCatalogController
 
         $output = [
             'draw'            => (int) $this->request->getPost('draw'),
-            'recordsTotal'    => $this->categoryModel->count_all(),
-            'recordsFiltered' => $this->categoryModel->count_filtered($postData),
+            'recordsTotal'    => $this->categoryModel->withDeleted()->count_all(),
+            'recordsFiltered' => $this->categoryModel->withDeleted()->count_filtered($postData),
             'data'            => $data,
         ];
 
@@ -96,7 +104,7 @@ class CatalogCategoryController extends BaseCatalogController
              throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $category = $this->categoryModel->find($id);
+        $category = $this->categoryModel->withDeleted()->find($id);
         if (!$category) {
             $this->setOutputError('Categoría no encontrada');
             return $this->response->setJSON($this->outputData);
@@ -174,6 +182,43 @@ class CatalogCategoryController extends BaseCatalogController
         (new UserActivityLogsModel())
             ->logActivity('delete_category', 'Eliminó (soft) categoría ID: ' . $id);
         $this->setOutputSuccess('Categoría eliminada correctamente');
+        return $this->response->setJSON($this->outputData);
+    }
+
+    /**
+     * Cambia el estatus (Activo/Inactivo) de una categoría
+     */
+    public function toggle_status_ajax(int $id)
+    {
+        if (!$this->request->isAJAX() || strtolower($this->request->getMethod()) !== 'post') {
+            return $this->response->setStatusCode(403);
+        }
+
+        $status = $this->request->getPost('status') ? 1 : 0;
+        
+        // Si se va a desactivar, verificar si tiene hijos activos
+        if ($status === 0) {
+            $activeChildren = $this->categoryModel->withDeleted()->where('parent_id', $id)->where('active', 1)->countAllResults();
+            if ($activeChildren > 0) {
+                $this->setOutputError('No se puede desactivar porque tiene subcategorías activas.');
+                return $this->response->setJSON($this->outputData);
+            }
+        }
+
+        // Al actualizar, usamos withDeleted() por si la categoría había sido eliminada con el botón de basura anterior
+        // y le quitamos la marca de deleted_at para restaurarla por completo
+        $updateData = ['active' => $status];
+        if ($status === 1) {
+            $updateData['deleted_at'] = null; // Restaurar soft delete
+        }
+        
+        $this->categoryModel->withDeleted()->update($id, $updateData);
+        
+        $actionName = $status ? 'activó/restauró' : 'desactivó/suspendió';
+        (new UserActivityLogsModel())
+            ->logActivity('update_category_status', ucfirst($actionName) . ' categoría ID: ' . $id);
+            
+        $this->setOutputSuccess('Categoría ' . ($status ? 'activada' : 'desactivada') . ' correctamente');
         return $this->response->setJSON($this->outputData);
     }
 }

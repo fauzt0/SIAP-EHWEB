@@ -25,45 +25,63 @@ $this->endSection(); ?>
 
         <div class="row">
             <div class="col-12">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white py-3">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h5 class="card-title mb-0"><i class="fas fa-tags me-2 text-primary"></i>Listado de Categorías</h5>
-                            </div>
-                            <div class="col-auto">
-                                <button type="button" class="btn btn-primary btn-lg shadow-sm" id="btn-nueva-categoria">
-                                    <i class="fas fa-plus me-1"></i> Nueva Categoría
-                                </button>
+                <div class="card">
+                    <div class="card-body">
+
+                        <!-- Botones superiores -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <button type="button" class="btn btn-light btn-lg me-2"><i class="fas fa-download"></i> Export</button>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-primary btn-lg" id="btn-nueva-categoria">
+                                            <i class="fas fa-plus"></i> Nueva Categoría
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="card-body">
-                        <!-- Filtros Rápidos -->
-                        <div class="row mb-4">
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                    <input type="text" class="form-control bg-light border-start-0" id="category-search" placeholder="Buscar categoría...">
+
+                        <!-- Fila de filtros -->
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <div class="input-group input-group-search">
+                                    <input type="text" class="form-control" id="category-search" placeholder="Buscar categoría...">
+                                    <button class="btn" type="button">
+                                        <i class="fas fa-search align-middle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-8 mb-2 mb-md-0">
+                                <div class="d-flex gap-2 flex-wrap align-items-center justify-content-md-end">
+                                    <select class="form-select" id="filter-active" style="max-width: 150px;">
+                                        <option value="1">Activos</option>
+                                        <option value="0">Inactivos</option>
+                                        <option value="">Todos</option>
+                                    </select>
+                                    <button class="btn btn-outline-secondary" id="btn-clear-filters" title="Limpiar filtros">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Tabla DataTable -->
-                        <div class="table-responsive">
-                            <table id="datatables-categories" class="table table-striped w-100 align-middle">
-                                <thead class="table-light text-uppercase small fw-bold">
-                                    <tr>
-                                        <th>Categoría</th>
-                                        <th>Slug</th>
-                                        <th>Dependencia</th>
-                                        <th>Estatus</th>
-                                        <th style="width: 100px;">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
+                        <table id="datatables-categories" class="table table-striped w-100">
+                            <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th>Slug</th>
+                                    <th>Dependencia</th>
+                                    <th>Estatus</th>
+                                    <th style="width: 100px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
                     </div>
                 </div>
             </div>
@@ -76,8 +94,8 @@ $this->endSection(); ?>
 <div class="modal fade" id="modal-category" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-dark text-white py-3">
-                <h5 class="modal-title"><i class="fas fa-tag me-2"></i><span id="modal-title-text">Nueva Categoría</span></h5>
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title text-white"><i class="fas fa-tag me-2"></i><span id="modal-title-text" class="text-white">Nueva Categoría</span></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="form-category">
@@ -109,8 +127,15 @@ $this->endSection(); ?>
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Icono (FontAwesome)</label>
                                 <div class="input-group">
-                                    <span class="input-group-text bg-light" id="icon-preview"><i class="fas fa-folder"></i></span>
-                                    <input type="text" class="form-control" name="icon" id="cat-icon" value="fas fa-folder" placeholder="fas fa-box">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="icon-preview">
+                                        <i class="fas fa-folder"></i>
+                                    </button>
+                                    <ul class="dropdown-menu icon-selector-dropdown" style="max-height: 200px; overflow-y: auto; width: 250px;">
+                                        <li><div class="p-2 d-flex flex-wrap gap-2 justify-content-center" id="icon-list-container">
+                                            <!-- Iconos cargados vía JS -->
+                                        </div></li>
+                                    </ul>
+                                    <input type="text" class="form-control" name="icon" id="cat-icon" value="fas fa-folder" readonly>
                                 </div>
                             </div>
                         </div>
@@ -162,6 +187,7 @@ $this->endSection(); ?>
                 type: 'POST',
                 data: function(d) {
                     d['<?= csrf_token() ?>'] = document.getElementById('csrf_token').value;
+                    d['active'] = document.getElementById('filter-active').value;
                 }
             },
             columns: [
@@ -194,12 +220,77 @@ $this->endSection(); ?>
                 if (window.categoriesDataTable) window.categoriesDataTable.search(val).draw();
             }, 400);
         });
+
+        // Eventos de filtros
+        $('#filter-active').on('change', function() {
+            if (window.categoriesDataTable) window.categoriesDataTable.ajax.reload();
+        });
+
+        $('#btn-clear-filters').on('click', function() {
+            $('#filter-active').val('1');
+            $('#category-search').val('');
+            if (window.categoriesDataTable) {
+                window.categoriesDataTable.search('');
+                window.categoriesDataTable.ajax.reload();
+            }
+        });
     }
 
     function setupCategoryActions() {
         const modalEl = document.getElementById('modal-category');
         const modal = new bootstrap.Modal(modalEl);
         const form = document.getElementById('form-category');
+
+        // Lista de iconos comunes de FontAwesome para el selector (Uso General ERP)
+        const commonIcons = [
+            // General & Folder
+            'fas fa-folder', 'fas fa-folder-open', 'fas fa-box', 'fas fa-boxes', 'fas fa-tags', 'fas fa-tag', 'fas fa-bookmark',
+            // Comercio & Ventas
+            'fas fa-shopping-cart', 'fas fa-shopping-bag', 'fas fa-shopping-basket', 'fas fa-store', 'fas fa-store-alt', 'fas fa-cash-register',
+            // Tecnología
+            'fas fa-laptop', 'fas fa-mobile-alt', 'fas fa-tablet-alt', 'fas fa-desktop', 'fas fa-server', 'fas fa-cloud', 'fas fa-database', 
+            'fas fa-code', 'fas fa-microchip', 'fas fa-wifi', 'fas fa-bolt', 'fas fa-hdd', 'fas fa-print', 'fas fa-mouse',
+            // Herramientas & Configuración
+            'fas fa-tools', 'fas fa-cogs', 'fas fa-cog', 'fas fa-wrench', 'fas fa-hammer', 'fas fa-screwdriver', 'fas fa-paint-brush', 
+            'fas fa-ruler-combined', 'fas fa-briefcase', 'fas fa-archive',
+            // Usuarios & Comunicación
+            'fas fa-user', 'fas fa-users', 'fas fa-user-tie', 'fas fa-user-graduate', 'fas fa-id-card', 'fas fa-envelope', 'fas fa-phone', 
+            'fas fa-headset', 'fas fa-comments', 'fas fa-bell',
+            // Finanzas
+            'fas fa-dollar-sign', 'fas fa-euro-sign', 'fas fa-credit-card', 'fas fa-wallet', 'fas fa-piggy-bank', 'fas fa-university', 
+            'fas fa-balance-scale', 'fas fa-calculator', 'fas fa-percentage', 'fas fa-chart-line', 'fas fa-chart-bar', 'fas fa-chart-pie',
+            // Logística & Transporte
+            'fas fa-truck', 'fas fa-shipping-fast', 'fas fa-warehouse', 'fas fa-route', 'fas fa-barcode', 'fas fa-qrcode', 'fas fa-map-marker-alt', 
+            'fas fa-globe', 'fas fa-car', 'fas fa-bus', 'fas fa-plane', 'fas fa-ship',
+            // Oficina & Documentos
+            'fas fa-file-alt', 'fas fa-file-invoice', 'fas fa-file-pdf', 'fas fa-file-excel', 'fas fa-copy', 'fas fa-paste', 'fas fa-calendar-alt', 
+            'fas fa-clock', 'fas fa-history', 'fas fa-tasks',
+            // Salud
+            'fas fa-heartbeat', 'fas fa-stethoscope', 'fas fa-first-aid', 'fas fa-pills', 'fas fa-hospital', 'fas fa-user-md',
+            // Industria & Educación
+            'fas fa-factory', 'fas fa-industry', 'fas fa-flask', 'fas fa-atom', 'fas fa-book', 'fas fa-graduation-cap', 'fas fa-school', 
+            'fas fa-lightbulb', 'fas fa-rocket',
+            // Hogar & Estilo de Vida
+            'fas fa-home', 'fas fa-building', 'fas fa-couch', 'fas fa-bed', 'fas fa-utensils', 'fas fa-coffee', 'fas fa-glass-martini', 
+            'fas fa-gift', 'fas fa-heart', 'fas fa-star', 'fas fa-leaf', 'fas fa-fire', 'fas fa-tint', 'fas fa-camera', 'fas fa-video',
+            // Otros
+            'fas fa-key', 'fas fa-lock', 'fas fa-shield-alt', 'fas fa-search', 'fas fa-info-circle', 'fas fa-check-circle', 
+            'fas fa-exclamation-triangle', 'fas fa-question-circle', 'fas fa-trash-alt'
+        ];
+
+        const iconContainer = document.getElementById('icon-list-container');
+        commonIcons.forEach(icon => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-light border p-2';
+            btn.title = icon;
+            btn.innerHTML = `<i class="${icon}"></i>`;
+            btn.onclick = function() {
+                document.getElementById('cat-icon').value = icon;
+                document.getElementById('icon-preview').innerHTML = `<i class="${icon}"></i>`;
+            };
+            iconContainer.appendChild(btn);
+        });
 
         // Botón Nueva Categoría
         document.getElementById('btn-nueva-categoria').addEventListener('click', function() {
@@ -208,11 +299,6 @@ $this->endSection(); ?>
             document.getElementById('modal-title-text').innerText = 'Nueva Categoría';
             document.getElementById('icon-preview').innerHTML = '<i class="fas fa-folder"></i>';
             modal.show();
-        });
-
-        // Preview de Icono en tiempo real
-        document.getElementById('cat-icon').addEventListener('input', function() {
-            document.getElementById('icon-preview').innerHTML = `<i class="${this.value}"></i>`;
         });
 
         // Guardar Categoría
@@ -320,6 +406,41 @@ $this->endSection(); ?>
                         notifyShow(data.message, 'danger');
                     }
                 });
+                return;
+            }
+
+            // Suspender / Restaurar
+            const btnToggle = e.target.closest('.btn-toggle-status');
+            if (btnToggle) {
+                const id = btnToggle.dataset.id;
+                const status = btnToggle.dataset.status;
+                const actionText = status == '1' ? 'restaurar/activar' : 'suspender/desactivar';
+                
+                if (!confirm(`¿Estás seguro de ${actionText} esta categoría?`)) return;
+
+                const formData = new FormData();
+                formData.append('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+                formData.append('status', status);
+
+                fetch('<?= base_url('nat/catalog/categories/toggle_status/') ?>' + id, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                })
+                .then(r => {
+                    const newCsrf = r.headers.get('<?= csrf_header() ?>');
+                    if (newCsrf) document.getElementById('csrf_token').value = newCsrf;
+                    return r.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        notifyShow(data.message, 'success');
+                        if (window.categoriesDataTable) window.categoriesDataTable.ajax.reload(null, false);
+                    } else {
+                        notifyShow(data.message, 'danger');
+                    }
+                });
+                return;
             }
         });
     }

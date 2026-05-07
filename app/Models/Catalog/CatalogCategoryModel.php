@@ -41,6 +41,10 @@ class CatalogCategoryModel extends Model
             ->select('catalog_categories.*, p.name as parent_name')
             ->join('catalog_categories p', 'p.id = catalog_categories.parent_id', 'left');
             
+        if (isset($postData['active']) && $postData['active'] !== '') {
+            $this->builder()->where('catalog_categories.active', (int)$postData['active']);
+        }
+            
         $this->_apply_datatables_filters($postData);
     }
 

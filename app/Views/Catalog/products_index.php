@@ -3,13 +3,13 @@
 <?php $this->section('title'); echo esc($pageTitle); $this->endSection(); ?>
 
 <?php $this->section('main') ?>
-{{-- Token CSRF global — Sección 2 DOCUMENTACION_TECNICA.md --}}
+<?php /* Token CSRF global — Sección 2 DOCUMENTACION_TECNICA.md */ ?>
 <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token">
 
 <main class="content">
     <div class="container-fluid p-0">
 
-        {{-- Encabezado + Breadcrumb --}}
+        <?php /* Encabezado + Breadcrumb */ ?>
         <div class="row mb-2 mb-xl-3">
             <div class="col-auto d-none d-sm-block">
                 <h1 class="h3 mb-3"><?= esc($pageTitle) ?></h1>
@@ -21,8 +21,8 @@
             </div>
         </div>
 
-        {{-- Cards de Estadísticas --}}
-        <div class="row g-3 mb-4">
+        <?php /* Cards de Estadísticas — Estilo Unificado con HR/Usuarios */ ?>
+        <div class="row mb-3">
             <?php
             $cards = [
                 ['label' => 'Total Productos', 'key' => 'total',    'color' => 'primary',   'icon' => 'fa-cubes'],
@@ -31,100 +31,107 @@
                 ['label' => 'Digitales',        'key' => 'digital',  'color' => 'secondary', 'icon' => 'fa-key'],
             ];
             foreach ($cards as $card): ?>
-            <div class="col-6 col-md-3">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="flex-shrink-0 rounded-3 p-3 bg-<?= $card['color'] ?> bg-opacity-10">
-                            <i class="fas <?= $card['icon'] ?> fa-lg text-<?= $card['color'] ?>"></i>
+            <div class="col-12 col-sm-6 col-md-3 d-flex">
+                <div class="card flex-fill">
+                    <div class="card-header pb-0">
+                        <h5 class="card-title mb-0 mt-1"><?= $card['label'] ?></h5>
+                    </div>
+                    <div class="card-body my-0 pt-0">
+                        <div class="d-flex align-items-center mb-3 mt-2">
+                            <div class="flex-grow-1">
+                                <h3 class="mb-0 fw-light"><?= number_format($response['stats'][$card['key']] ?? 0) ?></h3>
+                            </div>
+                            <div class="ms-auto">
+                                <div class="stat text-<?= $card['color'] ?>">
+                                    <i class="fas <?= $card['icon'] ?> align-middle"></i>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="h4 mb-0 fw-bold"><?= number_format($response['stats'][$card['key']] ?? 0) ?></div>
-                            <small class="text-muted"><?= $card['label'] ?></small>
+                        <div class="progress progress-sm shadow-sm mb-1">
+                            <div class="progress-bar bg-<?= $card['color'] ?>" role="progressbar" style="width: 100%"></div>
                         </div>
+                        <small class="text-muted">Total registrados</small>
                     </div>
                 </div>
             </div>
             <?php endforeach; ?>
         </div>
 
-        {{-- Tabla principal --}}
         <div class="row">
             <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-boxes me-2 text-primary"></i>Catálogo de Productos y Servicios
-                                </h5>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= route_to('catalog.products.create') ?>" class="btn btn-primary shadow-sm">
-                                    <i class="fas fa-plus me-1"></i> Nuevo Producto
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                <div class="card">
                     <div class="card-body">
 
-                        {{-- Filtros --}}
-                        <div class="row g-2 mb-4">
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="fas fa-search text-muted"></i>
-                                    </span>
-                                    <input type="text" class="form-control bg-light border-start-0"
-                                           id="product-search" placeholder="Buscar por nombre, SKU...">
+                        <!-- Botones superiores -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <button type="button" class="btn btn-light btn-lg me-2"><i class="fas fa-download"></i> Export</button>
+                                    </div>
+                                    <div>
+                                        <a href="<?= route_to('catalog.products.create') ?>" class="btn btn-primary btn-lg">
+                                            <i class="fas fa-plus"></i> Nuevo Producto
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-2">
-                                <select class="form-select" id="filter-type">
-                                    <option value="">Todos los tipos</option>
-                                    <option value="service">Servicio</option>
-                                    <option value="physical">Físico</option>
-                                    <option value="digital">Digital</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select" id="filter-category">
-                                    <option value="">Todas las categorías</option>
-                                    <?php foreach ($response['categories'] as $cat): ?>
-                                    <option value="<?= $cat->id ?>"><?= esc($cat->name) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select class="form-select" id="filter-active">
-                                    <option value="1">Activos</option>
-                                    <option value="0">Inactivos</option>
-                                    <option value="">Todos</option>
-                                </select>
-                            </div>
-                            <div class="col-md-1">
-                                <button class="btn btn-outline-secondary w-100" id="btn-clear-filters" title="Limpiar filtros">
-                                    <i class="fas fa-times"></i>
-                                </button>
                             </div>
                         </div>
 
-                        {{-- DataTable --}}
-                        <div class="table-responsive">
-                            <table id="datatables-products" class="table table-striped align-middle w-100">
-                                <thead class="table-light text-uppercase small fw-bold">
-                                    <tr>
-                                        <th style="width:60px;">Imagen</th>
-                                        <th>Producto / SKU</th>
-                                        <th>Categoría</th>
-                                        <th>Tipo</th>
-                                        <th>Planes</th>
-                                        <th>Estatus</th>
-                                        <th style="width:120px;">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                        <!-- Fila de filtros -->
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-2 mb-md-0">
+                                <div class="input-group input-group-search">
+                                    <input type="text" class="form-control" id="product-search" placeholder="Buscar por nombre, SKU...">
+                                    <button class="btn" type="button">
+                                        <i class="fas fa-search align-middle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-8 mb-2 mb-md-0">
+                                <div class="d-flex gap-2 flex-wrap align-items-center justify-content-md-end">
+                                    <select class="form-select" id="filter-type" style="max-width: 180px;">
+                                        <option value="">Todos los tipos</option>
+                                        <option value="service">Servicio</option>
+                                        <option value="physical">Físico</option>
+                                        <option value="digital">Digital</option>
+                                    </select>
+
+                                    <select class="form-select" id="filter-category" style="max-width: 180px;">
+                                        <option value="">Todas las categorías</option>
+                                        <?php foreach ($response['categories'] as $cat): ?>
+                                        <option value="<?= $cat->id ?>"><?= esc($cat->name) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+
+                                    <select class="form-select" id="filter-active" style="max-width: 150px;">
+                                        <option value="1">Activos</option>
+                                        <option value="0">Inactivos</option>
+                                        <option value="">Todos</option>
+                                    </select>
+
+                                    <button class="btn btn-outline-secondary" id="btn-clear-filters" title="Limpiar filtros">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Tabla DataTable -->
+                        <table id="datatables-products" class="table table-striped w-100">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">Imagen</th>
+                                    <th>Producto / SKU</th>
+                                    <th>Categoría</th>
+                                    <th>Tipo</th>
+                                    <th>Planes</th>
+                                    <th>Estatus</th>
+                                    <th style="width:120px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
 
                     </div>
                 </div>

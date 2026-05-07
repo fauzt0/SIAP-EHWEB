@@ -178,6 +178,10 @@ class AuthGroups extends ShieldAuthGroups
         'hr.delete'           => 'Can delete worker records (soft delete)',
         'hr.payroll'          => 'Can manage payroll',
         'hr.reports'          => 'Can generate HR reports',
+
+        // Catalog module
+        'catalog.access'      => 'Can access catalog module',
+        'catalog.manage'      => 'Can manage products and categories',
     ];
 
     /**
@@ -198,6 +202,7 @@ class AuthGroups extends ShieldAuthGroups
             'sales.*',
             'purchasing.*',
             'hr.*',
+            'catalog.*',
         ],
         'admin' => [
             'admin.*',
@@ -207,6 +212,7 @@ class AuthGroups extends ShieldAuthGroups
             'sales.*',
             'purchasing.*',
             'hr.*',
+            'catalog.*',
         ],
         'editor' => [
             'admin.access',
@@ -239,6 +245,7 @@ class AuthGroups extends ShieldAuthGroups
         'inventory' => [
             'admin.access',
             'inventory.*',
+            'catalog.*',
             'users.view',
         ],
         'sales' => [

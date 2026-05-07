@@ -140,44 +140,44 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
           $routes->post('save-manual/(:num)', 'HR\WorkerContractController::saveManualContract/$1', ['as' => 'hr.contracts.save_manual']);
       });
 
-      // ── Catálogo de Productos y Servicios ──────────────────────────
-      $routes->group('catalog', ['filter' => 'permission:catalog.access'], function ($routes) {
-          
-          // Categorías
-          $routes->get('categories', 'Catalog\CatalogCategoryController::index', ['as' => 'catalog.categories']);
-          $routes->post('categories/list_ajax', 'Catalog\CatalogCategoryController::categories_ajax', ['as' => 'catalog.categories_ajax']);
-          $routes->get('categories/get_ajax/(:num)', 'Catalog\CatalogCategoryController::get_ajax/$1', ['as' => 'catalog.categories.get']);
-          $routes->post('categories/save', 'Catalog\CatalogCategoryController::save_ajax', ['as' => 'catalog.categories.save']);
-          $routes->post('categories/delete/(:num)', 'Catalog\CatalogCategoryController::delete_ajax/$1', ['as' => 'catalog.categories.delete']);
-
-          // Productos
-          $routes->get('products', 'Catalog\CatalogProductController::index', ['as' => 'catalog.products']);
-          $routes->post('products/list_ajax', 'Catalog\CatalogProductController::products_ajax', ['as' => 'catalog.products_ajax']);
-          $routes->get('products/new', 'Catalog\CatalogProductController::create', ['as' => 'catalog.products.create']);
-          $routes->post('products/store', 'Catalog\CatalogProductController::store', ['as' => 'catalog.products.store']);
-          $routes->get('products/edit/(:num)', 'Catalog\CatalogProductController::edit/$1', ['as' => 'catalog.products.edit']);
-          $routes->post('products/update/(:num)', 'Catalog\CatalogProductController::update/$1', ['as' => 'catalog.products.update']);
-          $routes->post('products/delete/(:num)', 'Catalog\CatalogProductController::delete/$1', ['as' => 'catalog.products.delete']);
-
-          // Imágenes de producto
-          $routes->post('products/images/delete/(:num)', 'Catalog\CatalogProductController::delete_image/$1', ['as' => 'catalog.products.image.delete']);
-          $routes->post('products/images/set_main/(:num)', 'Catalog\CatalogProductController::set_main_image/$1', ['as' => 'catalog.products.image.set_main']);
-
-          // ── Planes de Precios (Motor de Precios) ──
-          $routes->get('products/(:num)/plans', 'Catalog\CatalogPlanController::getPlans/$1', ['as' => 'catalog.plans.list']);
-          $routes->post('products/(:num)/plans/store', 'Catalog\CatalogPlanController::storePlan/$1', ['as' => 'catalog.plans.store']);
-          $routes->post('plans/update/(:num)', 'Catalog\CatalogPlanController::updatePlan/$1', ['as' => 'catalog.plans.update']);
-          $routes->post('plans/delete/(:num)', 'Catalog\CatalogPlanController::deletePlan/$1', ['as' => 'catalog.plans.delete']);
-          $routes->post('plans/toggle/(:num)', 'Catalog\CatalogPlanController::togglePlan/$1', ['as' => 'catalog.plans.toggle']);
-
-          // ── Relaciones de Productos (Bundles / Gifts / Upsells) ──
-          $routes->get('products/(:num)/relations', 'Catalog\CatalogPlanController::getRelations/$1', ['as' => 'catalog.relations.list']);
-          $routes->post('products/(:num)/relations/store', 'Catalog\CatalogPlanController::storeRelation/$1', ['as' => 'catalog.relations.store']);
-          $routes->post('relations/delete/(:num)', 'Catalog\CatalogPlanController::deleteRelation/$1', ['as' => 'catalog.relations.delete']);
-      });
-
-
     }); // fin del grupo hr
+
+    // ── Catálogo de Productos y Servicios ──────────────────────────
+    $routes->group('catalog', ['filter' => 'permission:catalog.access'], function ($routes) {
+        
+        // Categorías
+        $routes->get('categories', 'Catalog\CatalogCategoryController::index', ['as' => 'catalog.categories']);
+        $routes->post('categories/list_ajax', 'Catalog\CatalogCategoryController::categories_ajax', ['as' => 'catalog.categories_ajax']);
+        $routes->get('categories/get_ajax/(:num)', 'Catalog\CatalogCategoryController::get_ajax/$1', ['as' => 'catalog.categories.get']);
+        $routes->post('categories/save', 'Catalog\CatalogCategoryController::save_ajax', ['as' => 'catalog.categories.save']);
+        $routes->post('categories/delete/(:num)', 'Catalog\CatalogCategoryController::delete_ajax/$1', ['as' => 'catalog.categories.delete']);
+        $routes->post('categories/toggle_status/(:num)', 'Catalog\CatalogCategoryController::toggle_status_ajax/$1', ['as' => 'catalog.categories.toggle_status']);
+
+        // Productos
+        $routes->get('products', 'Catalog\CatalogProductController::index', ['as' => 'catalog.products']);
+        $routes->post('products/list_ajax', 'Catalog\CatalogProductController::products_ajax', ['as' => 'catalog.products_ajax']);
+        $routes->get('products/new', 'Catalog\CatalogProductController::create', ['as' => 'catalog.products.create']);
+        $routes->post('products/store', 'Catalog\CatalogProductController::store', ['as' => 'catalog.products.store']);
+        $routes->get('products/edit/(:num)', 'Catalog\CatalogProductController::edit/$1', ['as' => 'catalog.products.edit']);
+        $routes->post('products/update/(:num)', 'Catalog\CatalogProductController::update/$1', ['as' => 'catalog.products.update']);
+        $routes->post('products/delete/(:num)', 'Catalog\CatalogProductController::delete/$1', ['as' => 'catalog.products.delete']);
+
+        // Imágenes de producto
+        $routes->post('products/images/delete/(:num)', 'Catalog\CatalogProductController::delete_image/$1', ['as' => 'catalog.products.image.delete']);
+        $routes->post('products/images/set_main/(:num)', 'Catalog\CatalogProductController::set_main_image/$1', ['as' => 'catalog.products.image.set_main']);
+
+        // ── Planes de Precios (Motor de Precios) ──
+        $routes->get('products/(:num)/plans', 'Catalog\CatalogPlanController::getPlans/$1', ['as' => 'catalog.plans.list']);
+        $routes->post('products/(:num)/plans/store', 'Catalog\CatalogPlanController::storePlan/$1', ['as' => 'catalog.plans.store']);
+        $routes->post('plans/update/(:num)', 'Catalog\CatalogPlanController::updatePlan/$1', ['as' => 'catalog.plans.update']);
+        $routes->post('plans/delete/(:num)', 'Catalog\CatalogPlanController::deletePlan/$1', ['as' => 'catalog.plans.delete']);
+        $routes->post('plans/toggle/(:num)', 'Catalog\CatalogPlanController::togglePlan/$1', ['as' => 'catalog.plans.toggle']);
+
+        // ── Relaciones de Productos (Bundles / Gifts / Upsells) ──
+        $routes->get('products/(:num)/relations', 'Catalog\CatalogPlanController::getRelations/$1', ['as' => 'catalog.relations.list']);
+        $routes->post('products/(:num)/relations/store', 'Catalog\CatalogPlanController::storeRelation/$1', ['as' => 'catalog.relations.store']);
+        $routes->post('relations/delete/(:num)', 'Catalog\CatalogPlanController::deleteRelation/$1', ['as' => 'catalog.relations.delete']);
+    });
 
   });//fin del grupo protegido por sesion
 
