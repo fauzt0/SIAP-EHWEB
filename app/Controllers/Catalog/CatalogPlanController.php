@@ -17,8 +17,8 @@ use App\Models\Users\UserActivityLogsModel;
  */
 class CatalogPlanController extends BaseCatalogController
 {
-    private CatalogPlanModel $planModel;
-    private CatalogProductRelationModel $relationModel;
+    protected $planModel;
+    protected $relationModel;
 
     public function initController(
         \CodeIgniter\HTTP\RequestInterface $request,

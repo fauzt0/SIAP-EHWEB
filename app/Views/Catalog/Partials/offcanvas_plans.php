@@ -17,8 +17,8 @@
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-plans"
      aria-labelledby="offcanvasPlansLabel" style="width: 580px;">
     <div class="offcanvas-header border-bottom bg-dark text-white py-3">
-        <h5 class="offcanvas-title" id="offcanvasPlansLabel">
-            <i class="fas fa-tags me-2"></i>Planes de Precios
+        <h5 class="offcanvas-title text-white" id="offcanvasPlansLabel">
+            <i class="fas fa-tags me-2 text-white"></i>Planes de Precios
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
     </div>
@@ -121,7 +121,14 @@
 
         <!-- Listado de planes del producto -->
         <div class="p-4">
-            <h6 class="fw-bold mb-3"><i class="fas fa-list me-1 text-secondary"></i>Planes Configurados</h6>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0"><i class="fas fa-list me-1 text-secondary"></i>Planes Configurados</h6>
+                <select class="form-select form-select-sm w-auto" id="filter-plans-status">
+                    <option value="all">Todos</option>
+                    <option value="1">Activos</option>
+                    <option value="0">Inactivos</option>
+                </select>
+            </div>
             <div id="plans-list">
                 <div class="text-center text-muted py-4">
                     <i class="fas fa-spinner fa-spin fa-lg mb-2 d-block"></i>Cargando planes...
@@ -151,6 +158,7 @@ const cycleLabels = {
 };
 
 let currentProductId = null;
+let currentPlansData = [];
 
 // ── Apertura del offcanvas desde el DataTable ──────────────
 document.addEventListener('click', function (e) {
@@ -162,6 +170,7 @@ document.addEventListener('click', function (e) {
     document.getElementById('plans-product-name').textContent = btn.dataset.name;
     document.getElementById('plans-product-sku').textContent  = '';
     document.getElementById('plan-product-id').value          = currentProductId;
+    document.getElementById('filter-plans-status').value      = 'all'; // Resetear filtro
 
     resetPlanForm();
     loadPlans(currentProductId);
@@ -189,20 +198,35 @@ function loadPlans(productId) {
         const icon = { service: 'fa-cloud', physical: 'fa-box', digital: 'fa-key' }[product.product_type] || 'fa-tag';
         document.getElementById('plans-product-icon').className  = 'fas ' + icon + ' fa-lg text-primary';
 
-        if (!plans.length) {
-            container.innerHTML = '<p class="text-muted fst-italic small">Sin planes configurados. Agrega el primero arriba.</p>';
-            return;
-        }
+        currentPlansData = plans;
+        renderPlans();
+    })
+    .catch(() => { container.innerHTML = '<p class="text-danger">Error de conexión.</p>'; });
+}
 
-        container.innerHTML = plans.map(plan => `
+function renderPlans() {
+    const container = document.getElementById('plans-list');
+    const filterVal = document.getElementById('filter-plans-status').value;
+    
+    let filteredPlans = currentPlansData;
+    if (filterVal !== 'all') {
+        filteredPlans = currentPlansData.filter(p => p.is_active == filterVal);
+    }
+
+    if (!filteredPlans.length) {
+        container.innerHTML = '<p class="text-muted fst-italic small">No se encontraron planes con el filtro actual.</p>';
+        return;
+    }
+
+    container.innerHTML = filteredPlans.map(plan => `
             <div class="card border-0 shadow-sm mb-2" id="plan-card-${plan.id}">
                 <div class="card-body py-2 px-3">
                     <div class="d-flex align-items-start justify-content-between">
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center gap-2 mb-1">
                                 <span class="fw-bold small">${plan.plan_name}</span>
-                                <span class="badge badge-subtle-${plan.is_active ? 'success' : 'secondary'} ms-1">
-                                    ${plan.is_active ? 'Activo' : 'Inactivo'}
+                                <span class="badge badge-subtle-${plan.is_active == 1 ? 'success' : 'secondary'} ms-1">
+                                    ${plan.is_active == 1 ? 'Activo' : 'Inactivo'}
                                 </span>
                                 <span class="badge badge-subtle-info">${cycleLabels[plan.billing_cycle] || plan.billing_cycle}</span>
                             </div>
@@ -216,8 +240,8 @@ function loadPlans(productId) {
                             <button class="btn btn-xs btn-outline-warning btn-edit-plan" data-plan='${JSON.stringify(plan)}' title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-xs btn-outline-secondary btn-toggle-plan" data-id="${plan.id}" title="${plan.is_active ? 'Desactivar' : 'Activar'}">
-                                <i class="fas ${plan.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                            <button class="btn btn-xs btn-outline-secondary btn-toggle-plan" data-id="${plan.id}" title="${plan.is_active == 1 ? 'Desactivar' : 'Activar'}">
+                                <i class="fas ${plan.is_active == 1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                             </button>
                             <button class="btn btn-xs btn-outline-danger btn-delete-plan" data-id="${plan.id}" title="Eliminar">
                                 <i class="fas fa-trash"></i>
@@ -227,9 +251,9 @@ function loadPlans(productId) {
                 </div>
             </div>
         `).join('');
-    })
-    .catch(() => { container.innerHTML = '<p class="text-danger">Error de conexión.</p>'; });
 }
+
+document.getElementById('filter-plans-status').addEventListener('change', renderPlans);
 
 // ── Guardar Plan (crear o editar) ─────────────────────────
 document.getElementById('plan-form').addEventListener('submit', function (e) {

@@ -128,6 +128,6 @@ class CatalogPlanModel extends Model
         $plan = $this->find($id);
         if (!$plan) return false;
 
-        return (bool) $this->update($id, ['is_active' => $plan->is_active ? 0 : 1]);
+        return (bool) $this->builder()->where('id', $id)->update(['is_active' => $plan->is_active ? 0 : 1]);
     }
 }
