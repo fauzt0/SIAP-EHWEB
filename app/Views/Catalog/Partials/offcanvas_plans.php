@@ -240,7 +240,7 @@ function renderPlans() {
                             <button class="btn btn-xs btn-outline-warning btn-edit-plan" data-plan='${JSON.stringify(plan)}' title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-xs btn-outline-secondary btn-toggle-plan" data-id="${plan.id}" title="${plan.is_active == 1 ? 'Desactivar' : 'Activar'}">
+                            <button class="btn btn-xs ${plan.is_active == 1 ? 'btn-outline-danger' : 'btn-outline-success'} btn-toggle-plan" data-id="${plan.id}" title="${plan.is_active == 1 ? 'Desactivar' : 'Activar'}">
                                 <i class="fas ${plan.is_active == 1 ? 'fa-eye-slash' : 'fa-eye'}"></i>
                             </button>
                             <button class="btn btn-xs btn-outline-danger btn-delete-plan" data-id="${plan.id}" title="Eliminar">

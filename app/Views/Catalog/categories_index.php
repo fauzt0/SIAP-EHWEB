@@ -117,7 +117,7 @@ $this->endSection(); ?>
                         <select class="form-select" name="parent_id" id="cat-parent">
                             <option value="">-- Ninguna (Nivel Principal) --</option>
                             <?php foreach ($response['parent_categories'] as $parent): ?>
-                                <option value="<?= $parent->id ?>"><?= esc($parent->name) ?></option>
+                                <option value="<?= $parent->id ?>"><?= esc($parent->display_name ?? $parent->name) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

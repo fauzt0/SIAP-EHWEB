@@ -85,48 +85,55 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold small text-uppercase text-muted">Tipo de Producto</label>
                             <div class="d-flex gap-4 border-bottom pb-2" id="type-tabs">
-                                <span class="type-tab text-muted pb-1 <?= (!$response['isEdit'] || $response['product']->product_type === 'service') ? 'active' : '' ?>"
+                                <span class="type-tab text-muted pb-1 <?= (empty($response['product']) || $response['product']->product_type === 'service') ? 'active' : '' ?>"
                                       data-type="service">
                                     <i class="fas fa-cloud me-1"></i>Servicio
                                 </span>
-                                <span class="type-tab text-muted pb-1 <?= ($response['isEdit'] && $response['product']->product_type === 'physical') ? 'active' : '' ?>"
+                                <span class="type-tab text-muted pb-1 <?= (!empty($response['product']) && $response['product']->product_type === 'physical') ? 'active' : '' ?>"
                                       data-type="physical">
                                     <i class="fas fa-box me-1"></i>Producto Físico
                                 </span>
-                                <span class="type-tab text-muted pb-1 <?= ($response['isEdit'] && $response['product']->product_type === 'digital') ? 'active' : '' ?>"
+                                <span class="type-tab text-muted pb-1 <?= (!empty($response['product']) && $response['product']->product_type === 'digital') ? 'active' : '' ?>"
                                       data-type="digital">
                                     <i class="fas fa-key me-1"></i>Digital / Licencia
                                 </span>
                             </div>
                             <input type="hidden" name="product_type" id="product_type"
-                                   value="<?= $response['isEdit'] ? esc($response['product']->product_type) : 'service' ?>">
+                                   value="<?= !empty($response['product']) ? esc($response['product']->product_type) : 'service' ?>">
                         </div>
 
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nombre Comercial <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control form-control-lg" name="commercial_name" id="commercial_name" required
-                                       value="<?= $response['isEdit'] ? esc($response['product']->commercial_name) : '' ?>"
+                                       value="<?= !empty($response['product']) ? esc($response['product']->commercial_name) : '' ?>"
                                        placeholder="Ej: Hosting Básico Pro">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nombre Interno</label>
                                 <input type="text" class="form-control form-control-lg" name="internal_name" id="internal_name"
-                                       value="<?= $response['isEdit'] ? esc($response['product']->internal_name) : '' ?>"
+                                       value="<?= !empty($response['product']) ? esc($response['product']->internal_name) : '' ?>"
                                        placeholder="Nombre para uso interno">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">SKU <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control font-monospace text-uppercase" name="sku" id="sku" required
-                                       value="<?= $response['isEdit'] ? esc($response['product']->sku) : '' ?>"
-                                       placeholder="HOST-001">
-                                <div class="form-text">Código único de identificación</div>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace text-uppercase" name="sku" id="sku" required
+                                           value="<?= !empty($response['product']) ? esc($response['product']->sku) : '' ?>"
+                                           placeholder="HOST-001" <?= $response['isEdit'] ? 'readonly' : '' ?>>
+                                    <?php if (!$response['isEdit']): ?>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="generateSku()" title="Generar Automático">
+                                        <i class="fas fa-random"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="form-text">Código único de identificación. <?= $response['isEdit'] ? 'No modificable en edición.' : '' ?></div>
                             </div>
                             <?php /* Código de barras: solo para Físicos */ ?>
-                            <div class="col-md-4 section-physical" style="display: <?= ($response['isEdit'] && $response['product']->product_type === 'physical') ? '' : 'none' ?>">
+                            <div class="col-md-4 section-physical" style="display: <?= (!empty($response['product']) && $response['product']->product_type === 'physical') ? '' : 'none' ?>">
                                 <label class="form-label fw-semibold">Código de Barras</label>
                                 <input type="text" class="form-control font-monospace" name="barcode"
-                                       value="<?= $response['isEdit'] ? esc($response['product']->barcode ?? '') : '' ?>"
+                                       value="<?= !empty($response['product']) ? esc($response['product']->barcode ?? '') : '' ?>"
                                        placeholder="EAN/UPC">
                             </div>
                             <div class="col-md-4">
@@ -134,8 +141,8 @@
                                 <select class="form-select" name="category_id" id="category_id">
                                     <option value="">Sin categoría</option>
                                     <?php foreach ($response['categories'] as $cat): ?>
-                                    <option value="<?= $cat->id ?>" <?= ($response['isEdit'] && $response['product']->category_id == $cat->id) ? 'selected' : '' ?>>
-                                        <?= esc($cat->name) ?>
+                                    <option value="<?= $cat->id ?>" data-icon="<?= esc($cat->icon ?? 'fas fa-folder') ?>" <?= (!empty($response['product']) && $response['product']->category_id == $cat->id) ? 'selected' : '' ?>>
+                                        <?= esc($cat->display_name ?? $cat->name) ?>
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -143,13 +150,13 @@
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Descripción Corta</label>
                                 <input type="text" class="form-control" name="description_short"
-                                       value="<?= $response['isEdit'] ? esc($response['product']->description_short ?? '') : '' ?>"
+                                       value="<?= !empty($response['product']) ? esc($response['product']->description_short ?? '') : '' ?>"
                                        placeholder="Resumen visible en listados y propuestas (máx. 255 caracteres)" maxlength="255">
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Descripción Larga</label>
                                 <textarea class="form-control" name="description_long" rows="4"
-                                          placeholder="Descripción detallada del producto o servicio..."><?= $response['isEdit'] ? esc($response['product']->description_long ?? '') : '' ?></textarea>
+                                          placeholder="Descripción detallada del producto o servicio..."><?= !empty($response['product']) ? esc($response['product']->description_long ?? '') : '' ?></textarea>
                             </div>
                         </div>
                     </div>
@@ -207,12 +214,12 @@
                 <?php /* Publicación / Estado */ ?>
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white border-bottom py-3">
-                        <h5 class="card-title mb-0"><i class="fas fa-toggle-on me-2 text-success"></i>Publicación</h5>
+                        <h5 class="card-title mb-0"><i class="fas fa-paper-plane me-2 text-success"></i>Publicación</h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" role="switch" name="active" id="active"
-                                   <?= (!$response['isEdit'] || $response['product']->active) ? 'checked' : '' ?>>
+                                   <?= (empty($response['product']) || $response['product']->active) ? 'checked' : '' ?>>
                             <label class="form-check-label fw-semibold" for="active">Producto Activo</label>
                             <div class="form-text">Solo los productos activos son visibles al vender.</div>
                         </div>
@@ -394,14 +401,36 @@ const ROUTES = {
     setMain:      '<?= base_url('nat/catalog/products/images/set_main/') ?>',
 };
 const IS_EDIT     = <?= $response['isEdit'] ? 'true' : 'false' ?>;
-const PRODUCT_ID  = <?= $response['product'] ? $response['product']->id : 'null' ?>;
+const PRODUCT_ID  = <?= !empty($response['product']->id) ? $response['product']->id : 'null' ?>;
 
 document.addEventListener('DOMContentLoaded', function () {
     initTypeTabs();
     initAttributeBuilder();
     initImageGallery();
     initFormSubmit();
+    initCategorySelect();
 });
+
+function initCategorySelect() {
+    function formatCategory(state) {
+        if (!state.id) return state.text;
+        const icon = state.element.getAttribute('data-icon') || 'fas fa-folder';
+        return $('<span><i class="' + icon + ' text-muted me-2"></i>' + state.text + '</span>');
+    }
+
+    $('#category_id').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Seleccione una categoría',
+        allowClear: true,
+        templateResult: formatCategory,
+        templateSelection: formatCategory
+    });
+}
+
+function generateSku() {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('sku').value = 'PRD-' + randomNum;
+}
 
 // ── Selector de tipo de producto ──────────────────────────────
 function initTypeTabs() {
@@ -579,7 +608,10 @@ function initFormSubmit() {
 
         fetch(url, {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            headers: { 
+                'X-Requested-With': 'XMLHttpRequest',
+                '<?= csrf_header() ?>': document.getElementById('csrf_token').value
+            },
             body: formData
         })
         .then(r => {

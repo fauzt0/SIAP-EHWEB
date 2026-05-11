@@ -47,10 +47,27 @@ class CatalogProductModel extends Model
             $this->builder()->where('catalog_products.product_type', $postData['filter_type']);
         }
         if (!empty($postData['filter_category'])) {
-            $this->builder()->where('catalog_products.category_id', (int)$postData['filter_category']);
+            $catId = (int)$postData['filter_category'];
+            
+            // Buscar subcategorías para incluirlas en el filtro (1 nivel de profundidad)
+            $catModel = new \App\Models\Catalog\CatalogCategoryModel();
+            $children = $catModel->withDeleted()->where('parent_id', $catId)->findAll();
+            $catIds = [$catId];
+            foreach ($children as $child) {
+                $catIds[] = $child->id;
+            }
+            
+            $this->builder()->whereIn('catalog_products.category_id', $catIds);
         }
         if (isset($postData['filter_active']) && $postData['filter_active'] !== '') {
-            $this->builder()->where('catalog_products.active', (int)$postData['filter_active']);
+            if ($postData['filter_active'] === 'deleted') {
+                $this->builder()->where('catalog_products.deleted_at IS NOT NULL');
+            } else {
+                $this->builder()->where('catalog_products.active', (int)$postData['filter_active']);
+                $this->builder()->where('catalog_products.deleted_at IS NULL');
+            }
+        } else {
+            $this->builder()->where('catalog_products.deleted_at IS NULL');
         }
 
         $this->_apply_datatables_filters($postData);

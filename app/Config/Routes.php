@@ -161,6 +161,8 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->get('products/edit/(:num)', 'Catalog\CatalogProductController::edit/$1', ['as' => 'catalog.products.edit']);
         $routes->post('products/update/(:num)', 'Catalog\CatalogProductController::update/$1', ['as' => 'catalog.products.update']);
         $routes->post('products/delete/(:num)', 'Catalog\CatalogProductController::delete/$1', ['as' => 'catalog.products.delete']);
+        $routes->post('products/restore/(:num)', 'Catalog\CatalogProductController::restore/$1', ['as' => 'catalog.products.restore']);
+        $routes->post('products/toggle_status/(:num)', 'Catalog\CatalogProductController::toggle_status_ajax/$1', ['as' => 'catalog.products.toggle_status']);
 
         // Imágenes de producto
         $routes->post('products/images/delete/(:num)', 'Catalog\CatalogProductController::delete_image/$1', ['as' => 'catalog.products.image.delete']);

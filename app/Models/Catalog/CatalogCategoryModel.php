@@ -49,12 +49,25 @@ class CatalogCategoryModel extends Model
     }
 
     /**
-     * Obtiene el árbol jerárquico
+     * Obtiene categorías ordenadas jerárquicamente para listados (Selects)
+     * Retorna un array plano con nombres indentados: "Padre", "-- Hijo", "-- -- Nieto"
      */
-    public function getHierarchy($parentId = null)
+    public function getFullHierarchy()
     {
-        return $this->where('parent_id', $parentId)
-                    ->where('active', 1)
-                    ->findAll();
+        $all = $this->where('active', 1)->orderBy('name', 'ASC')->findAll();
+        $result = [];
+        $this->buildHierarchy($all, null, 0, $result);
+        return $result;
+    }
+
+    private function buildHierarchy($all, $parentId, $level, &$result)
+    {
+        foreach ($all as $cat) {
+            if ($cat->parent_id == $parentId) {
+                $cat->display_name = str_repeat('— ', $level) . $cat->name;
+                $result[] = $cat;
+                $this->buildHierarchy($all, $cat->id, $level + 1, $result);
+            }
+        }
     }
 }

@@ -28,7 +28,7 @@ class CatalogCategoryController extends BaseCatalogController
         ]);
 
         $this->viewData['response'] = [
-            'parent_categories' => $this->categoryModel->where('parent_id', null)->where('active', 1)->findAll(),
+            'parent_categories' => $this->categoryModel->getFullHierarchy(),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'Catalog/categories_index');

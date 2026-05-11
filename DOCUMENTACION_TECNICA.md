@@ -95,6 +95,35 @@ $('#tabla').on('xhr.dt', function (e, settings, json, xhr) {
 });
 ```
 
+### C. Integración con Fetch API y Formularios (FormData)
+Cuando se envían formularios nativos mediante `fetch()` utilizando `FormData`, enviar el token únicamente en el cuerpo de la petición puede causar conflictos si el payload es complejo (ej. subida de archivos múltiples). 
+
+Por regla general en este proyecto, toda petición `fetch()` que realice mutaciones (POST, PUT, DELETE) debe inyectar el token CSRF explícitamente en las **cabeceras HTTP**, además de actualizarlo en la respuesta.
+
+**Estándar de implementación:**
+```javascript
+// 1. Obtener el token actual del DOM
+const currentToken = document.getElementById('csrf_token').value;
+
+fetch(url, {
+    method: 'POST',
+    headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        // 2. Inyección estricta en Header
+        '<?= csrf_header() ?>': currentToken 
+    },
+    body: formData // El formData se envía normal
+})
+.then(response => {
+    // 3. Capturar y renovar el token de inmediato
+    const newToken = response.headers.get('<?= csrf_header() ?>');
+    if (newToken) {
+        document.getElementById('csrf_token').value = newToken;
+    }
+    return response.json();
+})
+```
+
 ---
 
 

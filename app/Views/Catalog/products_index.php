@@ -30,7 +30,15 @@
                 ['label' => 'Físicos',          'key' => 'physical', 'color' => 'warning',   'icon' => 'fa-box'],
                 ['label' => 'Digitales',        'key' => 'digital',  'color' => 'secondary', 'icon' => 'fa-key'],
             ];
-            foreach ($cards as $card): ?>
+            $total = $response['stats']['total'] ?? 0;
+            foreach ($cards as $card): 
+                $val = $response['stats'][$card['key']] ?? 0;
+                // Si es la tarjeta de total, va al 100%. Si no, se calcula la proporción.
+                $percent = 100;
+                if ($card['key'] !== 'total' && $total > 0) {
+                    $percent = round(($val / $total) * 100);
+                }
+            ?>
             <div class="col-12 col-sm-6 col-md-3 d-flex">
                 <div class="card flex-fill">
                     <div class="card-header pb-0">
@@ -39,7 +47,7 @@
                     <div class="card-body my-0 pt-0">
                         <div class="d-flex align-items-center mb-3 mt-2">
                             <div class="flex-grow-1">
-                                <h3 class="mb-0 fw-light"><?= number_format($response['stats'][$card['key']] ?? 0) ?></h3>
+                                <h3 class="mb-0 fw-light"><?= number_format($val) ?></h3>
                             </div>
                             <div class="ms-auto">
                                 <div class="stat text-<?= $card['color'] ?>">
@@ -48,7 +56,7 @@
                             </div>
                         </div>
                         <div class="progress progress-sm shadow-sm mb-1">
-                            <div class="progress-bar bg-<?= $card['color'] ?>" role="progressbar" style="width: 100%"></div>
+                            <div class="progress-bar bg-<?= $card['color'] ?>" role="progressbar" style="width: <?= $percent ?>%"></div>
                         </div>
                         <small class="text-muted">Total registrados</small>
                     </div>
@@ -100,13 +108,14 @@
                                     <select class="form-select" id="filter-category" style="max-width: 180px;">
                                         <option value="">Todas las categorías</option>
                                         <?php foreach ($response['categories'] as $cat): ?>
-                                        <option value="<?= $cat->id ?>"><?= esc($cat->name) ?></option>
+                                        <option value="<?= $cat->id ?>" data-icon="<?= esc($cat->icon ?? 'fas fa-folder') ?>"><?= esc($cat->display_name ?? $cat->name) ?></option>
                                         <?php endforeach; ?>
                                     </select>
 
                                     <select class="form-select" id="filter-active" style="max-width: 150px;">
                                         <option value="1">Activos</option>
                                         <option value="0">Inactivos</option>
+                                        <option value="deleted">Eliminados (Papelera)</option>
                                         <option value="">Todos</option>
                                     </select>
 
@@ -148,7 +157,30 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     initProductsTable();
+    initFiltersSelect2();
 });
+
+function initFiltersSelect2() {
+    function formatCategory(state) {
+        if (!state.id) return state.text;
+        const icon = state.element.getAttribute('data-icon') || 'fas fa-folder';
+        return $('<span><i class="' + icon + ' text-muted me-2"></i>' + state.text + '</span>');
+    }
+
+    $('#filter-category').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Todas las categorías',
+        allowClear: true,
+        templateResult: formatCategory,
+        templateSelection: formatCategory,
+        dropdownParent: $('#filter-category').parent()
+    });
+
+    // Actualizar DataTable cuando se usa Select2
+    $('#filter-category').on('change', function() {
+        if (window.productsTable) window.productsTable.draw();
+    });
+}
 
 function initProductsTable() {
     // Guard: Sección 6 DOCUMENTACION_TECNICA.md
@@ -202,8 +234,8 @@ function initProductsTable() {
         }, 400);
     });
 
-    // Filtros de selección
-    ['filter-type', 'filter-category', 'filter-active'].forEach(id => {
+    // Filtros de selección (type y active)
+    ['filter-type', 'filter-active'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => {
             if (window.productsTable) window.productsTable.draw();
         });
@@ -212,7 +244,7 @@ function initProductsTable() {
     // Limpiar filtros
     document.getElementById('btn-clear-filters').addEventListener('click', function () {
         document.getElementById('filter-type').value     = '';
-        document.getElementById('filter-category').value = '';
+        $('#filter-category').val('').trigger('change');
         document.getElementById('filter-active').value   = '1';
         document.getElementById('product-search').value  = '';
         if (window.productsTable) window.productsTable.search('').draw();
@@ -245,6 +277,62 @@ document.addEventListener('click', function (e) {
                 if (window.productsTable) window.productsTable.ajax.reload(null, false);
             } else {
                 notifyShow(data.message || 'Error al eliminar', 'danger');
+            }
+        })
+        .catch(() => notifyShow('Error de conexión', 'danger'));
+    }
+
+    // Restaurar producto
+    const btnRestore = e.target.closest('.btn-restore-product');
+    if (btnRestore) {
+        if (!confirm('¿Restaurar este producto?')) return;
+
+        const formData = new FormData();
+        formData.append('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+
+        fetch('<?= base_url('nat/catalog/products/restore/') ?>' + btnRestore.dataset.id, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(r => {
+            const newToken = r.headers.get('<?= csrf_header() ?>');
+            if (newToken) document.getElementById('csrf_token').value = newToken;
+            return r.json();
+        })
+        .then(data => {
+            if (data.success) {
+                notifyShow(data.message, 'success');
+                if (window.productsTable) window.productsTable.ajax.reload(null, false);
+            } else {
+                notifyShow(data.message || 'Error al restaurar', 'danger');
+            }
+        })
+        .catch(() => notifyShow('Error de conexión', 'danger'));
+    }
+
+    // Activar/Inactivar producto (Toggle Status)
+    const btnToggle = e.target.closest('.btn-toggle-product');
+    if (btnToggle) {
+        const formData = new FormData();
+        formData.append('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+
+        fetch('<?= base_url('nat/catalog/products/toggle_status/') ?>' + btnToggle.dataset.id, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(r => {
+            const newToken = r.headers.get('<?= csrf_header() ?>');
+            if (newToken) document.getElementById('csrf_token').value = newToken;
+            return r.json();
+        })
+        .then(data => {
+            if (data.success) {
+                notifyShow(data.message, 'success');
+                if (window.productsTable) window.productsTable.ajax.reload(null, false);
+            } else {
+                notifyShow(data.message || 'Error al cambiar estatus', 'danger');
             }
         })
         .catch(() => notifyShow('Error de conexión', 'danger'));

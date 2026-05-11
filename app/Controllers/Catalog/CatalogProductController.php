@@ -39,7 +39,7 @@ class CatalogProductController extends BaseCatalogController
         }
 
         $this->viewData['response'] = [
-            'categories' => $this->categoryModel->where('active', 1)->findAll(),
+            'categories' => $this->categoryModel->getFullHierarchy(),
             'stats'      => $stats,
         ];
 
@@ -69,12 +69,16 @@ class CatalogProductController extends BaseCatalogController
             $imgPath = $product->main_image ?? null;
             if (!empty($imgPath) && file_exists(FCPATH . 'uploads/catalog/' . $imgPath)) {
                 $imgUrl = base_url('uploads/catalog/' . $imgPath);
+                $row[] = '<img src="' . $imgUrl . '" width="48" height="48" '
+                       . 'class="rounded object-fit-cover shadow-sm border" '
+                       . 'alt="' . esc($product->commercial_name) . '">';
             } else {
-                $imgUrl = base_url('bootstrap/img/catalog/no-image.png');
+                // Icono genérico si no hay imagen (Sección de Estética Premium)
+                $row[] = '<div class="rounded d-flex align-items-center justify-content-center bg-light shadow-sm border" '
+                       . 'style="width: 48px; height: 48px;">'
+                       . '<i class="fas fa-image fa-lg text-secondary"></i>'
+                       . '</div>';
             }
-            $row[] = '<img src="' . $imgUrl . '" width="48" height="48" '
-                   . 'class="rounded object-fit-cover shadow-sm border" '
-                   . 'alt="' . esc($product->commercial_name) . '">';
 
             // Nombre comercial + SKU
             $row[] = '<div class="fw-semibold">' . esc($product->commercial_name) . '</div>'
@@ -104,21 +108,47 @@ class CatalogProductController extends BaseCatalogController
                 : '<span class="text-muted small">Sin planes</span>';
 
             // Estatus (fas icons únicamente)
-            $row[] = $product->active
-                ? '<span class="badge badge-subtle-success"><i class="fas fa-check-circle me-1"></i>Activo</span>'
-                : '<span class="badge badge-subtle-danger"><i class="fas fa-times-circle me-1"></i>Inactivo</span>';
+            if ($product->deleted_at !== null) {
+                $row[] = '<span class="badge badge-subtle-dark"><i class="fas fa-trash me-1"></i>Eliminado</span>';
+            } else {
+                $row[] = $product->active
+                    ? '<span class="badge badge-subtle-success"><i class="fas fa-check-circle me-1"></i>Activo</span>'
+                    : '<span class="badge badge-subtle-danger"><i class="fas fa-times-circle me-1"></i>Inactivo</span>';
+            }
 
             // Acciones (permisos según Sección 7 DOCUMENTACION_TECNICA.md)
             $pid     = $product->id;
             $actions = '<div class="d-flex gap-1 align-items-center">';
-            $actions .= '<a href="' . route_to('catalog.products.edit', $pid) . '" '
-                      . 'class="btn btn-sm btn-outline-warning" title="Editar">'
-                      . '<i class="fas fa-edit"></i></a>';
-            $actions .= '<button class="btn btn-sm btn-outline-primary btn-manage-plans" '
-                      . 'data-id="' . $pid . '" data-name="' . esc($product->commercial_name) . '" '
-                      . 'title="Gestionar Planes"><i class="fas fa-tags"></i></button>';
-            $actions .= '<button class="btn btn-sm btn-outline-danger btn-delete-product" '
-                      . 'data-id="' . $pid . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
+            
+            if ($product->deleted_at !== null) {
+                // Si está eliminado, solo permitir restaurar
+                $actions .= '<button class="btn btn-outline-success btn-restore-product" '
+                          . 'data-id="' . $pid . '" title="Restaurar Producto"><i class="fas fa-trash-restore"></i></button>';
+            } else {
+                // Orden solicitado: Editar, Clonar, Gestionar Planes, Eliminar, Toggle (al final)
+                $actions .= '<a href="' . route_to('catalog.products.edit', $pid) . '" '
+                          . 'class="btn btn-outline-warning" title="Editar">'
+                          . '<i class="fas fa-edit"></i></a>';
+                          
+                $actions .= '<a href="' . route_to('catalog.products.create') . '?clone_id=' . $pid . '" '
+                          . 'class="btn btn-outline-secondary" title="Clonar Producto">'
+                          . '<i class="fas fa-copy"></i></a>';
+                          
+                $actions .= '<button class="btn btn-outline-primary btn-manage-plans" '
+                          . 'data-id="' . $pid . '" data-name="' . esc($product->commercial_name) . '" '
+                          . 'title="Gestionar Planes"><i class="fas fa-tags"></i></button>';
+                          
+                $actions .= '<button class="btn btn-outline-danger btn-delete-product" '
+                          . 'data-id="' . $pid . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
+
+                // Toggle al final con nueva lógica de color
+                $icon = $product->active ? 'fa-eye-slash' : 'fa-eye';
+                $title = $product->active ? 'Inactivar' : 'Activar';
+                $color = $product->active ? 'outline-danger' : 'outline-success';
+                
+                $actions .= '<button class="btn btn-' . $color . ' btn-toggle-product" '
+                          . 'data-id="' . $pid . '" title="' . $title . '"><i class="fas ' . $icon . '"></i></button>';
+            }
             $actions .= '</div>';
             $row[]   = $actions;
 
@@ -150,11 +180,33 @@ class CatalogProductController extends BaseCatalogController
             'Nuevo Producto' => '',
         ]);
 
+        $product = null;
+        $attributes = [];
+
+        $cloneId = $this->request->getGet('clone_id');
+        if ($cloneId) {
+            $product = $this->productModel->find($cloneId);
+            if ($product) {
+                // Limpiar identificadores únicos y marcar como copia
+                $product->id = null;
+                $product->sku = '';
+                $product->commercial_name = $product->commercial_name . ' (Copia)';
+                if (!empty($product->internal_name)) {
+                    $product->internal_name = $product->internal_name . ' (Copia)';
+                }
+                
+                $attrModel = new CatalogAttributeModel();
+                $attributes = $attrModel->getByProduct($cloneId);
+                $this->setViewSuccess('Clonar Producto');
+                $this->setPageTittleAhead('Clonar: ' . esc($product->commercial_name), 'Alta de Producto o Servicio');
+            }
+        }
+
         $this->viewData['response'] = [
-            'categories' => $this->categoryModel->where('active', 1)->findAll(),
-            'product'    => null,
-            'attributes' => [],
-            'images'     => [],
+            'categories' => $this->categoryModel->getFullHierarchy(),
+            'product'    => $product,
+            'attributes' => $attributes,
+            'images'     => [], // No clonar imágenes automáticamente
             'isEdit'     => false,
         ];
 
@@ -188,7 +240,7 @@ class CatalogProductController extends BaseCatalogController
         $imageModel = new CatalogProductImageModel();
 
         $this->viewData['response'] = [
-            'categories' => $this->categoryModel->where('active', 1)->findAll(),
+            'categories' => $this->categoryModel->getFullHierarchy(),
             'product'    => $product,
             'attributes' => $attrModel->getByProduct($id),
             'images'     => $imageModel->getByProduct($id),
@@ -304,7 +356,61 @@ class CatalogProductController extends BaseCatalogController
         $this->setOutputSuccess('Producto eliminado correctamente.');
         return $this->response->setJSON($this->outputData);
     }
+    // ────────────────────────────────────────────────────────────────────────
+    // POST AJAX: Restaurar Producto (Deshacer Soft Delete)
+    // ────────────────────────────────────────────────────────────────────────
 
+    public function restore(int $id)
+    {
+        if (!$this->request->isAJAX() || !$this->request->is('post')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Petición denegada.']);
+        }
+
+        $product = $this->productModel->withDeleted()->find($id);
+        if (!$product) {
+            $this->setOutputError('Producto no encontrado.', null, ResponseInterface::HTTP_NOT_FOUND);
+            return $this->response->setJSON($this->outputData);
+        }
+
+        // Usamos el builder para evitar el error de allowedFields con deleted_at
+        $this->productModel->builder()->where('id', $id)->update(['deleted_at' => null]);
+        cache()->delete('catalog_product_stats');
+
+        (new UserActivityLogsModel())
+            ->logActivity('restore_product', 'Restauró producto ID: ' . $id . ' | ' . $product->commercial_name . ' | SKU: ' . $product->sku);
+
+        $this->setOutputSuccess('Producto restaurado correctamente.');
+        return $this->response->setJSON($this->outputData);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // POST AJAX: Activar/Inactivar Producto (Toggle Status)
+    // ────────────────────────────────────────────────────────────────────────
+
+    public function toggle_status_ajax(int $id)
+    {
+        if (!$this->request->isAJAX() || !$this->request->is('post')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Petición denegada.']);
+        }
+
+        $product = $this->productModel->withDeleted()->find($id);
+        if (!$product) {
+            $this->setOutputError('Producto no encontrado.', null, ResponseInterface::HTTP_NOT_FOUND);
+            return $this->response->setJSON($this->outputData);
+        }
+
+        // Toggle: si estaba activo (1) pasa a inactivo (0), y viceversa
+        $newStatus = $product->active ? 0 : 1;
+        $this->productModel->withDeleted()->update($id, ['active' => $newStatus]);
+        cache()->delete('catalog_product_stats');
+
+        $actionStr = $newStatus ? 'Activó' : 'Inactivó';
+        (new UserActivityLogsModel())
+            ->logActivity('update_product_status', $actionStr . ' producto ID: ' . $id . ' | ' . $product->commercial_name . ' | SKU: ' . $product->sku);
+
+        $this->setOutputSuccess('Producto ' . strtolower($actionStr) . ' correctamente.');
+        return $this->response->setJSON($this->outputData);
+    }
     // ────────────────────────────────────────────────────────────────────────
     // POST AJAX: Eliminar imagen individual (lógica en modelo)
     // ────────────────────────────────────────────────────────────────────────
