@@ -96,10 +96,14 @@ class CatalogPlanModel extends Model
             $data['renewal_price'] = 0.00;
         }
 
-        $this->insert($data);
-        $newId = $this->db->insertID();
+        $newId = $this->insert($data);
 
-        return $newId ?: false;
+        if ($newId === false) {
+            log_message('error', 'Error insertando plan: ' . json_encode($this->errors()) . ' | DB Error: ' . json_encode($this->db->error()));
+            return false;
+        }
+
+        return (int)$newId;
     }
 
     /**

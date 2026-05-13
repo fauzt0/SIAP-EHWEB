@@ -256,7 +256,7 @@ class CatalogProductController extends BaseCatalogController
 
     public function store()
     {
-        if (!$this->request->is('post')) {
+        if (!$this->request->isAJAX() || !$this->request->is('post')) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Método no válido.');
         }
 
@@ -296,7 +296,7 @@ class CatalogProductController extends BaseCatalogController
 
     public function update(int $id)
     {
-        if (!$this->request->is('post')) {
+        if (!$this->request->isAJAX() || !$this->request->is('post')) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Método no válido.');
         }
 

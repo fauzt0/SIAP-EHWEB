@@ -331,7 +331,7 @@
                                     <i class="fas fa-info-circle me-1 text-info"></i>
                                     Los <strong>gifts/bundles</strong> con período gratuito &gt; 0 aplican gratis solo ese tiempo. Después se cobran como servicio adicional.
                                 </p>
-                                <form id="relation-form" class="border rounded p-3 bg-light mb-3">
+                                <div id="relation-form" class="border rounded p-3 bg-light mb-3">
                                     <div class="row g-2 align-items-end">
                                         <div class="col-md-4">
                                             <label class="form-label fw-semibold small">Producto Relacionado</label>
@@ -364,12 +364,12 @@
                                             </div>
                                         </div>
                                         <div class="col-md-1">
-                                            <button type="submit" class="btn btn-primary btn-sm w-100" title="Agregar relación">
+                                            <button type="button" id="btn-add-relation" class="btn btn-primary btn-sm w-100" title="Agregar relación">
                                                 <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
                                     </div>
-                                </form>
+                                </div>
                                 <div id="relations-list">
                                     <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i></div>
                                 </div>
@@ -709,13 +709,21 @@ document.querySelector('[href="#tab-relations"]')?.addEventListener('shown.bs.ta
                     if (!data.data) return { results: [] };
                     return {
                         results: data.data.map(function (row) {
-                            const tmp = document.createElement('div');
-                            tmp.innerHTML = row[1];
-                            const name = tmp.querySelector('.fw-semibold')?.textContent?.trim() || 'Producto';
-                            const sku  = tmp.querySelector('.font-monospace')?.textContent?.trim() || '';
-                            // Excluir el producto actual de la lista
-                            return { id: row[0] === PRODUCT_ID_EDIT ? null : (row[0] || ''), text: name + (sku ? ' [' + sku + ']' : '') };
-                        }).filter(r => r.id)
+                            // row[1] = HTML con nombre + SKU
+                            const nameTmp = document.createElement('div');
+                            nameTmp.innerHTML = row[1];
+                            const name = nameTmp.querySelector('.fw-semibold')?.textContent?.trim() || 'Producto';
+                            const sku  = nameTmp.querySelector('.font-monospace')?.textContent?.trim() || '';
+
+                            // El ID numérico está en data-id de los botones de acción (row[6])
+                            const actTmp = document.createElement('div');
+                            actTmp.innerHTML = row[6] || '';
+                            const productId = parseInt(actTmp.querySelector('[data-id]')?.getAttribute('data-id') || '0');
+
+                            // Excluir el producto actual y entradas sin ID válido
+                            if (!productId || productId === PRODUCT_ID_EDIT) return null;
+                            return { id: productId, text: name + (sku ? ' [' + sku + ']' : '') };
+                        }).filter(Boolean)
                     };
                 }
             }
@@ -728,7 +736,8 @@ document.querySelector('[href="#tab-relations"]')?.addEventListener('shown.bs.ta
 function loadRelations() {
     const container = document.getElementById('relations-list');
     fetch(RELATIONS_BASE + PRODUCT_ID_EDIT + '/relations', {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        cache: 'no-store'
     })
     .then(r => r.json())
     .then(data => {
@@ -750,7 +759,7 @@ function loadRelations() {
                         <small class="text-muted">${rel.related_sku} · <strong>${period}</strong> · ${price}</small>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-danger btn-delete-relation" data-id="${rel.id}" title="Eliminar">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-relation" data-id="${rel.id}" title="Eliminar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>`;
@@ -759,16 +768,25 @@ function loadRelations() {
     .catch(() => {});
 }
 
-// ── Guardar relación ──────────────────────────────────────────
-document.getElementById('relation-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    formData.set('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
-
-    const select2Val = typeof $ !== 'undefined' ? $('#related-product-id').val() : document.getElementById('related-product-id').value;
-    formData.set('related_product_id', select2Val || '');
+// ── Agregar relación ──────────────────────────────────────────
+// El panel de relaciones es un <div> (no un <form>) para evitar
+// la anidación de formularios que HTML no permite. El botón +
+// tiene id="btn-add-relation" y type="button".
+// Un producto puede tener múltiples relaciones con distintos
+// productos o tipos (el modelo previene duplicados del mismo par).
+function submitRelation() {
+    const select2Val = typeof $ !== 'undefined'
+        ? $('#related-product-id').val()
+        : document.getElementById('related-product-id').value;
 
     if (!select2Val) { notifyShow('Selecciona un producto relacionado.', 'warning'); return; }
+
+    const formData = new FormData();
+    formData.set('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+    formData.set('related_product_id', select2Val);
+    formData.set('relation_type',   document.getElementById('relation-type').value);
+    formData.set('duration_months', document.getElementById('duration-months').value);
+    formData.set('override_price',  document.getElementById('override-price').value);
 
     fetch(RELATIONS_BASE + PRODUCT_ID_EDIT + '/relations/store', {
         method: 'POST',
@@ -784,19 +802,32 @@ document.getElementById('relation-form').addEventListener('submit', function (e)
         if (data.success) {
             notifyShow(data.message, 'success');
             loadRelations();
-            this.reset();
+            // Resetear campos para permitir agregar otra relación
             if (typeof $ !== 'undefined') $('#related-product-id').val(null).trigger('change');
+            document.getElementById('duration-months').value = '0';
+            document.getElementById('override-price').value  = '0.00';
+            document.getElementById('relation-type').value   = 'gift';
+            document.getElementById('duration-group').style.display = '';
         } else {
-            notifyShow(data.message || 'Error al crear la relación', 'danger');
+            let errorMsg = data.message || 'Error al crear la relación';
+            if (data.errors && typeof data.errors === 'object') {
+                errorMsg += ': ' + Object.values(data.errors).join(', ');
+            } else if (data.errors) {
+                errorMsg += ': ' + data.errors;
+            }
+            notifyShow(errorMsg, 'danger');
         }
     })
     .catch(() => notifyShow('Error de conexión', 'danger'));
-});
+}
+
+document.getElementById('btn-add-relation')?.addEventListener('click', submitRelation);
 
 // ── Eliminar relación ─────────────────────────────────────────
 document.addEventListener('click', function (e) {
     const btn = e.target.closest('.btn-delete-relation');
     if (!btn) return;
+    e.preventDefault();
     if (!confirm('¿Eliminar esta relación?')) return;
 
     const formData = new FormData();
@@ -820,7 +851,7 @@ document.addEventListener('click', function (e) {
 });
 
 // ── Ocultar duration_months para upsell ──────────────────────
-document.getElementById('relation-type').addEventListener('change', function () {
+document.getElementById('relation-type')?.addEventListener('change', function () {
     const isUpsell = this.value === 'upsell';
     document.getElementById('duration-group').style.display = isUpsell ? 'none' : '';
     if (isUpsell) document.getElementById('duration-months').value = '0';

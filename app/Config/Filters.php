@@ -20,14 +20,14 @@ class Filters extends BaseConfig
      * @phpstan-var array<string, class-string|list<class-string>>
      */
     public array $aliases = [
-        'csrf'          => CSRF::class,
-        'toolbar'       => DebugToolbar::class,
-        'honeypot'      => Honeypot::class,
-        'invalidchars'  => InvalidChars::class,
+        'csrf' => CSRF::class,
+        'toolbar' => DebugToolbar::class,
+        'honeypot' => Honeypot::class,
+        'invalidchars' => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
         //'AdminFilter'   => \App\Filters\AdminFilter::class, //protected by shield
         //'PermissionFilter' => \App\Filters\PermissionFilter::class,//protected by shield 
-        'csrfTokenFilter'     => \App\Filters\CsrfTokenFilter::class, //filtro para actualizar y devolver el csrf token
+        'csrfTokenFilter' => \App\Filters\CsrfTokenFilter::class, //filtro para actualizar y devolver el csrf token
     ];
 
     /**
@@ -41,7 +41,7 @@ class Filters extends BaseConfig
         'before' => [
             // 'honeypot',
             'csrf' => [
-              'except' => ['nat/user/updater/*'], //excluimos la ruta nat/user/update/* del filtro CSRF en entorno de desarrollo
+                'except' => ['nat/user/updater/*'], //excluimos la ruta nat/user/update/* del filtro CSRF en entorno de desarrollo
             ],
             // 'invalidchars',
         ],
@@ -75,14 +75,14 @@ class Filters extends BaseConfig
      */
 
     //aplicaremos los filtros de autenticacion a todas las secciones internas
-    public array $filters = [      
-      
+    public array $filters = [
+
     ];
-    
+
 
     //listado con las excepciones para entorno de desarrollo del filtro CSRF
     public array $developmentExceptions = [
-        'nat/user/update/*',        
+        'nat/user/update/*',
     ];
 
     public function __construct()
@@ -90,15 +90,15 @@ class Filters extends BaseConfig
         parent::__construct();
 
         // Si estamos en desarrollo, agregamos excepciones al filtro CSRF.
-        if (ENVIRONMENT === 'development') {          
+        if (ENVIRONMENT === 'development') {
             // Aquí puedes agregar todas las rutas que quieres excluir durante el desarrollo.
-                        
-            $valoresActuales =  $this->globals['before']['csrf']['except'];
+
+            $valoresActuales = $this->globals['before']['csrf']['except'];
             //echo var_dump($valoresActuales); //for debug purposes 
             //echo "<hr>"; ////for debug purposes 
             ///agregamos los valores nuevos //for debug purposes 
             $this->globals['before']['csrf']['except'] = array_merge($valoresActuales, $this->developmentExceptions);
-             //var_dump( $this->globals['before']['csrf']['except']); //for debug purposes 
+            //var_dump( $this->globals['before']['csrf']['except']); //for debug purposes 
         }
     }
 

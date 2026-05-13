@@ -93,7 +93,6 @@ class CatalogProductRelationModel extends Model
             (int)$data['related_product_id'],
             $data['relation_type']
         )) {
-            $this->validationMessages = ['Ya existe esta relación entre los productos.'];
             return false;
         }
 
@@ -103,10 +102,14 @@ class CatalogProductRelationModel extends Model
             $data['override_price']  = 0.00;
         }
 
-        $this->insert($data);
-        $newId = $this->db->insertID();
+        $newId = $this->insert($data);
 
-        return $newId ?: false;
+        if ($newId === false) {
+            log_message('error', 'Error insertando relación: ' . json_encode($this->errors()) . ' | DB Error: ' . json_encode($this->db->error()));
+            return false;
+        }
+
+        return (int)$newId;
     }
 
     /**

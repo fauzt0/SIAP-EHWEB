@@ -154,7 +154,12 @@ class CatalogPlanController extends BaseCatalogController
             return $this->response->setJSON($this->outputData);
         }
 
-        $this->planModel->delete($planId);
+        $deleted = $this->planModel->delete($planId);
+        if (!$deleted) {
+            $this->setOutputError('No se pudo eliminar el plan de la base de datos.');
+            return $this->response->setJSON($this->outputData);
+        }
+
         cache()->delete('catalog_product_stats');
 
         (new UserActivityLogsModel())
@@ -286,7 +291,12 @@ class CatalogPlanController extends BaseCatalogController
             return $this->response->setJSON($this->outputData);
         }
 
-        $this->relationModel->delete($relationId);
+        $deleted = $this->relationModel->delete($relationId);
+
+        if (!$deleted) {
+            $this->setOutputError('No se pudo eliminar la relación de la base de datos.');
+            return $this->response->setJSON($this->outputData);
+        }
 
         (new UserActivityLogsModel())
             ->logActivity(

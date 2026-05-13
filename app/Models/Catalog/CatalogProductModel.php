@@ -99,8 +99,7 @@ class CatalogProductModel extends Model
     {
         $this->db->transStart();
 
-        $this->insert($productData);
-        $newId = $this->db->insertID();
+        $newId = $this->insert($productData);
 
         if ($newId && !empty($attributes)) {
             $attrModel = new \App\Models\Catalog\CatalogAttributeModel();
