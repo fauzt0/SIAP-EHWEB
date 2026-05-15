@@ -202,8 +202,12 @@ class CatalogProductController extends BaseCatalogController
             }
         }
 
+        $brandModel = new \App\Models\Catalog\CatalogBrandModel();
+        $brands = $brandModel->getActive();
+
         $this->viewData['response'] = [
             'categories' => $this->categoryModel->getFullHierarchy(),
+            'brands'     => $brands,
             'product'    => $product,
             'attributes' => $attributes,
             'images'     => [], // No clonar imágenes automáticamente
@@ -239,12 +243,16 @@ class CatalogProductController extends BaseCatalogController
         $attrModel  = new CatalogAttributeModel();
         $imageModel = new CatalogProductImageModel();
 
-        // Sucursales activas para el modal de inventario (solo en edición)
+        // Marcas y Sucursales activas para el formulario
+        $brandModel = new \App\Models\Catalog\CatalogBrandModel();
+        $brands = $brandModel->getActive();
+        
         $branchModel = new \App\Models\OrgBranchModel();
         $branches = $branchModel->getActive();
 
         $this->viewData['response'] = [
             'categories' => $this->categoryModel->getFullHierarchy(),
+            'brands'     => $brands,
             'product'    => $product,
             'attributes' => $attrModel->getByProduct($id),
             'images'     => $imageModel->getByProduct($id),
@@ -480,6 +488,7 @@ class CatalogProductController extends BaseCatalogController
     {
         return [
             'category_id'       => $this->request->getPost('category_id') ?: null,
+            'brand_id'          => $this->request->getPost('brand_id') ?: null,
             'sku'               => strtoupper(trim((string)$this->request->getPost('sku'))),
             'barcode'           => trim((string)$this->request->getPost('barcode')) ?: null,
             'internal_name'     => trim((string)$this->request->getPost('internal_name')),

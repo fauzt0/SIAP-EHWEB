@@ -30,9 +30,9 @@ Como actualmente no existe la tabla de marcas, se propone crear `catalog_brands`
 
 ### [HITO 4.5] Estructura Organizacional y Marcas
 - [x] **Creación de Datos Base:** Se ejecutó `InitialSeeder` para crear el perfil de empresa y sucursales iniciales.
-- [ ] **Módulo de Marcas (Brands):** Pendiente crear tabla `catalog_brands` y modelo.
-- [ ] **Integración Producto-Marca:** Pendiente agregar columna `brand_id` en `catalog_products`.
-- [ ] **UI Marcas:** Pendiente agregar selector en `product_form.php` y filtros en DataTables.
+- [x] **Módulo de Marcas (Brands):** Creada la tabla `catalog_brands` mediante migración y su modelo `CatalogBrandModel`.
+- [x] **Integración Producto-Marca:** Añadida la columna `brand_id` en `catalog_products` (migración) y actualizada en `CatalogProductModel`.
+- [x] **UI Marcas:** Añadido el selector en `product_form.php` y los controladores para inyectar los datos.
 
 ### Notas para el Próximo Agente:
 1. El **Hito 4 (Inventario)** ya está funcional pero requiere que existan sucursales en `org_branches`.

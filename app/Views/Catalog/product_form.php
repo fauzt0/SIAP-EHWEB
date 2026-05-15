@@ -147,6 +147,17 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Marca</label>
+                                <select class="form-select" name="brand_id" id="brand_id">
+                                    <option value="">Sin marca</option>
+                                    <?php foreach ($response['brands'] as $brand): ?>
+                                    <option value="<?= $brand->id ?>" <?= (!empty($response['product']) && $response['product']->brand_id == $brand->id) ? 'selected' : '' ?>>
+                                        <?= esc($brand->name) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Descripción Corta</label>
                                 <input type="text" class="form-control" name="description_short"
