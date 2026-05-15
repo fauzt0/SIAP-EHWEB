@@ -307,6 +307,13 @@
                                     <i class="fas fa-link me-1 text-info"></i>Relaciones / Bundles
                                 </a>
                             </li>
+                            <?php if ($response['product']->product_type === 'physical'): ?>
+                            <li class="nav-item" id="tab-inventory-nav">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab-inventory">
+                                    <i class="fas fa-boxes me-1 text-success"></i>Inventario
+                                </a>
+                            </li>
+                            <?php endif; ?>
                         </ul>
                     </div>
                     <div class="card-body p-4">
@@ -374,6 +381,29 @@
                                     <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i></div>
                                 </div>
                             </div>
+
+                            <?php if ($response['product']->product_type === 'physical'): ?>
+                            <div class="tab-pane fade" id="tab-inventory">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <p class="text-muted small mb-0">
+                                        <i class="fas fa-info-circle me-1 text-info"></i>
+                                        Existencias actuales por sucursal. Solo aplica para productos físicos.
+                                    </p>
+                                    <button type="button" class="btn btn-sm btn-outline-success" id="btn-open-movement">
+                                        <i class="fas fa-plus me-1"></i>Registrar Movimiento
+                                    </button>
+                                </div>
+                                <div id="stock-table-container">
+                                    <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i></div>
+                                </div>
+                                <div class="mt-3">
+                                    <h6 class="text-muted fw-semibold"><i class="fas fa-history me-1"></i>Últimos Movimientos (Kardex)</h6>
+                                    <div id="kardex-container">
+                                        <div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
 
                         </div>
                     </div>
@@ -856,8 +886,213 @@ document.getElementById('relation-type')?.addEventListener('change', function ()
     document.getElementById('duration-group').style.display = isUpsell ? 'none' : '';
     if (isUpsell) document.getElementById('duration-months').value = '0';
 });
+
+<?php if ($response['isEdit'] && $response['product']->product_type === 'physical'): ?>
+// ── Inventario: carga de stock y Kardex ──────────────────────
+// Se activa al mostrar la pestaña de Inventario (Sección 1 DOCUMENTACION_TECNICA.md)
+const INVENTORY_PRODUCT_ID = <?= $response['product']->id ?>;
+
+function loadStock() {
+    fetch('<?= route_to('catalog.inventory.stock', $response['product']->id) ?>', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('stock-table-container');
+        if (!data.success || !data.response.length) {
+            container.innerHTML = '<p class="text-muted small fst-italic">Sin registros de stock. Registra una entrada para inicializar.</p>';
+            return;
+        }
+        let rows = '';
+        data.response.forEach(s => {
+            const alertClass = (parseFloat(s.stock) <= parseFloat(s.min_alert) && parseFloat(s.min_alert) > 0)
+                ? 'table-danger' : '';
+            rows += `<tr class="${alertClass}">
+                <td>${s.branch_name || 'Sucursal #' + s.org_branches_id}</td>
+                <td class="fw-semibold">${parseFloat(s.stock).toFixed(2)}</td>
+                <td>
+                    <div class="input-group input-group-sm" style="max-width:120px">
+                        <input type="number" class="form-control min-alert-input" data-stock-id="${s.id}"
+                               data-branch-id="${s.org_branches_id}" value="${parseFloat(s.min_alert).toFixed(2)}" min="0" step="1">
+                        <button class="btn btn-outline-secondary btn-save-alert" type="button"
+                                data-branch-id="${s.org_branches_id}" title="Guardar alerta"><i class="fas fa-save"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        container.innerHTML = `<table class="table table-sm table-hover table-striped mb-0">
+            <thead class="table-light"><tr>
+                <th>Sucursal</th><th>Existencia</th><th>Alerta Mínima</th>
+            </tr></thead><tbody>${rows}</tbody>
+        </table>`;
+        // Guardar alerta mínima
+        container.querySelectorAll('.btn-save-alert').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const branchId = this.dataset.branchId;
+                const input    = container.querySelector(`.min-alert-input[data-branch-id="${branchId}"]`);
+                const fd       = new FormData();
+                fd.append('org_branch_id', branchId);
+                fd.append('min_alert', input.value);
+                fd.append('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+                fetch('<?= route_to('catalog.inventory.min_alert', $response['product']->id) ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        '<?= csrf_header() ?>': document.getElementById('csrf_token').value,
+                    },
+                    body: fd
+                })
+                .then(r => { const t = r.headers.get('<?= csrf_header() ?>'); if (t) document.getElementById('csrf_token').value = t; return r.json(); })
+                .then(d => {
+                    notifyShow(d.message, d.success ? 'success' : 'danger');
+                    if (d.success) loadStock();
+                })
+                .catch(() => notifyShow('Error de conexión', 'danger'));
+            });
+        });
+    });
+}
+
+function loadKardex() {
+    fetch('<?= route_to('catalog.inventory.kardex', $response['product']->id) ?>', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const container = document.getElementById('kardex-container');
+        if (!data.success || !data.response.length) {
+            container.innerHTML = '<p class="text-muted small fst-italic">Sin movimientos registrados.</p>';
+            return;
+        }
+        const typeMap = { entry: '<span class="badge badge-subtle-success">Entrada</span>', exit: '<span class="badge badge-subtle-danger">Salida</span>', transfer: '<span class="badge badge-subtle-info">Transferencia</span>' };
+        let rows = '';
+        data.response.forEach(m => {
+            const dest = m.target_branch_name ? ` → ${m.target_branch_name}` : '';
+            rows += `<tr>
+                <td class="text-muted small">${m.created_at}</td>
+                <td>${typeMap[m.type] || m.type}</td>
+                <td class="fw-semibold">${parseFloat(m.quantity).toFixed(2)}</td>
+                <td>${m.branch_name || '-'}${dest}</td>
+                <td class="text-muted small">${m.notes || '-'}</td>
+            </tr>`;
+        });
+        container.innerHTML = `<div class="table-responsive" style="max-height:250px;overflow-y:auto">
+            <table class="table table-sm table-hover table-striped mb-0">
+                <thead class="table-light"><tr>
+                    <th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Sucursal</th><th>Notas</th>
+                </tr></thead><tbody>${rows}</tbody>
+            </table></div>`;
+    });
+}
+
+// Carga automática al abrir la tab de inventario
+document.querySelector('[href="#tab-inventory"]')?.addEventListener('shown.bs.tab', function () {
+    loadStock();
+    loadKardex();
+});
+
+// Botón "Registrar Movimiento" abre el modal
+document.getElementById('btn-open-movement')?.addEventListener('click', function () {
+    const modal = new bootstrap.Modal(document.getElementById('modal-movement'));
+    modal.show();
+});
+
+// Envío del formulario de movimiento
+document.getElementById('btn-submit-movement')?.addEventListener('click', function () {
+    const form = document.getElementById('form-movement');
+    const fd   = new FormData(form);
+    fd.append('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+
+    fetch('<?= route_to('catalog.inventory.movement', $response['product']->id) ?>', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            '<?= csrf_header() ?>': document.getElementById('csrf_token').value,
+        },
+        body: fd
+    })
+    .then(r => { const t = r.headers.get('<?= csrf_header() ?>'); if (t) document.getElementById('csrf_token').value = t; return r.json(); })
+    .then(data => {
+        if (data.success) {
+            notifyShow(data.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modal-movement')).hide();
+            form.reset();
+            loadStock();
+            loadKardex();
+        } else {
+            notifyShow(data.message || 'Error al registrar el movimiento', 'danger');
+        }
+    })
+    .catch(() => notifyShow('Error de conexión', 'danger'));
+});
+
+// Mostrar/Ocultar campo de sucursal destino en transferencias
+document.getElementById('movement-type')?.addEventListener('change', function () {
+    const targetGroup = document.getElementById('target-branch-group');
+    targetGroup.style.display = this.value === 'transfer' ? '' : 'none';
+});
+<?php endif; ?>
 </script>
 
 <?= $this->include('Catalog/Partials/offcanvas_plans') ?>
+<?php if ($response['isEdit'] && $response['product']->product_type === 'physical'): ?>
+<!-- Modal: Registro de Movimiento de Inventario -->
+<div class="modal fade" id="modal-movement" tabindex="-1" aria-labelledby="modal-movement-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-movement-label">
+                    <i class="fas fa-boxes me-2 text-success"></i>Registrar Movimiento de Inventario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-movement" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tipo de Movimiento <span class="text-danger">*</span></label>
+                        <select class="form-select" name="type" id="movement-type" required>
+                            <option value="entry">Entrada (Compra / Ajuste +)</option>
+                            <option value="exit">Salida (Venta / Ajuste -)</option>
+                            <option value="transfer">Transferencia entre Sucursales</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Sucursal Origen <span class="text-danger">*</span></label>
+                        <select class="form-select" name="org_branch_id" id="movement-branch" required>
+                            <option value="">Selecciona una sucursal...</option>
+                            <?php foreach ($response['branches'] as $branch): ?>
+                            <option value="<?= $branch->id ?>"><?= esc($branch->name) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="target-branch-group" style="display:none">
+                        <label class="form-label fw-semibold">Sucursal Destino <span class="text-danger">*</span></label>
+                        <select class="form-select" name="target_org_branch_id" id="movement-target-branch">
+                            <option value="">Selecciona una sucursal...</option>
+                            <?php foreach ($response['branches'] as $branch): ?>
+                            <option value="<?= $branch->id ?>"><?= esc($branch->name) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Cantidad <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="quantity" min="0.01" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notas / Referencia</label>
+                        <input type="text" class="form-control" name="notes" placeholder="Ej: Factura #123, Ajuste por merma...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn-submit-movement">
+                    <i class="fas fa-check me-1"></i>Registrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 <?php $this->endSection(); ?>

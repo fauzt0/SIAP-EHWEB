@@ -179,6 +179,12 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->get('products/(:num)/relations', 'Catalog\CatalogPlanController::getRelations/$1', ['as' => 'catalog.relations.list']);
         $routes->post('products/(:num)/relations/store', 'Catalog\CatalogPlanController::storeRelation/$1', ['as' => 'catalog.relations.store']);
         $routes->post('relations/delete/(:num)', 'Catalog\CatalogPlanController::deleteRelation/$1', ['as' => 'catalog.relations.delete']);
+
+        // ── Inventario y Stock (Hito 4) ──
+        $routes->get('products/(:num)/stock',              'Catalog\InventoryController::getStock/$1',        ['as' => 'catalog.inventory.stock']);
+        $routes->get('products/(:num)/kardex',             'Catalog\InventoryController::getKardex/$1',       ['as' => 'catalog.inventory.kardex']);
+        $routes->post('products/(:num)/stock/movement',    'Catalog\InventoryController::registerMovement/$1',['as' => 'catalog.inventory.movement']);
+        $routes->post('products/(:num)/stock/min_alert',   'Catalog\InventoryController::updateMinAlert/$1',  ['as' => 'catalog.inventory.min_alert']);
     });
 
   });//fin del grupo protegido por sesion
