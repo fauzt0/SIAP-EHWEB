@@ -240,13 +240,8 @@ class CatalogProductController extends BaseCatalogController
         $imageModel = new CatalogProductImageModel();
 
         // Sucursales activas para el modal de inventario (solo en edición)
-        $db = \Config\Database::connect();
-        $branches = $db->table('org_branches')
-            ->where('active', 1)
-            ->where('deleted_at IS NULL')
-            ->orderBy('is_main', 'DESC')
-            ->orderBy('name', 'ASC')
-            ->get()->getResult();
+        $branchModel = new \App\Models\OrgBranchModel();
+        $branches = $branchModel->getActive();
 
         $this->viewData['response'] = [
             'categories' => $this->categoryModel->getFullHierarchy(),
