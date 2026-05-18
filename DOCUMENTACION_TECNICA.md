@@ -345,3 +345,114 @@ $this->viewData['breadcrumb'] = $this->breadcrumb->getBreadCrumbHtml([
     'Editar Trabajador'=> '', // Nivel actual sin link
 ]);
 ```
+
+---
+
+<a name="14-gestión-de-vistas-y-layouts"></a>
+## 14. Gestión de Vistas y Layouts (Templates, Partials, Layouts)
+
+El proyecto utiliza un sistema de jerarquía de vistas (Layouts y Partials) nativo de CodeIgniter 4, apoyado por el motor de AppStack.
+
+### A. Estructura de Directorios
+*   **`app/Views/Layouts/`**: Contiene los "esqueletos" principales de la aplicación. Ejemplo: `user_loggedin_layout.php` (layout maestro para usuarios autenticados).
+*   **`app/Views/Partials/`**: Contiene componentes reutilizables como el `loggedin_sidebar.php` (menú lateral), `loggedin_topbar.php` (barra superior) y `footer.php`.
+*   **`app/Views/{Modulo}/`**: Vistas específicas de cada módulo (ej. `Organization/profile.php`).
+
+### B. Uso de Layouts en las Vistas
+Toda vista de módulo debe extender un layout maestro y definir las secciones (`title`, `main`, `scripts`):
+
+```php
+<?php $this->extend($layout); ?> <!-- $layout se inyecta desde BaseController -->
+
+<?php $this->section('title'); ?>
+<?= esc($headTitle) ?>
+<?php $this->endSection(); ?>
+
+<?php $this->section('main'); ?>
+<main class="content">
+    <!-- Contenido HTML de la vista -->
+</main>
+<?php $this->endSection(); ?>
+
+<?php $this->section('scripts'); ?>
+<script>
+    // JS específico de la vista
+</script>
+<?php $this->endSection(); ?>
+```
+
+---
+
+<a name="15-flujo-de-datos-del-controlador-a-la-vista-viewdata-y-outputdata"></a>
+## 15. Flujo de Datos del Controlador (ViewData y OutputData)
+
+El controlador principal `BaseController` define dos variables globales protegidas para estandarizar el flujo de información hacia las vistas y hacia las respuestas AJAX (JSON): `$viewData` y `$outputData`.
+
+### A. `$viewData` (Para renderizado HTML)
+Este arreglo se inicializa automáticamente y contiene propiedades predefinidas como `pageTitle`, `headTitle`, `breadcrumb`, y `response` (para enviar arreglos o modelos a la vista).
+
+**Flujo en Controlador:**
+```php
+public function index(): string
+{
+    // 1. Establecer variables usando helpers de BaseController
+    $this->setViewSuccess('Listado de Módulo');
+    $this->setPageTittleAhead('Mi Módulo', 'Gestión de Módulo');
+    
+    // 2. Inyectar datos específicos a la vista en la clave 'response'
+    $this->viewData['response'] = [
+        'data1' => $modelo->findAll()
+    ];
+    
+    // 3. Renderizar usando el Layout maestro
+    return $this->renderLayout('Layouts/user_loggedin_layout', 'Modulo/mi_vista');
+}
+```
+
+### B. `$outputData` (Para respuestas AJAX/JSON)
+Similar a `$viewData`, pero destinado exclusivamente a la comunicación de APIs o validaciones de formulario por Fetch/jQuery.
+
+**Flujo en Controlador:**
+```php
+public function save()
+{
+    if (!$this->request->isAJAX()) return;
+    
+    // 1. Operación de negocio
+    $modelo->insert($data);
+    
+    // 2. Formatear la respuesta de éxito
+    $this->setOutputSuccess('Guardado correctamente');
+    
+    // 3. Inyectar el token CSRF renovado obligatoriamente
+    $this->outputData['csrf'] = csrf_hash();
+    
+    // 4. Devolver JSON
+    return $this->response->setJSON($this->outputData);
+}
+```
+
+---
+
+<a name="16-ampliacion-datatabletrait"></a>
+## 16. Ampliación: Uso avanzado de DataTableTrait
+
+Como se mencionó en la sección 5, `DataTableTrait` es **el único proceso del ERP que maneja Traits** de forma estandarizada para DataTables Server-Side. 
+
+Para que un modelo funcione con el Trait, **debe** definir estrictamente las propiedades `$column_order` (columnas ordenables) y `$column_search` (columnas buscables).
+
+```php
+// En un modelo (ej. OrgBranchModel)
+private $column_order  = [null, 'name', 'branch_code', 'phone', 'email', 'active', null];
+private $column_search = ['name', 'branch_code', 'phone', 'email'];
+
+public function get_datatables($postData)
+{
+    $this->_get_datatables_query($postData);
+    if ($postData['length'] != -1) {
+        $this->limit($postData['length'], $postData['start']);
+    }
+    return $this->findAll();
+}
+```
+*Si se necesitan JOINS, se sobrescribe el método `private function _get_datatables_query($postData)` dentro del mismo modelo.*

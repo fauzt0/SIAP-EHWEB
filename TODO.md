@@ -3,6 +3,10 @@
 Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes, correcciones y próximos hitos del proyecto. Toda la referencia técnica ha sido trasladada a [DOCUMENTACION_TECNICA.md]
 ---
 
+## 🏢 En Desarrollo: Módulo de Organización (Perfil de Compañía)
+
+- [ ] **[DOCUMENTACIÓN LEGAL]** Desarrollar lógica de subida y almacenamiento de archivos (constancia de situación fiscal, comprobante de domicilio, acta constitutiva) para cada sucursal en el formulario `branch_form.php`.
+
 ## 🛠️ En Desarrollo: Módulo de Productos y Servicios (Fase 1)
 
 - [ ] **[CATÁLOGO] Estructura Base:**

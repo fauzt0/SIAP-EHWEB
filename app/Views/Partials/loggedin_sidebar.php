@@ -65,6 +65,24 @@
         </li>
       <?php endif; ?>
 
+      <?php if (auth()->user()->can('admin.manage-organization')): ?>
+        <li class="sidebar-item <?= url_is('nat/organization*') ? 'active' : '' ?>">
+          <a data-bs-target="#org-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/organization*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-building align-middle me-1"></i> <span class="align-middle">Organización</span>
+          </a>
+          <ul id="org-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/organization*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/organization/profile*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/organization/profile') ?>">Perfil Matriz</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/organization/branch*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= base_url('nat/organization/branches') ?>">Sucursales</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
       <?php if (auth()->user()->can('catalog.access')): ?>
         <li class="sidebar-item <?= url_is('nat/catalog*') ? 'active' : '' ?>">
           <a data-bs-target="#catalog-nav" data-bs-toggle="collapse"

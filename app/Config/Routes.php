@@ -142,6 +142,20 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
 
     }); // fin del grupo hr
 
+    // ── Módulo de Organización (Perfil de Compañía y Sucursales) ──
+    $routes->group('organization', ['filter' => 'permission:admin.manage-organization'], function ($routes) {
+        $routes->get('profile', 'Organization\OrganizationController::profile', ['as' => 'organization.profile']);
+        $routes->post('profile/update', 'Organization\OrganizationController::updateProfile', ['as' => 'organization.profile.update']);
+        
+        $routes->get('branches', 'Organization\OrganizationController::branches', ['as' => 'organization.branches']);
+        $routes->post('branches/list_ajax', 'Organization\OrganizationController::getBranches', ['as' => 'organization.branches_ajax']);
+        $routes->get('branch/new', 'Organization\OrganizationController::createBranch', ['as' => 'organization.branch.new']);
+        $routes->get('branch/edit/(:num)', 'Organization\OrganizationController::editBranch/$1', ['as' => 'organization.branch.edit']);
+        $routes->post('branch/save', 'Organization\OrganizationController::saveBranch', ['as' => 'organization.branch.save']);
+        $routes->post('branch/toggle_status/(:num)', 'Organization\OrganizationController::toggleBranchStatus/$1', ['as' => 'organization.branch.toggle_status']);
+        $routes->post('branch/delete/(:num)', 'Organization\OrganizationController::deleteBranch/$1', ['as' => 'organization.branch.delete']);
+    });
+
     // ── Catálogo de Productos y Servicios ──────────────────────────
     $routes->group('catalog', ['filter' => 'permission:catalog.access'], function ($routes) {
         
