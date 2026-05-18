@@ -22,6 +22,9 @@ Este documento centraliza todas las especificaciones técnicas, convenciones de 
 14. [Gestión de Vistas y Layouts (Templates, Partials, Layouts)](#14-gestión-de-vistas-y-layouts)
 15. [Flujo de Datos del Controlador (ViewData y OutputData)](#15-flujo-de-datos-del-controlador-a-la-vista-viewdata-y-outputdata)
 16. [Ampliación: Uso avanzado de DataTableTrait](#16-ampliacion-datatabletrait)
+17. [Notificaciones UI (tools.showAlert)](#17-notificaciones-ui-toolsshowalert)
+18. [Almacenamiento de Archivos (Uploads)](#18-almacenamiento-de-archivos-uploads)
+19. [Estándares Adicionales en Modelos](#19-estandares-adicionales-en-modelos)
 
 ---
 
@@ -459,3 +462,62 @@ public function get_datatables($postData)
 }
 ```
 *Si se necesitan JOINS, se sobrescribe el método `private function _get_datatables_query($postData)` dentro del mismo modelo.*
+
+---
+
+<a name="17-notificaciones-ui-toolsshowalert"></a>
+## 17. Notificaciones UI (`tools.showAlert`)
+
+Para mantener consistencia en la retroalimentación al usuario tras peticiones AJAX, el proyecto utiliza un wrapper global en Javascript llamado `tools.showAlert`. Este reemplaza a las alertas nativas del navegador (`alert()`).
+
+**Estándar de uso en vistas (AJAX success/error):**
+```javascript
+if (typeof tools !== 'undefined' && tools.showAlert) {
+    tools.showAlert('success', '¡Éxito!', res.message); // Tipos: 'success', 'error', 'warning', 'info'
+} else {
+    alert(res.message); // Fallback en caso de que tools.js no cargue
+}
+```
+
+---
+
+<a name="18-almacenamiento-de-archivos-uploads"></a>
+## 18. Almacenamiento de Archivos (Uploads)
+
+La subida de archivos (imágenes, documentos legales, PDFs) debe mantener una organización modular en el directorio `public_html/uploads/` o equivalente (`FCPATH . 'uploads/'`).
+
+**Reglas:**
+1. Crear un subdirectorio por módulo (Ej. `uploads/organization/`, `uploads/hr/workers/`, `uploads/catalog/products/`).
+2. Generar nombres aleatorios para evitar colisiones: `$file->getRandomName()`.
+3. Guardar en la base de datos la ruta relativa, no la absoluta (Ej. `uploads/organization/169123.png`).
+
+**Ejemplo en Controlador:**
+```php
+$logo = $this->request->getFile('logo');
+if ($logo && $logo->isValid() && !$logo->hasMoved()) {
+    $newName = $logo->getRandomName();
+    $logo->move(FCPATH . 'uploads/organization/', $newName);
+    $data['logo_path'] = 'uploads/organization/' . $newName;
+}
+```
+
+---
+
+<a name="19-estandares-adicionales-en-modelos"></a>
+## 19. Estándares Adicionales en Modelos
+
+Además de `DataTableTrait`, todos los modelos principales deben adherirse estrictamente a las convenciones de CodeIgniter 4 para seguridad e integridad de datos:
+
+*   **Soft Deletes Obligatorios:** Todo modelo que maneje datos críticos (usuarios, empleados, sucursales, productos) debe usar `$useSoftDeletes = true` y definir la columna `deleted_at`. Nunca borrar físicamente a menos que sea una tabla pivot o de configuración temporal.
+*   **Validaciones Centralizadas:** Definir siempre las reglas en `$validationRules` dentro del Modelo, en lugar de validar en el controlador.
+*   **Campos Protegidos:** Definir explícitamente `$allowedFields`.
+
+```php
+protected $useSoftDeletes   = true;
+protected $protectFields    = true;
+protected $allowedFields    = ['name', 'email', 'status'];
+
+protected $validationRules = [
+    'email' => 'required|valid_email|max_length[100]',
+];
+```
