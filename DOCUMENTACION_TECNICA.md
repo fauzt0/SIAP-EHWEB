@@ -465,17 +465,17 @@ public function get_datatables($postData)
 
 ---
 
-<a name="17-notificaciones-ui-toolsshowalert"></a>
-## 17. Notificaciones UI (`tools.showAlert`)
+<a name="17-notificaciones-ui-notifyshow"></a>
+## 17. Notificaciones UI (`notifyShow`)
 
-Para mantener consistencia en la retroalimentación al usuario tras peticiones AJAX, el proyecto utiliza un wrapper global en Javascript llamado `tools.showAlert`. Este reemplaza a las alertas nativas del navegador (`alert()`).
+Para mantener consistencia en la retroalimentación al usuario tras peticiones AJAX, el proyecto utiliza un wrapper global en Javascript llamado `notifyShow`. Este reemplaza a las alertas nativas del navegador (`alert()`).
 
 **Estándar de uso en vistas (AJAX success/error):**
 ```javascript
-if (typeof tools !== 'undefined' && tools.showAlert) {
-    tools.showAlert('success', '¡Éxito!', res.message); // Tipos: 'success', 'error', 'warning', 'info'
+if (typeof notifyShow === 'function') {
+    notifyShow(res.message, 'success'); // Tipos comunes: 'success', 'danger', 'warning', 'info'
 } else {
-    alert(res.message); // Fallback en caso de que tools.js no cargue
+    alert(res.message); // Fallback
 }
 ```
 

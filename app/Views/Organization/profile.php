@@ -136,14 +136,14 @@ $('#profile-form').on('submit', function(e) {
             btn.html(originalHtml).prop('disabled', false);
             if(res.csrf) document.getElementById('csrf_token').value = res.csrf;
             if(res.success) {
-                if(typeof tools !== 'undefined' && tools.showAlert) {
-                    tools.showAlert('success', '¡Éxito!', res.message);
+                if(typeof notifyShow === 'function') {
+                    notifyShow(res.message, 'success');
                 } else {
                     alert(res.message);
                 }
             } else {
-                if(typeof tools !== 'undefined' && tools.showAlert) {
-                    tools.showAlert('error', 'Error', res.message);
+                if(typeof notifyShow === 'function') {
+                    notifyShow(res.message, 'danger');
                 } else {
                     alert(res.message);
                 }
@@ -153,10 +153,10 @@ $('#profile-form').on('submit', function(e) {
             btn.html(originalHtml).prop('disabled', false);
             let res = xhr.responseJSON;
             if(res && res.csrf) document.getElementById('csrf_token').value = res.csrf;
-            if(typeof tools !== 'undefined' && tools.showAlert) {
-                tools.showAlert('error', 'Error', res ? res.message : 'Error de servidor');
+            if(typeof notifyShow === 'function') {
+                notifyShow(res && res.message ? res.message : 'Error de servidor', 'danger');
             } else {
-                alert(res ? res.message : 'Error de servidor');
+                alert(res && res.message ? res.message : 'Error de servidor');
             }
         }
     });

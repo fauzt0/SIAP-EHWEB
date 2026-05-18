@@ -92,7 +92,9 @@ window.toggleBranchStatus = function(id, status) {
             if(res.csrf) document.getElementById('csrf_token').value = res.csrf;
             if(res.success) {
                 $('#datatables-branches').DataTable().ajax.reload(null, false);
-                if(typeof tools !== 'undefined' && tools.showAlert) tools.showAlert('success', 'Éxito', res.message);
+                if(typeof notifyShow === 'function') notifyShow(res.message, 'success');
+            } else {
+                if(typeof notifyShow === 'function') notifyShow(res.message || 'Error', 'danger');
             }
         });
     }
@@ -107,7 +109,9 @@ window.deleteBranch = function(id) {
             if(res.csrf) document.getElementById('csrf_token').value = res.csrf;
             if(res.success) {
                 $('#datatables-branches').DataTable().ajax.reload(null, false);
-                if(typeof tools !== 'undefined' && tools.showAlert) tools.showAlert('success', 'Éxito', res.message);
+                if(typeof notifyShow === 'function') notifyShow(res.message, 'success');
+            } else {
+                if(typeof notifyShow === 'function') notifyShow(res.message || 'Error', 'danger');
             }
         });
     }
