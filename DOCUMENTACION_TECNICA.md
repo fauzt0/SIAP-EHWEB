@@ -19,6 +19,9 @@ Este documento centraliza todas las especificaciones técnicas, convenciones de 
 11. [Gestión de Fechas (Backend vs UI)](#11-gestión-de-fechas-backend-vs-ui)
 12. [Estándar de Iconografía (FontAwesome)](#12-estándar-de-iconografía-fontawesome)
 13. [Estructura de Navegación: Breadcrumbs](#13-estructura-de-navegación-breadcrumbs)
+14. [Gestión de Vistas y Layouts (Templates, Partials, Layouts)](#14-gestión-de-vistas-y-layouts)
+15. [Flujo de Datos del Controlador (ViewData y OutputData)](#15-flujo-de-datos-del-controlador-a-la-vista-viewdata-y-outputdata)
+16. [Ampliación: Uso avanzado de DataTableTrait](#16-ampliacion-datatabletrait)
 
 ---
 
