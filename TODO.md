@@ -1,61 +1,96 @@
 # Panel de Tareas (TODO)
 
-Este archivo se utiliza exclusivamente para el seguimiento de tareas pendientes, correcciones y próximos hitos del proyecto. Toda la referencia técnica ha sido trasladada a [DOCUMENTACION_TECNICA.md]
----
+Seguimiento de pendientes y próximos hitos. Referencia técnica: [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md). Handoff del agente anterior: [ESTATUS_ENTREGA.md](ESTATUS_ENTREGA.md). Esquema organización: [SCHEMA_ORGANIZACION.md](SCHEMA_ORGANIZACION.md).
 
-## 🏢 En Desarrollo: Módulo de Organización (Perfil de Compañía)
-
-- [ ] **[DOCUMENTACIÓN LEGAL]** Desarrollar lógica de subida y almacenamiento de archivos (constancia de situación fiscal, comprobante de domicilio, acta constitutiva) para cada sucursal en el formulario `branch_form.php`.
-
-## 🛠️ En Desarrollo: Módulo de Productos y Servicios (Fase 1)
-
-- [ ] **[CATÁLOGO] Estructura Base:**
-    - [ ] Migración de `catalog_product_images`.
-    - [ ] Implementación de Modelos CI4 (Products, Categories, Plans, Attributes, Stock, Movements).
-    - [ ] CRUD de Categorías (Vista jerárquica y lógica de slugs).
-- [ ] **[PRODUCTOS] Gestión Maestra:**
-    - [ ] Listado de Productos (DataTables Server-Side).
-    - [ ] Formulario dinámico de Producto (Físico vs Servicio).
-    - [ ] Galería de imágenes con Glassmorphism UI.
-
-## ❌ Pendientes de Recursos Humanos
-
-- [ ] **[RRHH] Gestión Avanzada de Incidencias:**
-    - [ ] Registro de retardos, faltas por enfermedad y permisos.
-    - [ ] Carga de justificaciones y recetas médicas.
-    - [ ] Reporte mensual para prenómina.
-- [ ] Generación de formatos PDF de baja (Renuncia/Finiquito).
-
-## 🚀 Próximos Hitos
-
-- [ ] **[PROVEEDORES]** Módulo de Proveedores: Registras a las empresas que te suministran servicios, capturas sus datos fiscales/bancarios y completas la tabla puente catalog_product_suppliers. Esto define tu costo base.
-
-- [ ] **[CLIENTES]** Módulo de Clientes / CRM: Das de alta a los compradores, asignas los contactos técnicos y defines sus perfiles de facturación.
-
-- [ ] **[VENTAS]** Módulo de Ventas, Renovaciones y POS: Ejecutas la transacción. Al tener los Proveedores (costos) y los Clientes (compradores) previamente configurados, el sistema puede generar la sales_order y calcular la utilidad neta en tiempo real.
-
-- [ ] **[CONTABILIDAD]** Módulo de Contabilidad: Entra en acción para administrar los saldos. Toma los ingresos generados en Ventas y los cruza con los egresos fijos registrados en Proveedores.
-
-- [ ] **[NOTIFICACIONES]**  Módulo de Notificaciones: La capa final. Con todos los módulos operativos, configuras los disparadores (triggers) para enviar alertas por WhatsApp o correo sobre vencimientos, tickets o pagos.
-
-- [ ] **[ACTIVACIONES]** Módulo de Activaciones / Aprovisionamiento: El motor técnico. Se encarga de la ejecución (crear cuentas en WHM, desplegar VPS, etc.) una vez que el Catálogo ha procesado la orden comercial. Mantiene la infraestructura separada de la oferta comercial.
-- [ ] Implementar módulo de Reportes base.
+**Última revisión:** 2026-05-18 (alineado con estado del repositorio `main`).
 
 ---
 
-## 🔔 Nota sobre Sistema de Alertas (Notificaciones)
-El sistema de alertas debe integrarse con el menú de "Notifications" en el topbar y considerarse en el desarrollo de Inventario y Ventas:
-- **Disparadores (Triggers):**
-    - **Stock Bajo:** Cuando `catalog_product_stock.stock < catalog_product_stock.min_alert`.
-    - **Vencimientos:** Alertas automáticas para renovación de planes/suscripciones.
-    - **Bitácora:** Los movimientos críticos de inventario deben generar notificaciones para administradores.
-- **Implementación:** Los modelos mutativos deben disparar eventos o llamadas al futuro `NotificationService` para registrar la alerta en la DB y mostrarla en tiempo real vía AJAX/WebSockets.
+## ✅ Completado (no requiere acción inmediata)
+
+### Organización y configuración
+- [x] Perfil de compañía matriz (`org_company_profile`) — `Organization/profile.php`
+- [x] CRUD de sucursales / unidades de negocio (`org_branches`) — DataTables, logos, permisos `admin.manage-organization`
+- [x] Documentación técnica ampliada (ViewData, OutputData, DataTableTrait, uploads, etc.)
+- [x] Diccionario `SCHEMA_ORGANIZACION.md`
+
+### Catálogo — Fase 1 (marcas y productos base)
+- [x] Migración y modelo `catalog_brands`; seeder de marcas
+- [x] Columna `brand_id` en `catalog_products` + selector en `product_form.php`
+- [x] Migración `catalog_product_images`
+- [x] Modelos: Products, Categories, Plans, Attributes, Stock, Movements, Images, Relations
+- [x] CRUD de categorías (jerárquico)
+- [x] Listado de productos (DataTables server-side) + filtros
+- [x] Formulario dinámico producto (físico / servicio / digital)
+- [x] Galería de imágenes en formulario de producto
+- [x] Módulo de inventario por sucursal (`catalog_product_stock` + movimientos)
+
+### Otros módulos con base operativa
+- [x] Usuarios, roles y permisos (Shield)
+- [x] RRHH: trabajadores, documentos, vacaciones, contratos/plantillas, incidencias básicas, finiquito/baja (parcial según permisos)
 
 ---
 
-## ⚙️ Refactorizaciones Pendientes
+## 🔥 Prioridad actual — Catálogo Fase 2 (producto ↔ unidad de negocio)
 
-- [ ] **[CONTRATOS]** Optimización de editor de plantillas y versionado.
-- [ ] **[USUARIOS]** Sección de "Mi Perfil" para empleados.
-- [ ] **[UI]** Estandarizar tablas a `table-striped`.
-- [ ] **[TÉCNICO]** Corregir dependencia de token CSRF en `main_users.php`.
+Integrar **quién comercializa** el producto (`business_unit_id` → `org_branches.id`), distinto del stock por sucursal (`catalog_product_stock`).
+
+- [ ] Migración: agregar `business_unit_id` (INT UNSIGNED, FK `org_branches.id`) en `catalog_products`
+- [ ] `CatalogProductModel`: `allowedFields`, validación, JOIN en `_get_datatables_query`
+- [ ] `CatalogProductController`: inyectar sucursales activas en create/edit; persistir en save/update
+- [ ] `product_form.php`: `<select>` obligatorio de Unidad de Negocio
+- [ ] `products_index.php`: columna en DataTables + render en `products_ajax`
+- [ ] (Opcional) Filtro por unidad de negocio en listado
+- [ ] Actualizar `PLAN_ORGANIZACION_CATALOGO.md` con la distinción comercializador vs inventario por sucursal
+
+---
+
+## 🏢 Organización — Pendiente (no bloquea Fase 2)
+
+- [ ] **[DOCUMENTACIÓN LEGAL]** Subida y almacenamiento de archivos por sucursal (CSF, comprobante de domicilio, acta constitutiva) en `branch_form.php` — hoy hay placeholder deshabilitado; definir tabla pivote o rutas en `uploads/organization/`
+
+---
+
+## ❌ Pendientes de Recursos Humanos (mejoras)
+
+- [ ] **[RRHH] Incidencias avanzadas:** retardos, faltas por enfermedad, permisos con flujo completo
+- [ ] Carga de justificaciones y recetas médicas vinculadas a incidencias
+- [ ] Reporte mensual para prenómina
+- [ ] Generación de formatos PDF de baja (renuncia/finiquito) — revisar qué cubre ya `WorkerSettlementController`
+
+---
+
+## 🚀 Roadmap ERP (después de Fase 2 catálogo)
+
+Orden sugerido según dependencias de negocio:
+
+- [ ] **[PROVEEDORES]** Alta de proveedores, datos fiscales/bancarios, tabla `catalog_product_suppliers` (costo base)
+- [ ] **[CLIENTES / CRM]** Compradores, contactos técnicos, perfiles de facturación
+- [ ] **[VENTAS / POS]** Órdenes de venta, renovaciones, utilidad neta (requiere proveedores + clientes)
+- [ ] **[CONTABILIDAD]** Cruce ingresos (ventas) vs egresos (proveedores)
+- [ ] **[NOTIFICACIONES]** Triggers (stock bajo, vencimientos, bitácora crítica) + topbar
+- [ ] **[ACTIVACIONES]** Aprovisionamiento (WHM, VPS, etc.) desacoplado del catálogo comercial
+- [ ] Módulo de reportes base
+- [ ] Vista “Stock crítico” por sucursal y marca (ver `PLAN_ORGANIZACION_CATALOGO.md`)
+- [ ] **Hito 5:** Descuentos en catálogo (cuando catálogo + unidad de negocio estén estables)
+
+---
+
+## 🔔 Nota: Sistema de alertas (futuro)
+
+Integrar con menú Notifications del topbar cuando existan Inventario + Ventas operativos:
+
+- **Stock bajo:** `catalog_product_stock.stock < min_alert`
+- **Vencimientos:** renovación de planes/suscripciones
+- **Bitácora:** movimientos críticos de inventario
+- **Implementación:** `NotificationService` desde modelos mutativos (DB + AJAX/WebSockets)
+
+---
+
+## ⚙️ Refactorizaciones y deuda técnica
+
+- [ ] **[CONTRATOS]** Optimización del editor de plantillas y versionado
+- [ ] **[USUarios]** Sección “Mi perfil” para empleados
+- [ ] **[UI]** Estandarizar tablas a `table-striped`
+- [ ] **[TÉCNICO]** Corregir dependencia de token CSRF en `main_users.php`
+- [ ] Revisar controladores legado que aún usen `$db->transStart()` directo (mover a modelos, ver §9 documentación)
