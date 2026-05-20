@@ -1,0 +1,30 @@
+# Dependencias de Backend
+/vendor/
+composer.lock
+
+# Dependencias de Frontend (si usas NPM/Webpack/Vite para AppStack)
+/node_modules/
+package-lock.json
+
+# Archivos dinámicos de CodeIgniter 4 (¡Crítico ignorarlos!)
+/writable/cache/
+/writable/logs/
+/writable/session/
+/writable/debugbar/
+/writable/uploads/
+
+# Archivos públicos estáticos pesados
+/public_html/assets/images/
+/public_html/assets/fonts/
+/public_html/uploads/
+
+# Archivos de Base de Datos y Backups (Aquí se van muchos tokens)
+*.sql
+*.sqlite
+*.csv
+*.xlsx
+/backups/
+
+Control de versiones y configuraciones de entorno
+.git/
+.env

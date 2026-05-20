@@ -4,8 +4,8 @@ namespace App\Controllers\Organization;
 
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
-use App\Models\OrgCompanyModel;
-use App\Models\OrgBranchModel;
+use App\Models\Organization\OrgCompanyModel;
+use App\Models\Organization\OrgBranchModel;
 use App\Models\Users\UserActivityLogsModel;
 
 class OrganizationController extends BaseController

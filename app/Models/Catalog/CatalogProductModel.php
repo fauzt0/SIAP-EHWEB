@@ -16,8 +16,12 @@ class CatalogProductModel extends Model
     protected $useSoftDeletes   = true;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'category_id', 'brand_id', 'sku', 'barcode', 'internal_name', 'commercial_name', 
-        'description_short', 'description_long', 'product_type', 'active'
+        'category_id', 'brand_id', 'business_unit_id', 'sku', 'barcode', 'internal_name', 'commercial_name',
+        'description_short', 'description_long', 'product_type', 'active',
+    ];
+
+    protected $validationRules = [
+        'business_unit_id' => 'required|is_natural_no_zero|is_not_unique[org_branches.id]',
     ];
 
     // Dates
@@ -39,11 +43,15 @@ class CatalogProductModel extends Model
     protected function _get_datatables_query($postData = [])
     {
         $this->builder()
-            ->select('catalog_products.*, catalog_categories.name as category_name, catalog_brands.name as brand_name, (SELECT COUNT(*) FROM catalog_product_plans WHERE catalog_product_plans.product_id = catalog_products.id AND catalog_product_plans.deleted_at IS NULL) as plans_count, (SELECT path FROM catalog_product_images WHERE catalog_product_images.product_id = catalog_products.id AND catalog_product_images.is_main = 1 LIMIT 1) as main_image')
+            ->select('catalog_products.*, catalog_categories.name as category_name, org_branches.name as branch_name, org_branches.branch_code as branch_code, catalog_brands.name as brand_name, (SELECT COUNT(*) FROM catalog_product_plans WHERE catalog_product_plans.product_id = catalog_products.id AND catalog_product_plans.deleted_at IS NULL) as plans_count, (SELECT path FROM catalog_product_images WHERE catalog_product_images.product_id = catalog_products.id AND catalog_product_images.is_main = 1 LIMIT 1) as main_image')
             ->join('catalog_categories', 'catalog_categories.id = catalog_products.category_id', 'left')
+            ->join('org_branches', 'org_branches.id = catalog_products.business_unit_id', 'left')
             ->join('catalog_brands', 'catalog_brands.id = catalog_products.brand_id', 'left');
 
         // Filtros personalizados desde el front
+        if (!empty($postData['filter_branch'])) {
+            $this->builder()->where('catalog_products.business_unit_id', (int) $postData['filter_branch']);
+        }
         if (!empty($postData['filter_type'])) {
             $this->builder()->where('catalog_products.product_type', $postData['filter_type']);
         }

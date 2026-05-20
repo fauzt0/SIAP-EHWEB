@@ -17,7 +17,7 @@ use App\Models\HR\HrProfileModel;
 use App\Models\HR\HrEmploymentModel;
 use App\Models\HR\HrDepartmentModel;
 use App\Models\HR\HrJobModel;
-use App\Models\OrgBranchModel;
+use App\Models\Organization\OrgBranchModel;
 use App\Models\HR\HrContractTypeModel;
 
 class WorkerController extends BaseHrController
@@ -200,7 +200,7 @@ class WorkerController extends BaseHrController
                 $jobName = $job->name ?? null;
             }
             if (!empty($employment->location_id)) {
-                $branch = (new \App\Models\OrgBranchModel())->find($employment->location_id);
+                $branch = (new \App\Models\Organization\OrgBranchModel())->find($employment->location_id);
                 $locationName = $branch->name ?? null;
             }
             if (!empty($employment->direct_manager_id)) {

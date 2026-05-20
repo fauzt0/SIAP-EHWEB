@@ -38,8 +38,11 @@ class CatalogProductController extends BaseCatalogController
             cache()->save('catalog_product_stats', $stats, 300);
         }
 
+        $branchModel = new \App\Models\Organization\OrgBranchModel();
+
         $this->viewData['response'] = [
             'categories' => $this->categoryModel->getFullHierarchy(),
+            'branches'   => $branchModel->getActive(),
             'stats'      => $stats,
         ];
 
@@ -47,7 +50,7 @@ class CatalogProductController extends BaseCatalogController
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // AJAX: DataTables Server-Side
+    // AJAX: DataTables Server-Side. Llama a la función get_datatables del modelo CatalogProductModel para obtener los datos de la tabla catalog_products.
     // ────────────────────────────────────────────────────────────────────────
 
     public function products_ajax()
@@ -88,6 +91,16 @@ class CatalogProductController extends BaseCatalogController
             $row[] = !empty($product->category_name)
                 ? '<span class="badge badge-subtle-secondary">' . esc($product->category_name) . '</span>'
                 : '<span class="text-muted small fst-italic">Sin categoría</span>';
+
+            // Unidad de negocio (comercializador)
+            if (!empty($product->branch_name)) {
+                $code = !empty($product->branch_code)
+                    ? '<small class="text-muted font-monospace ms-1">' . esc($product->branch_code) . '</small>'
+                    : '';
+                $row[] = '<span class="badge badge-subtle-primary">' . esc($product->branch_name) . '</span>' . $code;
+            } else {
+                $row[] = '<span class="text-muted small fst-italic">Sin unidad</span>';
+            }
 
             // Tipo de producto con icono fas (no Lucide — Sección 12 DOCUMENTACION_TECNICA.md)
             $typeMap = [
@@ -202,12 +215,16 @@ class CatalogProductController extends BaseCatalogController
             }
         }
 
-        $brandModel = new \App\Models\Catalog\CatalogBrandModel();
-        $brands = $brandModel->getActive();
+        $brandModel  = new \App\Models\Catalog\CatalogBrandModel();
+        $branchModel = new \App\Models\Organization\OrgBranchModel();
+        $branchId    = $product && !empty($product->business_unit_id)
+            ? (int) $product->business_unit_id
+            : null;
 
         $this->viewData['response'] = [
             'categories' => $this->categoryModel->getFullHierarchy(),
-            'brands'     => $brands,
+            'brands'     => $brandModel->getActive(),
+            'branches'   => $branchModel->getActiveForForm($branchId),
             'product'    => $product,
             'attributes' => $attributes,
             'images'     => [], // No clonar imágenes automáticamente
@@ -247,8 +264,8 @@ class CatalogProductController extends BaseCatalogController
         $brandModel = new \App\Models\Catalog\CatalogBrandModel();
         $brands = $brandModel->getActive();
         
-        $branchModel = new \App\Models\OrgBranchModel();
-        $branches = $branchModel->getActive();
+        $branchModel = new \App\Models\Organization\OrgBranchModel();
+        $branchId    = !empty($product->business_unit_id) ? (int) $product->business_unit_id : null;
 
         $this->viewData['response'] = [
             'categories' => $this->categoryModel->getFullHierarchy(),
@@ -256,7 +273,7 @@ class CatalogProductController extends BaseCatalogController
             'product'    => $product,
             'attributes' => $attrModel->getByProduct($id),
             'images'     => $imageModel->getByProduct($id),
-            'branches'   => $branches,
+            'branches'   => $branchModel->getActiveForForm($branchId),
             'isEdit'     => true,
         ];
 
@@ -489,6 +506,7 @@ class CatalogProductController extends BaseCatalogController
         return [
             'category_id'       => $this->request->getPost('category_id') ?: null,
             'brand_id'          => $this->request->getPost('brand_id') ?: null,
+            'business_unit_id'  => (int) $this->request->getPost('business_unit_id'),
             'sku'               => strtoupper(trim((string)$this->request->getPost('sku'))),
             'barcode'           => trim((string)$this->request->getPost('barcode')) ?: null,
             'internal_name'     => trim((string)$this->request->getPost('internal_name')),

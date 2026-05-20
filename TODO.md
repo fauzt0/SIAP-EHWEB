@@ -31,17 +31,17 @@ Seguimiento de pendientes y próximos hitos. Referencia técnica: [DOCUMENTACION
 
 ---
 
-## 🔥 Prioridad actual — Catálogo Fase 2 (producto ↔ unidad de negocio)
+## ✅ Completado — Catálogo Fase 2 (producto ↔ unidad de negocio)
 
-Integrar **quién comercializa** el producto (`business_unit_id` → `org_branches.id`), distinto del stock por sucursal (`catalog_product_stock`).
+- [x] Migración `business_unit_id` (FK `org_branches.id`) + backfill productos existentes
+- [x] `CatalogProductModel`, `CatalogProductController`, `product_form.php`, `products_index.php`
+- [x] **UI Unificada:** Campo "Unidad de Negocio" habilitado para todos los tipos (Servicio, Físico, Digital) en Alta y Edición.
+- [x] Filtro por unidad de negocio en listado
+- [x] `PLAN_ORGANIZACION_CATALOGO.md` actualizado
 
-- [ ] Migración: agregar `business_unit_id` (INT UNSIGNED, FK `org_branches.id`) en `catalog_products`
-- [ ] `CatalogProductModel`: `allowedFields`, validación, JOIN en `_get_datatables_query`
-- [ ] `CatalogProductController`: inyectar sucursales activas en create/edit; persistir en save/update
-- [ ] `product_form.php`: `<select>` obligatorio de Unidad de Negocio
-- [ ] `products_index.php`: columna en DataTables + render en `products_ajax`
-- [ ] (Opcional) Filtro por unidad de negocio en listado
-- [ ] Actualizar `PLAN_ORGANIZACION_CATALOGO.md` con la distinción comercializador vs inventario por sucursal
+## 🔥 Prioridad actual — Siguiente hito
+
+Ver **Roadmap ERP** (Proveedores → CRM → Ventas).
 
 ---
 

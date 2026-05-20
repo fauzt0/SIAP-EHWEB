@@ -1,0 +1,31 @@
+---
+description: MVC architecture and database transaction standards
+globs: app/Controllers/**/*.php, app/Models/**/*.php, app/Config/Routes.php
+alwaysApply: false
+---
+
+# MVC & Database Standards
+
+## Routing
+- Use named routes with the `as` parameter: `$routes->post('path', 'Controller::method', ['as' => 'route.name']);`.
+- Use appropriate HTTP verbs (GET for lists, POST for create/update/delete).
+
+## Controllers
+- **No Direct DB Connection**: Never use `\Config\Database::connect()` in controllers.
+- **Transactions**: Multi-table transactions must be handled in the **Model** or a **Service**, not the controller.
+- Use `$viewData` for HTML rendering and `$outputData` for AJAX responses.
+
+## Models
+- **Soft Deletes**: Use `protected $useSoftDeletes = true;` for critical data.
+- **Validation**: Define rules in `$validationRules` within the model.
+- **DataTableTrait**: Define `$column_order` and `$column_search` when using the trait.
+- **Transactions Example**:
+  ```php
+  public function complexOperation($data) {
+      $this->db->transStart();
+      $this->insert($data);
+      // ... other operations ...
+      $this->db->transComplete();
+      return $this->db->transStatus();
+  }
+  ```

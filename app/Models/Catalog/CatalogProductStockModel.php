@@ -90,7 +90,7 @@ class CatalogProductStockModel extends Model
 
         $movementModel = new InventoryMovementModel();
 
-        $this->db->transStart();
+        $this->db->transBegin();
 
         // ── 1. Actualizar saldo en la sucursal origen ──
         $stockRow = $this->getStock($productId, $branchId);
@@ -135,19 +135,20 @@ class CatalogProductStockModel extends Model
         $movementModel->insert([
             'catalog_product_id'   => $productId,
             'type'                 => $type,
-            'reference_id'         => 0,
+            'reference_id'         => null,
             'org_branch_id'        => $branchId,
-            'target_org_branch_id' => $targetBranchId ?: 0,
+            'target_org_branch_id' => ($type === 'transfer' && $targetBranchId > 0) ? $targetBranchId : null,
             'quantity'             => $quantity,
             'notes'                => $notes,
         ]);
 
-        $this->db->transComplete();
-
-        if (!$this->db->transStatus()) {
+        if ($this->db->transStatus() === false) {
+            $this->db->transRollback();
             log_message('error', 'Error en transacción registerMovement: ' . json_encode($this->db->error()));
             return 'Error interno al registrar el movimiento.';
         }
+
+        $this->db->transCommit();
 
         // ── 4. Bitácora de auditoría (fuera de la transacción para no bloquearla) ──
         $typeLabels = ['entry' => 'Entrada', 'exit' => 'Salida', 'transfer' => 'Transferencia'];

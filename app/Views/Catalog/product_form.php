@@ -102,6 +102,38 @@
                                    value="<?= !empty($response['product']) ? esc($response['product']->product_type) : 'service' ?>">
                         </div>
 
+                        <?php
+                        // Alta: sucursal matriz por defecto. Edición/clon: valor guardado en el producto.
+                        $selectedBusinessUnitId = 0;
+                        if (!empty($response['product']) && !empty($response['product']->business_unit_id)) {
+                            $selectedBusinessUnitId = (int) $response['product']->business_unit_id;
+                        } elseif (empty($response['product']) && !empty($response['branches'])) {
+                            foreach ($response['branches'] as $b) {
+                                if (!empty($b->is_main)) {
+                                    $selectedBusinessUnitId = (int) $b->id;
+                                    break;
+                                }
+                            }
+                            if ($selectedBusinessUnitId === 0) {
+                                $selectedBusinessUnitId = (int) $response['branches'][0]->id;
+                            }
+                        }
+                        ?>
+                        <div class="row g-3 mb-3 section-commercial">
+                            <div class="col-md-6 col-lg-5">
+                                <label class="form-label fw-semibold">Unidad de Negocio <span class="text-danger">*</span></label>
+                                <select class="form-select" name="business_unit_id" id="business_unit_id" required>
+                                    <option value="">Seleccione una unidad...</option>
+                                    <?php foreach ($response['branches'] ?? [] as $branch): ?>
+                                    <option value="<?= $branch->id ?>" <?= $selectedBusinessUnitId === (int) $branch->id ? 'selected' : '' ?>>
+                                        <?= esc($branch->name) ?><?= !empty($branch->branch_code) ? ' (' . esc($branch->branch_code) . ')' : '' ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text">Obligatorio para servicios, productos físicos y digitales/licencias.</div>
+                            </div>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nombre Comercial <span class="text-danger">*</span></label>
@@ -151,7 +183,7 @@
                                 <label class="form-label fw-semibold">Marca</label>
                                 <select class="form-select" name="brand_id" id="brand_id">
                                     <option value="">Sin marca</option>
-                                    <?php foreach ($response['brands'] as $brand): ?>
+                                    <?php foreach ($response['brands'] ?? [] as $brand): ?>
                                     <option value="<?= $brand->id ?>" <?= (!empty($response['product']) && $response['product']->brand_id == $brand->id) ? 'selected' : '' ?>>
                                         <?= esc($brand->name) ?>
                                     </option>
@@ -450,6 +482,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initImageGallery();
     initFormSubmit();
     initCategorySelect();
+    initBusinessUnitSelect();
 });
 
 function initCategorySelect() {
@@ -468,12 +501,45 @@ function initCategorySelect() {
     });
 }
 
+function initBusinessUnitSelect() {
+    const $bu = $('#business_unit_id');
+    if (!$bu.length) return;
+
+    $bu.select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Seleccione una unidad de negocio',
+        allowClear: false,
+        width: '100%',
+        dropdownParent: $bu.parent()
+    });
+}
+
 function generateSku() {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     document.getElementById('sku').value = 'PRD-' + randomNum;
 }
 
 // ── Selector de tipo de producto ──────────────────────────────
+function applyProductTypeVisibility(type) {
+    const isPhysical = type === 'physical';
+    document.querySelectorAll('.section-physical').forEach(el => {
+        el.style.display = isPhysical ? '' : 'none';
+    });
+
+    // Unidad de negocio: siempre activa (servicio, físico, digital) — alta y edición
+    const bu = document.getElementById('business_unit_id');
+    if (bu) {
+        bu.disabled = false;
+        bu.required = true;
+        if (typeof $ !== 'undefined' && $(bu).data('select2')) {
+            $(bu).prop('disabled', false).trigger('change.select2');
+        }
+    }
+    document.querySelectorAll('.section-commercial').forEach(el => {
+        el.style.display = '';
+    });
+}
+
 function initTypeTabs() {
     const tabs = document.querySelectorAll('.type-tab');
     tabs.forEach(tab => {
@@ -481,14 +547,13 @@ function initTypeTabs() {
             tabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             document.getElementById('product_type').value = this.dataset.type;
-
-            // Mostrar/ocultar secciones según tipo
-            const isPhysical = this.dataset.type === 'physical';
-            document.querySelectorAll('.section-physical').forEach(el => {
-                el.style.display = isPhysical ? '' : 'none';
-            });
+            applyProductTypeVisibility(this.dataset.type);
         });
     });
+
+    // Estado inicial al cargar (nuevo producto, edición o clonado)
+    const currentType = document.getElementById('product_type')?.value || 'service';
+    applyProductTypeVisibility(currentType);
 }
 
 // ── Builder de Atributos Dinámicos (EAV) ─────────────────────
@@ -641,6 +706,12 @@ function initFormSubmit() {
 
         const formData = new FormData(this);
         formData.set('<?= csrf_token() ?>', document.getElementById('csrf_token').value);
+
+        // Select2: asegurar business_unit_id en alta/edición
+        const buEl = document.getElementById('business_unit_id');
+        if (buEl && buEl.value) {
+            formData.set('business_unit_id', buEl.value);
+        }
 
         // Ajustar active (checkbox)
         if (!document.getElementById('active').checked) formData.set('active', '0');

@@ -1,0 +1,30 @@
+---
+description: Standards for UI components like DataTables, Select2, and Icons
+globs: app/Views/**/*.php, public_html/**/*.js
+alwaysApply: false
+---
+
+# UI Component Standards
+
+## DataTables
+- **Initialization Guard**: Always check if the table is already initialized to prevent errors:
+  ```javascript
+  if ($.fn.dataTable.isDataTable('#mi-tabla')) return;
+  ```
+
+## Select2
+- **Modals/Offcanvas**: Always specify `dropdownParent` when using Select2 inside a modal to fix focus and z-index issues:
+  ```javascript
+  $('#mi-select').select2({
+      dropdownParent: $('#mi-select').parent()
+  });
+  ```
+
+## Icons
+- **Standard**: Use **FontAwesome 5/6** (`fas` or `far`).
+- **Avoid Lucide/Feather**: Do not use JS-based icon libraries for dynamic content (AJAX/DataTables) as they fail to render new elements automatically.
+
+## Dates
+- **Database**: Use ISO 8601 (`YYYY-MM-DD`).
+- **UI Display**: Format as `DD/MM/YYYY`.
+- **Inputs**: Use native `<input type="date">` for better mobile UX.

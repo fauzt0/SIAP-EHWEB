@@ -112,6 +112,13 @@
                                         <?php endforeach; ?>
                                     </select>
 
+                                    <select class="form-select" id="filter-branch" style="max-width: 200px;">
+                                        <option value="">Todas las unidades</option>
+                                        <?php foreach ($response['branches'] ?? [] as $branch): ?>
+                                        <option value="<?= $branch->id ?>"><?= esc($branch->name) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+
                                     <select class="form-select" id="filter-active" style="max-width: 150px;">
                                         <option value="1">Activos</option>
                                         <option value="0">Inactivos</option>
@@ -133,6 +140,7 @@
                                     <th style="width:60px;">Imagen</th>
                                     <th>Producto / SKU</th>
                                     <th>Categoría</th>
+                                    <th>Unidad de Negocio</th>
                                     <th>Tipo</th>
                                     <th>Planes</th>
                                     <th>Estatus</th>
@@ -201,6 +209,7 @@ function initProductsTable() {
                 d['<?= csrf_token() ?>']  = document.getElementById('csrf_token').value;
                 d.filter_type             = document.getElementById('filter-type').value;
                 d.filter_category         = document.getElementById('filter-category').value;
+                d.filter_branch           = document.getElementById('filter-branch').value;
                 d.filter_active           = document.getElementById('filter-active').value;
             }
         },
@@ -208,10 +217,11 @@ function initProductsTable() {
             { data: 0, orderable: false, searchable: false }, // Imagen
             { data: 1 },                                       // Nombre / SKU
             { data: 2 },                                       // Categoría
-            { data: 3 },                                       // Tipo
-            { data: 4, orderable: false, searchable: false },  // Planes
-            { data: 5, orderable: false, searchable: false },  // Estatus
-            { data: 6, orderable: false, searchable: false }   // Acciones
+            { data: 3 },                                       // Unidad de negocio
+            { data: 4 },                                       // Tipo
+            { data: 5, orderable: false, searchable: false },  // Planes
+            { data: 6, orderable: false, searchable: false },  // Estatus
+            { data: 7, orderable: false, searchable: false }   // Acciones
         ],
         language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-MX.json' },
         pageLength: 15,
@@ -234,8 +244,8 @@ function initProductsTable() {
         }, 400);
     });
 
-    // Filtros de selección (type y active)
-    ['filter-type', 'filter-active'].forEach(id => {
+    // Filtros de selección (type, unidad y active)
+    ['filter-type', 'filter-branch', 'filter-active'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => {
             if (window.productsTable) window.productsTable.draw();
         });
@@ -244,6 +254,7 @@ function initProductsTable() {
     // Limpiar filtros
     document.getElementById('btn-clear-filters').addEventListener('click', function () {
         document.getElementById('filter-type').value     = '';
+        document.getElementById('filter-branch').value   = '';
         $('#filter-category').val('').trigger('change');
         document.getElementById('filter-active').value   = '1';
         document.getElementById('product-search').value  = '';

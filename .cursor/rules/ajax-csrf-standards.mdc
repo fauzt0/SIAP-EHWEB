@@ -1,0 +1,36 @@
+---
+description: Standards for AJAX requests and CSRF security management
+globs: app/Controllers/**/*.php, app/Views/**/*.php, public_html/**/*.js
+alwaysApply: false
+---
+
+# AJAX & CSRF Standards
+
+## Backend (Controllers)
+- All AJAX-only endpoints must validate the request:
+  ```php
+  if (!$this->request->isAJAX()) {
+      throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+  }
+  ```
+
+## Frontend (JS/Fetch)
+- **Headers**: Always include `X-Requested-With: XMLHttpRequest`.
+- **CSRF Injection**: For mutative requests (POST, PUT, DELETE), inject the CSRF token in headers using `<?= csrf_header() ?>`.
+- **CSRF Renewal**: Always capture the new token from the response header and update the global `#csrf_token` input.
+
+## Views
+- Include the CSRF hidden input at the start of the `main` section:
+  ```html
+  <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token">
+  ```
+
+## DataTables
+- Use `xhr.dt` event to renew the CSRF token:
+  ```javascript
+  $('#tabla').on('xhr.dt', function (e, settings, json, xhr) {
+      if (xhr && xhr.getResponseHeader('<?= csrf_header() ?>')) {
+          document.getElementById('csrf_token').value = xhr.getResponseHeader('<?= csrf_header() ?>');
+      }
+  });
+  ```

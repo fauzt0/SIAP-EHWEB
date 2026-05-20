@@ -1,5 +1,5 @@
 <?php
-
+/**Modelos de prueba para el modulo de catalogo de productos y servicios. Eliminar antes del deploy.*/
 namespace App\Models;
 
 use CodeIgniter\Model;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Organization;
 
 use CodeIgniter\Model;
 
@@ -39,6 +39,33 @@ class OrgBranchModel extends Model
     public function getActive(): array
     {
         return $this->where('active', 1)->orderBy('name', 'ASC')->findAll();
+    }
+
+    /**
+     * Sucursales para selectores de formulario (alta/edición).
+     * Incluye la sucursal ya asignada aunque esté inactiva, para no perder el valor en edición.
+     */
+    public function getActiveForForm(?int $includeBranchId = null): array
+    {
+        $branches = $this->getActive();
+
+        if ($includeBranchId === null || $includeBranchId <= 0) {
+            return $branches;
+        }
+
+        foreach ($branches as $branch) {
+            if ((int) $branch->id === $includeBranchId) {
+                return $branches;
+            }
+        }
+
+        $assigned = $this->find($includeBranchId);
+        if ($assigned) {
+            $branches[] = $assigned;
+            usort($branches, static fn ($a, $b) => strcmp($a->name, $b->name));
+        }
+
+        return $branches;
     }
 
     private function _get_datatables_query($postData)
