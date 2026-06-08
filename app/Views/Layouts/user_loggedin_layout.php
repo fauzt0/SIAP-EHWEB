@@ -34,6 +34,7 @@
     ?>
 
     <div class="main">
+      <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" id="csrf_token">
       <!-- main content y topbar -->
       <?php 
         echo $this->include('Partials/loggedin_topbar');         

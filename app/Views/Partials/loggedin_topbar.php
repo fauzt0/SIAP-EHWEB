@@ -133,67 +133,28 @@
 				</div>
 			</li>
 			<li class="nav-item dropdown">
-				<a class="nav-icon dropdown-toggle" href="#" id="alertsDropdown" data-bs-toggle="dropdown">
+				<a class="nav-icon dropdown-toggle" href="#" id="alertsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside">
 					<div class="position-relative">
-						<i class="align-middle text-body" data-lucide="bell-off"></i>
+						<i class="align-middle text-body" data-lucide="bell"></i>
+						<span class="indicator" id="alertBadge" style="display:none">0</span>
 					</div>
 				</a>
 				<div class="dropdown-menu dropdown-menu-lg dropdown-menu-end py-0" aria-labelledby="alertsDropdown">
 					<div class="dropdown-menu-header">
-						4 New Notifications
+						<span id="alertHeader">Notificaciones</span>
 					</div>
-					<div class="list-group">
-						<a href="#" class="list-group-item">
-							<div class="row g-0 align-items-center">
-								<div class="col-2">
-									<i class="text-danger" data-lucide="alert-circle"></i>
-								</div>
-								<div class="col-10">
-									<div>Update completed</div>
-									<div class="text-muted small mt-1">Restart server 12 to complete the update.</div>
-									<div class="text-muted small mt-1">2h ago</div>
-								</div>
-							</div>
-						</a>
-						<a href="#" class="list-group-item">
-							<div class="row g-0 align-items-center">
-								<div class="col-2">
-									<i class="text-warning" data-lucide="bell"></i>
-								</div>
-								<div class="col-10">
-									<div>Lorem ipsum</div>
-									<div class="text-muted small mt-1">Aliquam ex eros, imperdiet vulputate hendrerit
-										et.</div>
-									<div class="text-muted small mt-1">6h ago</div>
-								</div>
-							</div>
-						</a>
-						<a href="#" class="list-group-item">
-							<div class="row g-0 align-items-center">
-								<div class="col-2">
-									<i class="text-primary" data-lucide="home"></i>
-								</div>
-								<div class="col-10">
-									<div>Login from 192.186.1.1</div>
-									<div class="text-muted small mt-1">8h ago</div>
-								</div>
-							</div>
-						</a>
-						<a href="#" class="list-group-item">
-							<div class="row g-0 align-items-center">
-								<div class="col-2">
-									<i class="text-success" data-lucide="user-plus"></i>
-								</div>
-								<div class="col-10">
-									<div>New connection</div>
-									<div class="text-muted small mt-1">Anna accepted your request.</div>
-									<div class="text-muted small mt-1">12h ago</div>
-								</div>
-							</div>
-						</a>
+					<div class="list-group" id="alertList">
+						<div class="text-center py-3 text-muted">
+							<i class="fas fa-spinner fa-spin fa-fw me-1"></i>Cargando...
+						</div>
 					</div>
-					<div class="dropdown-menu-footer">
-						<a href="#" class="text-muted">Show all notifications</a>
+					<div class="dropdown-menu-footer d-flex justify-content-between">
+						<a href="#" class="text-muted small" id="markAllReadBtn" onclick="return markAllAlertsRead();">
+							<i class="fas fa-check-double fa-fw me-1"></i>Marcar todo leído
+						</a>
+						<a href="<?= route_to('alerts.history') ?>" class="text-muted small">
+							<i class="fas fa-list fa-fw me-1"></i>Ver todas
+						</a>
 					</div>
 				</div>
 			</li>
@@ -277,5 +238,290 @@
 				if (typeof lucide !== 'undefined') lucide.createIcons();
 			});
 		}
+	})();
+</script>
+
+<script>
+	// ── Sistema de Alertas / Notificaciones ──────────────────────────────
+	// Carga las alertas vía AJAX, las renderiza en el dropdown y actualiza el badge.
+	(function () {
+		const UNREAD_URL = '<?= route_to('alerts.get_unread') ?>';
+		const MARK_READ_URL = '<?= route_to('alerts.mark_read') ?>';
+		const MARK_ALL_READ_URL = '<?= route_to('alerts.mark_all_read') ?>';
+		const POLL_INTERVAL = 60000; // 60 segundos
+
+		/**
+		 * Obtiene el icono FontAwesome según el tipo de alerta.
+		 */
+		function getTypeIcon(type) {
+			const map = {
+				'info': 'fa-info-circle',
+				'success': 'fa-check-circle',
+				'warning': 'fa-exclamation-triangle',
+				'danger': 'fa-times-circle'
+			};
+			return map[type] || 'fa-bell';
+		}
+
+		/**
+		 * Obtiene la clase CSS de color según el tipo de alerta.
+		 */
+		function getTypeClass(type) {
+			const map = {
+				'info': 'text-primary',
+				'success': 'text-success',
+				'warning': 'text-warning',
+				'danger': 'text-danger'
+			};
+			return map[type] || 'text-body';
+		}
+
+		/**
+		 * Escapa HTML para prevenir XSS.
+		 */
+		function escapeHtml(str) {
+			if (!str) return '';
+			var div = document.createElement('div');
+			div.appendChild(document.createTextNode(str));
+			return div.innerHTML;
+		}
+
+		/**
+		 * Formatea un timestamp ISO a formato relativo (hace X minutos/horas/días).
+		 */
+		function timeAgoFormat(isoString) {
+			if (!isoString) return '';
+			var now = new Date();
+			var date = new Date(isoString.replace(' ', 'T') + 'Z');
+			var diffMs = now - date;
+			var diffMin = Math.floor(diffMs / 60000);
+			if (diffMin < 1) return 'Ahora';
+			if (diffMin < 60) return 'Hace ' + diffMin + ' min';
+			var diffHr = Math.floor(diffMin / 60);
+			if (diffHr < 24) return 'Hace ' + diffHr + ' h';
+			var diffDays = Math.floor(diffHr / 24);
+			if (diffDays < 7) return 'Hace ' + diffDays + ' d';
+			return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+		}
+
+		function showAlertsError(message) {
+			var list = document.getElementById('alertList');
+			var header = document.getElementById('alertHeader');
+			if (header) {
+				header.textContent = 'Notificaciones';
+			}
+			if (list) {
+				list.innerHTML = '<div class="text-center py-3 text-muted"><i class="fas fa-exclamation-triangle fa-fw me-1"></i>' + escapeHtml(message || 'No se pudieron cargar las notificaciones') + '</div>';
+			}
+		}
+
+		/**
+		 * Carga las alertas no leídas desde el servidor.
+		 */
+		function loadAlerts() {
+			var csrfToken = document.getElementById('csrf_token');
+			var tokenValue = csrfToken ? csrfToken.value : '';
+
+			fetch(UNREAD_URL, {
+				method: 'GET',
+				headers: {
+					'X-Requested-With': 'XMLHttpRequest',
+					'<?= csrf_header() ?>': tokenValue
+				}
+			})
+			.then(function (response) {
+				// Renovar token CSRF desde headers
+				var newToken = response.headers.get('<?= csrf_header() ?>');
+				if (newToken && csrfToken) {
+					csrfToken.value = newToken;
+				}
+				return response.json().then(function (data) {
+					return { ok: response.ok, data: data };
+				});
+			})
+			.then(function (result) {
+				var data = result.data;
+				if (data.csrf && csrfToken) {
+					csrfToken.value = data.csrf;
+				}
+				if (result.ok && data.success) {
+					var payload = data.response || data;
+					renderAlerts(payload.alerts || [], payload.count || 0);
+				} else {
+					showAlertsError(data.message || 'No se pudieron cargar las notificaciones');
+					console.warn('[Alertas] Error al cargar:', data.message);
+				}
+			})
+			.catch(function (err) {
+				showAlertsError('Error de conexión al cargar notificaciones');
+				console.error('[Alertas] Error de red:', err);
+			});
+		}
+
+		/**
+		 * Renderiza las alertas en el dropdown y actualiza el badge.
+		 */
+		function renderAlerts(alerts, count) {
+			var list = document.getElementById('alertList');
+			var badge = document.getElementById('alertBadge');
+			var header = document.getElementById('alertHeader');
+
+			if (!list) return;
+
+			// Actualizar badge
+			if (badge) {
+				if (count > 0) {
+					badge.textContent = count > 99 ? '99+' : count;
+					badge.style.display = '';
+				} else {
+					badge.style.display = 'none';
+				}
+			}
+
+			// Actualizar header
+			if (header) {
+				var text = count > 0 ? 'Tienes ' + count + ' notificacione' + (count === 1 ? '' : 's') : 'Notificaciones';
+				header.textContent = text;
+			}
+
+			// Si no hay alertas
+			if (!alerts || alerts.length === 0) {
+				list.innerHTML = '<div class="text-center py-3 text-muted"><i class="fas fa-bell-slash fa-fw me-1"></i>Sin notificaciones nuevas</div>';
+				return;
+			}
+
+			// Construir HTML
+			var html = '';
+			for (var i = 0; i < alerts.length; i++) {
+				var a = alerts[i];
+				var icon = getTypeIcon(a.type);
+				var iconClass = getTypeClass(a.type);
+				var title = escapeHtml(a.title);
+				var message = escapeHtml(a.message || '');
+				var time = timeAgoFormat(a.created_at);
+				var targetUrl = a.target_url || '';
+				var alertId = a.alert_id || a.id;
+				var isAuto = a.is_auto ? 1 : 0;
+
+				html += '<a href="' + targetUrl + '" class="list-group-item list-group-item-action border-bottom alert-item" data-alert-id="' + alertId + '" onclick="return handleAlertClick(this, event, ' + alertId + ', ' + isAuto + ');">';
+				html += '	<div class="row align-items-center">';
+				html += '		<div class="col-auto">';
+				html += '			<i class="fas fa-fw ' + icon + ' fa-lg ' + iconClass + '"></i>';
+				html += '		</div>';
+				html += '		<div class="col ps-0">';
+				html += '			<div class="text-body fw-bold">' + title + '</div>';
+				if (message) {
+					html += '			<div class="text-muted small text-truncate" style="max-width:250px;">' + message + '</div>';
+				}
+				html += '			<small class="text-muted">' + time + '</small>';
+				html += '		</div>';
+				html += '	</div>';
+				html += '</a>';
+			}
+
+			list.innerHTML = html;
+		}
+
+		/**
+		 * Maneja el click en una alerta.
+		 * - Alerts automáticas (isAuto=1): solo navega, no marca como leída.
+		 * - Alerts almacenadas (isAuto=0): marca como leída vía AJAX + navega.
+		 */
+		window.handleAlertClick = function (el, event, alertId, isAuto) {
+			// Auto-alertas: solo navegar, no marcar como leída
+			if (isAuto) {
+				var href = el.getAttribute('href');
+				if (!href || href === '' || href === '#') {
+					if (event) event.preventDefault();
+					return false;
+				}
+				return true;
+			}
+
+			// Alertas almacenadas: marcar como leída (fire-and-forget) y navegar
+			var csrfToken = document.getElementById('csrf_token');
+			var tokenValue = csrfToken ? csrfToken.value : '';
+			var formData = new FormData();
+			formData.append('alert_id', alertId);
+
+			fetch(MARK_READ_URL, {
+				method: 'POST',
+				headers: {
+					'X-Requested-With': 'XMLHttpRequest',
+					'<?= csrf_header() ?>': tokenValue
+				},
+				body: formData
+			})
+			.then(function (response) {
+				var newToken = response.headers.get('<?= csrf_header() ?>');
+				if (newToken && csrfToken) {
+					csrfToken.value = newToken;
+				}
+				return response.json();
+			})
+			.then(function (data) {
+				if (data.success) {
+					loadAlerts();
+				}
+			})
+			.catch(function (err) {
+				console.error('[Alertas] Error al marcar como leída:', err);
+			});
+
+			// Navegar si hay target_url real
+			var href = el.getAttribute('href');
+			if (!href || href === '' || href === '#') {
+				if (event) event.preventDefault();
+				return false;
+			}
+
+			return true;
+		};
+
+		/**
+		 * Marca todas las alertas como leídas vía AJAX.
+		 */
+		window.markAllAlertsRead = function () {
+			var csrfToken = document.getElementById('csrf_token');
+			var tokenValue = csrfToken ? csrfToken.value : '';
+
+			fetch(MARK_ALL_READ_URL, {
+				method: 'POST',
+				headers: {
+					'X-Requested-With': 'XMLHttpRequest',
+					'<?= csrf_header() ?>': tokenValue
+				}
+			})
+			.then(function (response) {
+				var newToken = response.headers.get('<?= csrf_header() ?>');
+				if (newToken && csrfToken) {
+					csrfToken.value = newToken;
+				}
+				return response.json();
+			})
+			.then(function (data) {
+				if (data.success) {
+					if (typeof notifyShow === 'function') {
+						notifyShow(data.message || 'Todas las notificaciones marcadas como leídas', 'success');
+					}
+					loadAlerts();
+				} else {
+					if (typeof notifyShow === 'function') {
+						notifyShow(data.message || 'Error al marcar notificaciones', 'danger');
+					}
+				}
+			})
+			.catch(function (err) {
+				console.error('[Alertas] Error al marcar todas como leídas:', err);
+			});
+
+			return false; // Prevenir navegación del enlace #
+		};
+
+		// Inicializar al cargar DOM
+		document.addEventListener('DOMContentLoaded', function () {
+			loadAlerts();
+			setInterval(loadAlerts, POLL_INTERVAL);
+		});
 	})();
 </script>
