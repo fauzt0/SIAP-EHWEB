@@ -132,3 +132,20 @@ stats/
 /image*.png
 /tablas_recursos_humanos.md
 history/
+
+#htpasswd
+.htpasswd/
+
+#private pointer
+private_html/
+
+#cursor rules
+.cursor/rules/
+.cursor/rules/
+.cursor/
+.cursorignore
+
+
+
+#roo rules
+.roo/
