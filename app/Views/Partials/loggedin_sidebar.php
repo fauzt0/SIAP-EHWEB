@@ -74,10 +74,10 @@
           <ul id="org-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/organization*') ? 'show' : '' ?>"
             data-bs-parent="#sidebar">
             <li class="sidebar-item <?= url_is('nat/organization/profile*') ? 'active' : '' ?>">
-              <a class="sidebar-link" href="<?= base_url('nat/organization/profile') ?>">Perfil Matriz</a>
+              <a class="sidebar-link" href="<?= route_to('organization.profile') ?>">Perfil Matriz</a>
             </li>
             <li class="sidebar-item <?= url_is('nat/organization/branch*') ? 'active' : '' ?>">
-              <a class="sidebar-link" href="<?= base_url('nat/organization/branches') ?>">Sucursales</a>
+              <a class="sidebar-link" href="<?= route_to('organization.branches') ?>">Sucursales</a>
             </li>
           </ul>
         </li>
@@ -96,6 +96,24 @@
             </li>
             <li class="sidebar-item <?= url_is('nat/catalog/categories*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= base_url('nat/catalog/categories') ?>">Categorías</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('catalog.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/suppliers*') ? 'active' : '' ?>">
+          <a data-bs-target="#suppliers-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/suppliers*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-truck align-middle me-1"></i> <span class="align-middle">Proveedores</span>
+          </a>
+          <ul id="suppliers-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/suppliers*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= (url_is('nat/suppliers') && !url_is('nat/suppliers/purchase-orders*')) ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('suppliers.index') ?>">Proveedores</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/suppliers/purchase-orders*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('suppliers.po.index') ?>">Órdenes de Compra</a>
             </li>
           </ul>
         </li>

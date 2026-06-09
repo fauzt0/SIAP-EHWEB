@@ -25,6 +25,8 @@ Este documento centraliza todas las especificaciones técnicas, convenciones de 
 17. [Notificaciones UI (tools.showAlert)](#17-notificaciones-ui-toolsshowalert)
 18. [Almacenamiento de Archivos (Uploads)](#18-almacenamiento-de-archivos-uploads)
 19. [Estándares Adicionales en Modelos](#19-estandares-adicionales-en-modelos)
+20. [Extensión de Catálogos de Datos (Tipos de Servicio)](#20-extensión-de-catálogos-de-datos-tipos-de-servicio)
+21. [Sistema de Alertas y Notificaciones](#21-sistema-de-alertas-y-notificaciones)
 
 ---
 
@@ -521,3 +523,143 @@ protected $validationRules = [
     'email' => 'required|valid_email|max_length[100]',
 ];
 ```
+
+---
+
+<a name="20-extensión-de-catálogos-de-datos-tipos-de-servicio"></a>
+## 20. Extensión de Catálogos de Datos (Tipos de Servicio)
+
+Para mantener la flexibilidad y evitar la sobrecarga de la base de datos con tablas de configuración estáticas, ciertos catálogos de datos como los "tipos de servicio" (`service_type` en `fin_recurring_expenses`) se definen directamente en el Modelo `FinRecurringExpenseModel`.
+
+### A. Estructura y Reglas de Extensión
+1. **Definición en el Modelo:** La lista completa de tipos se encuentra centralizada en la constante `FinRecurringExpenseModel::SERVICE_TYPES`.
+2. **Agrupación (Opcional):** Para mejorar la UX en selectores `optgroup`, se puede definir la constante `FinRecurringExpenseModel::SERVICE_TYPE_GROUPS`.
+3. **Validación Automática:** Al estar definido en el modelo, cualquier nuevo tipo añadido a `SERVICE_TYPES` será automáticamente validado (`in_list`) y estará disponible en el controlador y las vistas sin cambios adicionales en la lógica de procesamiento.
+
+**Ejemplo de cómo extender en el modelo:**
+```php
+// En app/Models/Financial/FinRecurringExpenseModel.php
+public const SERVICE_TYPES = [
+    'electricity'     => 'Electricidad (CFE)',
+    'water'           => 'Agua',
+    'gas'             => 'Gas natural / LP',
+    // ... más tipos
+    'custom_type'     => 'Mi Nuevo Tipo Personalizado', // Añadir aquí
+    'other'           => 'Otro',
+];
+
+public const SERVICE_TYPE_GROUPS = [
+    'Servicios públicos y utilities' => ['electricity', 'water', 'gas'],
+    // ... otros grupos
+    'Mis servicios'                  => ['custom_type'], // Agrupar si es necesario
+];
+```
+
+### B. Beneficios del Estándar
+- **Centralización:** Un solo lugar para gestionar los tipos.
+- **Consistencia:** Validación y etiquetas uniformes en toda la aplicación.
+- **Facilidad de Extensión:** No requiere tocar la base de datos ni controladores/vistas al añadir un nuevo tipo.
+- **Seguridad:** El validador del modelo utiliza dinámicamente las claves de la constante para la regla `in_list`.
+
+---
+
+<a name="21-sistema-de-alertas-y-notificaciones"></a>
+## 21. Sistema de Alertas y Notificaciones
+
+El sistema de alertas es un componente híbrido diseñado para notificar a los usuarios sobre eventos importantes, combinando alertas persistentes (almacenadas en la base de datos) con alertas dinámicas en tiempo real (generadas on-the-fly, estilo CHISA).
+
+### A. Arquitectura General
+
+El sistema se compone de los siguientes elementos clave:
+
+1.  **Alertas Almacenadas (Manuales):** Son alertas creadas programáticamente por los módulos de negocio a través de `AlertService::dispatch()`. Estas alertas se guardan en la tabla `sys_alerts`, se asignan a usuarios específicos y su estado (`leída`/`no leída`) persiste en la tabla pivote `sys_alert_user`.
+2.  **Alertas Automáticas (CHISA-style):** Son alertas generadas en tiempo real por métodos detectores privados en `AlertController.php`. Estas alertas consultan tablas operativas y existen solo mientras la condición persista en la base de datos. No se almacenan y no tienen estado de lectura.
+3.  **Frontend (TopBar):** Un componente JavaScript en `loggedin_topbar.php` consulta periódicamente (cada 60 segundos) el backend para obtener las alertas no leídas y las renderiza en un dropdown.
+
+### B. Flujo de Obtención de Alertas (`AlertController::get_unread_ajax()`)
+
+1.  **Obtención de Alertas Almacenadas:** `AlertService::getUnreadByUser()` consulta las alertas persistentes no leídas para el usuario actual.
+2.  **Detección de Alertas Automáticas:** `AlertController::_detectAll()` ejecuta una serie de métodos privados (`_detect*()`) que consultan diversas tablas para identificar condiciones que requieren una alerta (ej., trabajadores sin datos, stock bajo). Estos detectores verifican los permisos del usuario antes de ejecutarse.
+3.  **Fusión y Límite:** Las alertas almacenadas y automáticas se fusionan (dando prioridad visual a las almacenadas) y se limitan para la visualización en el dropdown.
+4.  **Respuesta JSON:** Se devuelve una respuesta JSON unificada con las alertas para el frontend.
+
+### C. Detectores Automáticos
+
+*   Cada detector es un método privado en `AlertController` (ej., `_detectWorkersMissingNss()`).
+*   Realiza una consulta directa a la base de datos para verificar una condición específica.
+*   Si la condición se cumple, construye un objeto `stdClass` con la estructura de una alerta, marcando `is_auto=1`.
+*   Estas alertas no se almacenan; desaparecen cuando la condición subyacente se corrige en la base de datos.
+*   Los errores en la ejecución de un detector son capturados (`_safeDetect()`) para no afectar al resto del sistema.
+
+### D. Interacción con el Frontend (`loggedin_topbar.php`)
+
+*   **Polling:** El JavaScript en `loggedin_topbar.php` realiza una petición AJAX cada 60 segundos a `AlertController::get_unread_ajax()`.
+*   **Manejo de Clicks:**
+    *   **Alertas Automáticas (`is_auto=1`):** Al hacer click, el sistema solo navega a la URL de destino (`target_url`). No se marcan como leídas porque no están persistidas.
+    *   **Alertas Almacenadas (`is_auto=0`):** Al hacer click, el sistema envía una petición AJAX a `AlertController::mark_read_ajax()` para marcar la alerta como leída y luego navega a la `target_url`.
+*   **CSRF:** El token CSRF se maneja globalmente en el layout `user_loggedin_layout.php` y se actualiza en cada petición/respuesta AJAX para evitar errores de seguridad.
+
+### E. Cómo Agregar un Nuevo Detector Automático
+
+Para añadir una nueva alerta dinámica (ej., "Órdenes de Compra Pendientes"):
+
+1.  **Definir la Ruta de Destino:** Asegúrate de que exista una ruta nombrada a la que la alerta pueda redirigir (ej., `route_to('purchase_orders.index')`).
+2.  **Crear el Método Detector en `AlertController`:**
+    *   Añade un nuevo método privado (ej., `_detectPendingPurchaseOrders()`) que contenga la lógica de consulta a la base de datos para detectar la condición.
+    *   Asegúrate de que el método devuelva un array de objetos `stdClass` con la estructura de alerta, utilizando `_buildAutoAlert()`.
+    *   **Ejemplo:**
+        ```php
+        private function _detectPendingPurchaseOrders(): array
+        {
+            $db    = db_connect();
+            $count = $db->table('fin_purchase_orders')
+                ->where('status', 'pendiente')
+                ->where('deleted_at', null)
+                ->countAllResults();
+
+            if ($count === 0) return [];
+
+            return [$this->_buildAutoAlert([
+                'type'       => 'info',
+                'icon'       => 'fa-shopping-cart',
+                'title'      => 'Órdenes de compra pendientes',
+                'message'    => $count . ' órdenes pendientes de recibir',
+                'module'     => 'Compras',
+                'target_url' => route_to('purchase_orders.index'),
+            ])];
+        }
+        ```
+3.  **Integrar en `_detectAll()`:**
+    *   Dentro del método `_detectAll()`, añade una condición de permiso y llama al nuevo detector usando `_safeDetect()`.
+    *   **Ejemplo:**
+        ```php
+        // En AlertController.php, dentro del método _detectAll()
+        if ($user->can('purchasing.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingPurchaseOrders'));
+        }
+        ```
+    *   Asegúrate de que el permiso (`purchasing.access`) sea apropiado para los usuarios que deben ver esta alerta.
+
+### F. Cómo Despachar una Alerta Almacenada (Manual)
+
+Desde cualquier controlador o servicio, puedes usar `AlertService::dispatch()`:
+
+```php
+// Ejemplo: Despachar una alerta por un pago vencido a usuarios con permiso 'billing.access'
+$alertService = new \App\Libraries\AlertService();
+$alertId = $alertService->dispatch(
+    title: 'Pago de cliente vencido',
+    message: 'El cliente "XYZ" tiene una factura vencida por $1,200 MXN.',
+    type: 'danger',
+    icon: 'fa-file-invoice-dollar',
+    targetUrl: route_to('clients.invoices.show', $clientId, $invoiceId),
+    requiredPermission: 'billing.access',
+    module: 'Cobranza',
+    referenceType: 'invoice',
+    referenceId: $invoiceId
+);
+
+if ($alertId === 0) {
+    // Manejar error si la alerta no pudo ser creada
+    log_message('error', 'No se pudo despachar la alerta de pago vencido.');
+}

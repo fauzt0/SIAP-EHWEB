@@ -148,7 +148,8 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('profile/update', 'Organization\OrganizationController::updateProfile', ['as' => 'organization.profile.update']);
         
         $routes->get('branches', 'Organization\OrganizationController::branches', ['as' => 'organization.branches']);
-        $routes->post('branches/list_ajax', 'Organization\OrganizationController::getBranches', ['as' => 'organization.branches_ajax']);
+        $routes->post('branches/list_ajax', 'Organization\OrganizationController::list_ajax', ['as' => 'organization.branches_ajax']);
+        $routes->get('branch/get_ajax/(:num)', 'Organization\OrganizationController::get_ajax/$1', ['as' => 'organization.branch.get_ajax']);
         $routes->get('branch/new', 'Organization\OrganizationController::createBranch', ['as' => 'organization.branch.new']);
         $routes->get('branch/edit/(:num)', 'Organization\OrganizationController::editBranch/$1', ['as' => 'organization.branch.edit']);
         $routes->post('branch/save', 'Organization\OrganizationController::saveBranch', ['as' => 'organization.branch.save']);
@@ -156,50 +157,133 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('branch/delete/(:num)', 'Organization\OrganizationController::deleteBranch/$1', ['as' => 'organization.branch.delete']);
     });
 
-    // ── Catálogo de Productos y Servicios ──────────────────────────
+        // ── Módulo de Gestión de Proveedores ───────────────────────────
+        $routes->group('suppliers', ['filter' => 'permission:catalog.access'], function ($routes) {
+
+            // ── Proveedores (SupplierController) ───────────────────────
+            $routes->get('/', 'Financial\SupplierController::index', ['as' => 'suppliers.index']);
+            $routes->post('list_ajax', 'Financial\SupplierController::list_ajax', ['as' => 'suppliers.list_ajax']);
+            $routes->get('select_ajax', 'Financial\SupplierController::select_ajax', ['as' => 'suppliers.select_ajax']);
+            $routes->get('show/(:num)', 'Financial\SupplierController::show/$1', ['as' => 'suppliers.show']);
+            $routes->get('get_ajax/(:num)', 'Financial\SupplierController::get_ajax/$1', ['as' => 'suppliers.get_ajax']);
+
+            $routes->post('store', 'Financial\SupplierController::store', ['as' => 'suppliers.store', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('update/(:num)', 'Financial\SupplierController::update/$1', ['as' => 'suppliers.update', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('delete/(:num)', 'Financial\SupplierController::delete/$1', ['as' => 'suppliers.delete', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('restore/(:num)', 'Financial\SupplierController::restore/$1', ['as' => 'suppliers.restore', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('toggle_status/(:num)', 'Financial\SupplierController::toggle_status/$1', ['as' => 'suppliers.toggle_status', 'filter' => 'permission:catalog.manage-suppliers']);
+
+            // Asociación de productos del catálogo al proveedor
+            $routes->get('(:num)/products', 'Financial\SupplierController::get_linked_products/$1', ['as' => 'suppliers.products.list']);
+            $routes->post('(:num)/products/link', 'Financial\SupplierController::link_product/$1', ['as' => 'suppliers.products.link', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('(:num)/products/unlink/(:num)', 'Financial\SupplierController::unlink_product/$1/$2', ['as' => 'suppliers.products.unlink', 'filter' => 'permission:catalog.manage-suppliers']);
+
+            // ── Contactos (SupplierContactController) ──────────────────
+            $routes->get('(:num)/contacts', 'Financial\SupplierContactController::list_ajax/$1', ['as' => 'suppliers.contacts.list']);
+            $routes->get('contacts/get_ajax/(:num)', 'Financial\SupplierContactController::get_ajax/$1', ['as' => 'suppliers.contacts.get_ajax']);
+            $routes->post('(:num)/contacts/store', 'Financial\SupplierContactController::store/$1', ['as' => 'suppliers.contacts.store', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('contacts/update/(:num)', 'Financial\SupplierContactController::update/$1', ['as' => 'suppliers.contacts.update', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('contacts/delete/(:num)', 'Financial\SupplierContactController::delete/$1', ['as' => 'suppliers.contacts.delete', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('contacts/set_primary/(:num)', 'Financial\SupplierContactController::set_primary/$1', ['as' => 'suppliers.contacts.set_primary', 'filter' => 'permission:catalog.manage-suppliers']);
+
+            // ── Órdenes de Compra (PurchaseOrderController) ────────────
+            $routes->get('purchase-orders', 'Financial\PurchaseOrderController::index', ['as' => 'suppliers.po.index']);
+            $routes->post('purchase-orders/list_ajax', 'Financial\PurchaseOrderController::list_ajax', ['as' => 'suppliers.po.list_ajax']);
+            $routes->get('purchase-orders/show/(:num)', 'Financial\PurchaseOrderController::show/$1', ['as' => 'suppliers.po.show']);
+            $routes->get('purchase-orders/get_ajax/(:num)', 'Financial\PurchaseOrderController::get_ajax/$1', ['as' => 'suppliers.po.get_ajax']);
+            $routes->get('purchase-orders/generate_po_number', 'Financial\PurchaseOrderController::generate_po_number', ['as' => 'suppliers.po.generate_number']);
+            $routes->get('(:num)/purchase-orders', 'Financial\PurchaseOrderController::by_supplier/$1', ['as' => 'suppliers.po.by_supplier']);
+
+            $routes->post('purchase-orders/store', 'Financial\PurchaseOrderController::store', ['as' => 'suppliers.po.store', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('purchase-orders/update/(:num)', 'Financial\PurchaseOrderController::update/$1', ['as' => 'suppliers.po.update', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('purchase-orders/update_status/(:num)', 'Financial\PurchaseOrderController::update_status/$1', ['as' => 'suppliers.po.update_status', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('purchase-orders/delete/(:num)', 'Financial\PurchaseOrderController::delete/$1', ['as' => 'suppliers.po.delete', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('purchase-orders/restore/(:num)', 'Financial\PurchaseOrderController::restore/$1', ['as' => 'suppliers.po.restore', 'filter' => 'permission:catalog.manage-suppliers']);
+
+            // ── PDF Export — Purchase Order Download (§9) ─────────────────
+            $routes->get('purchase-orders/download/(:num)', 'Financial\PurchaseOrderController::download/$1', ['as' => 'suppliers.po.download']);
+
+            // ── Activity Timeline (Offcanvas) (§10) ──────────────────────
+            $routes->get('(:num)/activity', 'Financial\SupplierController::activity/$1', ['as' => 'suppliers.activity']);
+
+            // ── Recurring Expenses / Services Association (§11) ──────────
+            $routes->get('(:num)/services', 'Financial\SupplierController::list_services/$1', ['as' => 'suppliers.services.list']);
+            $routes->post('(:num)/services/store', 'Financial\SupplierController::store_service/$1', ['as' => 'suppliers.services.store', 'filter' => 'permission:catalog.manage-suppliers']);
+
+        }); // fin del grupo suppliers
+
+        // ── Catálogo de Productos y Servicios ──────────────────────────
     $routes->group('catalog', ['filter' => 'permission:catalog.access'], function ($routes) {
         
         // Categorías
         $routes->get('categories', 'Catalog\CatalogCategoryController::index', ['as' => 'catalog.categories']);
         $routes->post('categories/list_ajax', 'Catalog\CatalogCategoryController::categories_ajax', ['as' => 'catalog.categories_ajax']);
         $routes->get('categories/get_ajax/(:num)', 'Catalog\CatalogCategoryController::get_ajax/$1', ['as' => 'catalog.categories.get']);
-        $routes->post('categories/save', 'Catalog\CatalogCategoryController::save_ajax', ['as' => 'catalog.categories.save']);
-        $routes->post('categories/delete/(:num)', 'Catalog\CatalogCategoryController::delete_ajax/$1', ['as' => 'catalog.categories.delete']);
-        $routes->post('categories/toggle_status/(:num)', 'Catalog\CatalogCategoryController::toggle_status_ajax/$1', ['as' => 'catalog.categories.toggle_status']);
+        $routes->post('categories/save', 'Catalog\CatalogCategoryController::save_ajax', ['as' => 'catalog.categories.save', 'filter' => 'permission:catalog.manage']);
+        $routes->post('categories/delete/(:num)', 'Catalog\CatalogCategoryController::delete_ajax/$1', ['as' => 'catalog.categories.delete', 'filter' => 'permission:catalog.manage']);
+        $routes->post('categories/toggle_status/(:num)', 'Catalog\CatalogCategoryController::toggle_status_ajax/$1', ['as' => 'catalog.categories.toggle_status', 'filter' => 'permission:catalog.manage']);
 
         // Productos
         $routes->get('products', 'Catalog\CatalogProductController::index', ['as' => 'catalog.products']);
         $routes->post('products/list_ajax', 'Catalog\CatalogProductController::products_ajax', ['as' => 'catalog.products_ajax']);
-        $routes->get('products/new', 'Catalog\CatalogProductController::create', ['as' => 'catalog.products.create']);
-        $routes->post('products/store', 'Catalog\CatalogProductController::store', ['as' => 'catalog.products.store']);
-        $routes->get('products/edit/(:num)', 'Catalog\CatalogProductController::edit/$1', ['as' => 'catalog.products.edit']);
-        $routes->post('products/update/(:num)', 'Catalog\CatalogProductController::update/$1', ['as' => 'catalog.products.update']);
-        $routes->post('products/delete/(:num)', 'Catalog\CatalogProductController::delete/$1', ['as' => 'catalog.products.delete']);
-        $routes->post('products/restore/(:num)', 'Catalog\CatalogProductController::restore/$1', ['as' => 'catalog.products.restore']);
-        $routes->post('products/toggle_status/(:num)', 'Catalog\CatalogProductController::toggle_status_ajax/$1', ['as' => 'catalog.products.toggle_status']);
+        $routes->get('products/new', 'Catalog\CatalogProductController::create', ['as' => 'catalog.products.create', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/store', 'Catalog\CatalogProductController::store', ['as' => 'catalog.products.store', 'filter' => 'permission:catalog.manage']);
+        $routes->get('products/edit/(:num)', 'Catalog\CatalogProductController::edit/$1', ['as' => 'catalog.products.edit', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/update/(:num)', 'Catalog\CatalogProductController::update/$1', ['as' => 'catalog.products.update', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/delete/(:num)', 'Catalog\CatalogProductController::delete/$1', ['as' => 'catalog.products.delete', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/restore/(:num)', 'Catalog\CatalogProductController::restore/$1', ['as' => 'catalog.products.restore', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/toggle_status/(:num)', 'Catalog\CatalogProductController::toggle_status_ajax/$1', ['as' => 'catalog.products.toggle_status', 'filter' => 'permission:catalog.manage']);
 
         // Imágenes de producto
-        $routes->post('products/images/delete/(:num)', 'Catalog\CatalogProductController::delete_image/$1', ['as' => 'catalog.products.image.delete']);
-        $routes->post('products/images/set_main/(:num)', 'Catalog\CatalogProductController::set_main_image/$1', ['as' => 'catalog.products.image.set_main']);
+        $routes->post('products/images/delete/(:num)', 'Catalog\CatalogProductController::delete_image/$1', ['as' => 'catalog.products.image.delete', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/images/set_main/(:num)', 'Catalog\CatalogProductController::set_main_image/$1', ['as' => 'catalog.products.image.set_main', 'filter' => 'permission:catalog.manage']);
 
         // ── Planes de Precios (Motor de Precios) ──
         $routes->get('products/(:num)/plans', 'Catalog\CatalogPlanController::getPlans/$1', ['as' => 'catalog.plans.list']);
-        $routes->post('products/(:num)/plans/store', 'Catalog\CatalogPlanController::storePlan/$1', ['as' => 'catalog.plans.store']);
-        $routes->post('plans/update/(:num)', 'Catalog\CatalogPlanController::updatePlan/$1', ['as' => 'catalog.plans.update']);
-        $routes->post('plans/delete/(:num)', 'Catalog\CatalogPlanController::deletePlan/$1', ['as' => 'catalog.plans.delete']);
-        $routes->post('plans/toggle/(:num)', 'Catalog\CatalogPlanController::togglePlan/$1', ['as' => 'catalog.plans.toggle']);
+        $routes->post('products/(:num)/plans/store', 'Catalog\CatalogPlanController::storePlan/$1', ['as' => 'catalog.plans.store', 'filter' => 'permission:catalog.manage']);
+        $routes->post('plans/update/(:num)', 'Catalog\CatalogPlanController::updatePlan/$1', ['as' => 'catalog.plans.update', 'filter' => 'permission:catalog.manage']);
+        $routes->post('plans/delete/(:num)', 'Catalog\CatalogPlanController::deletePlan/$1', ['as' => 'catalog.plans.delete', 'filter' => 'permission:catalog.manage']);
+        $routes->post('plans/toggle/(:num)', 'Catalog\CatalogPlanController::togglePlan/$1', ['as' => 'catalog.plans.toggle', 'filter' => 'permission:catalog.manage']);
 
         // ── Relaciones de Productos (Bundles / Gifts / Upsells) ──
         $routes->get('products/(:num)/relations', 'Catalog\CatalogPlanController::getRelations/$1', ['as' => 'catalog.relations.list']);
-        $routes->post('products/(:num)/relations/store', 'Catalog\CatalogPlanController::storeRelation/$1', ['as' => 'catalog.relations.store']);
-        $routes->post('relations/delete/(:num)', 'Catalog\CatalogPlanController::deleteRelation/$1', ['as' => 'catalog.relations.delete']);
+        $routes->post('products/(:num)/relations/store', 'Catalog\CatalogPlanController::storeRelation/$1', ['as' => 'catalog.relations.store', 'filter' => 'permission:catalog.manage']);
+        $routes->post('relations/delete/(:num)', 'Catalog\CatalogPlanController::deleteRelation/$1', ['as' => 'catalog.relations.delete', 'filter' => 'permission:catalog.manage']);
 
         // ── Inventario y Stock (Hito 4) ──
         $routes->get('products/(:num)/stock',              'Catalog\InventoryController::getStock/$1',        ['as' => 'catalog.inventory.stock']);
         $routes->get('products/(:num)/kardex',             'Catalog\InventoryController::getKardex/$1',       ['as' => 'catalog.inventory.kardex']);
-        $routes->post('products/(:num)/stock/movement',    'Catalog\InventoryController::registerMovement/$1',['as' => 'catalog.inventory.movement']);
-        $routes->post('products/(:num)/stock/min_alert',   'Catalog\InventoryController::updateMinAlert/$1',  ['as' => 'catalog.inventory.min_alert']);
+        $routes->post('products/(:num)/stock/movement',    'Catalog\InventoryController::registerMovement/$1',['as' => 'catalog.inventory.movement', 'filter' => 'permission:catalog.manage']);
+        $routes->post('products/(:num)/stock/min_alert',   'Catalog\InventoryController::updateMinAlert/$1',  ['as' => 'catalog.inventory.min_alert', 'filter' => 'permission:catalog.manage']);
     });
+
+        // ── Sistema de Alertas / Notificaciones ─────────────────────────
+        $routes->group('alerts', function ($routes) {
+            // AJAX: Obtener alertas no leídas para el dropdown del topbar
+            $routes->get('get-unread', 'System\AlertController::get_unread_ajax', [
+                'as' => 'alerts.get_unread',
+            ]);
+
+            // AJAX: Marcar una alerta como leída
+            $routes->post('mark-read', 'System\AlertController::mark_read_ajax', [
+                'as' => 'alerts.mark_read',
+            ]);
+
+            // AJAX: Marcar todas como leídas
+            $routes->post('mark-all-read', 'System\AlertController::mark_all_read_ajax', [
+                'as' => 'alerts.mark_all_read',
+            ]);
+
+            // Vista HTML: Historial completo de notificaciones
+            $routes->get('history', 'System\AlertController::history', [
+                'as' => 'alerts.history',
+            ]);
+
+            // AJAX: DataTable del historial
+            $routes->post('history-ajax', 'System\AlertController::history_ajax', [
+                'as' => 'alerts.history_ajax',
+            ]);
+        });
 
   });//fin del grupo protegido por sesion
 

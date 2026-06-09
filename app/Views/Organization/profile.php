@@ -59,7 +59,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="text-center">
-                                        <?php $logo = !empty($response['company']) && $response['company']->logo_path ? base_url($response['company']->logo_path) : base_url('assets/img/default-company.png'); ?>
+                                        <?php $logo = !empty($response['company']) && $response['company']->logo_path ? base_url($response['company']->logo_path) : base_url('bootstrap/img/avatars/avatar.jpg'); ?>
                                         <img alt="Logo" src="<?= $logo ?>" class="rounded mx-auto d-block mt-2 mb-2 img-fluid" style="max-height: 150px; object-fit: contain;" id="logo-preview">
                                         <div class="mt-2">
                                             <label for="logo" class="btn btn-primary"><i class="fas fa-upload"></i> Cambiar Logo</label>
@@ -104,7 +104,7 @@
 </main>
 <?php $this->endSection(); ?>
 
-<?php $this->section('scripts'); ?>
+<?php $this->section('pageFooterScripts'); ?>
 <script>
 document.getElementById('logo').addEventListener('change', function(e) {
     if(this.files && this.files[0]) {
@@ -127,12 +127,18 @@ $('#profile-form').on('submit', function(e) {
     btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Guardando...').prop('disabled', true);
 
     $.ajax({
-        url: '<?= base_url("nat/organization/profile/update") ?>',
+        url: '<?= route_to('organization.profile.update') ?>',
         type: 'POST',
         data: formData,
         processData: false,
         contentType: false,
-        success: function(res) {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            '<?= csrf_header() ?>': csrfToken
+        },
+        success: function(res, textStatus, xhr) {
+            const headerToken = xhr.getResponseHeader('<?= csrf_header() ?>');
+            if (headerToken) document.getElementById('csrf_token').value = headerToken;
             btn.html(originalHtml).prop('disabled', false);
             if(res.csrf) document.getElementById('csrf_token').value = res.csrf;
             if(res.success) {

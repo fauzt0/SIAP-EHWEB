@@ -73,12 +73,16 @@ class CatalogCategoryController extends BaseCatalogController
 
             // Acciones
             $actions = '<div class="d-flex gap-1">';
-            if ($category->active) {
-                $actions .= '<button class="btn btn-sm btn-outline-warning btn-toggle-status" data-id="' . $category->id . '" data-status="0" title="Desactivar/Suspender"><i class="fas fa-ban"></i></button>';
+            if (auth()->user()->can('catalog.manage')) {
+                if ($category->active) {
+                    $actions .= '<button class="btn btn-sm btn-outline-warning btn-toggle-status" data-id="' . $category->id . '" data-status="0" title="Desactivar/Suspender"><i class="fas fa-ban"></i></button>';
+                } else {
+                    $actions .= '<button class="btn btn-sm btn-outline-success btn-toggle-status" data-id="' . $category->id . '" data-status="1" title="Restaurar/Activar"><i class="fas fa-check-circle"></i></button>';
+                }
+                $actions .= '<button class="btn btn-sm btn-outline-primary btn-edit-category" data-id="' . $category->id . '" title="Editar"><i class="fas fa-edit"></i></button>';
             } else {
-                $actions .= '<button class="btn btn-sm btn-outline-success btn-toggle-status" data-id="' . $category->id . '" data-status="1" title="Restaurar/Activar"><i class="fas fa-check-circle"></i></button>';
+                $actions .= '<span class="text-muted small">Sólo lectura</span>';
             }
-            $actions .= '<button class="btn btn-sm btn-outline-primary btn-edit-category" data-id="' . $category->id . '" title="Editar"><i class="fas fa-edit"></i></button>';
             $actions .= '</div>';
             $row[] = $actions;
 

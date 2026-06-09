@@ -50,7 +50,8 @@ class CatalogProductController extends BaseCatalogController
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // AJAX: DataTables Server-Side. Llama a la función get_datatables del modelo CatalogProductModel para obtener los datos de la tabla catalog_products.
+    // AJAX: DataTables Server-Side. 
+    // Llama a la función get_datatables del modelo CatalogProductModel para obtener los datos de la tabla catalog_products.
     // ────────────────────────────────────────────────────────────────────────
 
     public function products_ajax()
@@ -92,15 +93,33 @@ class CatalogProductController extends BaseCatalogController
                 ? '<span class="badge badge-subtle-secondary">' . esc($product->category_name) . '</span>'
                 : '<span class="text-muted small fst-italic">Sin categoría</span>';
 
-            // Unidad de negocio (comercializador)
+            // Unidad de negocio (comercializador) con imagen de logo
             if (!empty($product->branch_name)) {
+                // Se espera que branch_logo_path contenga el logo de la unidad de negocio
+                $branchLogoPath = $product->branch_logo_path ?? null;
+                if (!empty($branchLogoPath) && file_exists(FCPATH . 'uploads/branches/' . $branchLogoPath)) {
+                    $branchLogoUrl = base_url('uploads/branches/' . $branchLogoPath);
+                    $branchImg = '<img src="' . $branchLogoUrl . '" width="48" height="48" '
+                        . 'class="rounded object-fit-cover shadow-sm border me-2" '
+                        . 'alt="' . esc($product->branch_name) . '">';
+                } else {
+                    $branchImg = '<div class="rounded d-flex align-items-center justify-content-center bg-light shadow-sm border me-2" style="width: 48px; height: 48px;"><i class="fas fa-image fa-lg text-secondary"></i></div>';
+                }
                 $code = !empty($product->branch_code)
                     ? '<small class="text-muted font-monospace ms-1">' . esc($product->branch_code) . '</small>'
                     : '';
-                $row[] = '<span class="badge badge-subtle-primary">' . esc($product->branch_name) . '</span>' . $code;
+                $row[] = '<div class="d-flex align-items-center">'
+                        . $branchImg
+                        . '<span class="badge badge-subtle-primary">' . esc($product->branch_name) . '</span>'
+                        . $code
+                        . '</div>';
             } else {
-                $row[] = '<span class="text-muted small fst-italic">Sin unidad</span>';
+                $row[] = '<div class="d-flex align-items-center">'
+                       . '<div class="rounded d-flex align-items-center justify-content-center bg-light shadow-sm border me-2" style="width: 48px; height: 48px;"><i class="fas fa-image fa-lg text-secondary"></i></div>'
+                       . '<span class="text-muted small fst-italic">Sin unidad</span>'
+                       . '</div>';
             }
+ 
 
             // Tipo de producto con icono fas (no Lucide — Sección 12 DOCUMENTACION_TECNICA.md)
             $typeMap = [
@@ -133,34 +152,38 @@ class CatalogProductController extends BaseCatalogController
             $pid     = $product->id;
             $actions = '<div class="d-flex gap-1 align-items-center">';
             
-            if ($product->deleted_at !== null) {
-                // Si está eliminado, solo permitir restaurar
-                $actions .= '<button class="btn btn-outline-success btn-restore-product" '
-                          . 'data-id="' . $pid . '" title="Restaurar Producto"><i class="fas fa-trash-restore"></i></button>';
-            } else {
-                // Orden solicitado: Editar, Clonar, Gestionar Planes, Eliminar, Toggle (al final)
-                $actions .= '<a href="' . route_to('catalog.products.edit', $pid) . '" '
-                          . 'class="btn btn-outline-warning" title="Editar">'
-                          . '<i class="fas fa-edit"></i></a>';
-                          
-                $actions .= '<a href="' . route_to('catalog.products.create') . '?clone_id=' . $pid . '" '
-                          . 'class="btn btn-outline-secondary" title="Clonar Producto">'
-                          . '<i class="fas fa-copy"></i></a>';
-                          
-                $actions .= '<button class="btn btn-outline-primary btn-manage-plans" '
-                          . 'data-id="' . $pid . '" data-name="' . esc($product->commercial_name) . '" '
-                          . 'title="Gestionar Planes"><i class="fas fa-tags"></i></button>';
-                          
-                $actions .= '<button class="btn btn-outline-danger btn-delete-product" '
-                          . 'data-id="' . $pid . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
+            if (auth()->user()->can('catalog.manage')) {
+                if ($product->deleted_at !== null) {
+                    // Si está eliminado, solo permitir restaurar
+                    $actions .= '<button class="btn btn-outline-success btn-restore-product" '
+                              . 'data-id="' . $pid . '" title="Restaurar Producto"><i class="fas fa-trash-restore"></i></button>';
+                } else {
+                    // Orden solicitado: Editar, Clonar, Gestionar Planes, Eliminar, Toggle (al final)
+                    $actions .= '<a href="' . route_to('catalog.products.edit', $pid) . '" '
+                              . 'class="btn btn-outline-warning" title="Editar">'
+                              . '<i class="fas fa-edit"></i></a>';
+                              
+                    $actions .= '<a href="' . route_to('catalog.products.create') . '?clone_id=' . $pid . '" '
+                              . 'class="btn btn-outline-secondary" title="Clonar Producto">'
+                              . '<i class="fas fa-copy"></i></a>';
+                              
+                    $actions .= '<button class="btn btn-outline-primary btn-manage-plans" '
+                              . 'data-id="' . $pid . '" data-name="' . esc($product->commercial_name) . '" '
+                              . 'title="Gestionar Planes"><i class="fas fa-tags"></i></button>';
+                              
+                    $actions .= '<button class="btn btn-outline-danger btn-delete-product" '
+                              . 'data-id="' . $pid . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
 
-                // Toggle al final con nueva lógica de color
-                $icon = $product->active ? 'fa-eye-slash' : 'fa-eye';
-                $title = $product->active ? 'Inactivar' : 'Activar';
-                $color = $product->active ? 'outline-danger' : 'outline-success';
-                
-                $actions .= '<button class="btn btn-' . $color . ' btn-toggle-product" '
-                          . 'data-id="' . $pid . '" title="' . $title . '"><i class="fas ' . $icon . '"></i></button>';
+                    // Toggle al final con nueva lógica de color
+                    $icon = $product->active ? 'fa-eye-slash' : 'fa-eye';
+                    $title = $product->active ? 'Inactivar' : 'Activar';
+                    $color = $product->active ? 'outline-danger' : 'outline-success';
+                    
+                    $actions .= '<button class="btn btn-' . $color . ' btn-toggle-product" '
+                              . 'data-id="' . $pid . '" title="' . $title . '"><i class="fas ' . $icon . '"></i></button>';
+                }
+            } else {
+                $actions .= '<span class="text-muted small">Sólo lectura</span>';
             }
             $actions .= '</div>';
             $row[]   = $actions;

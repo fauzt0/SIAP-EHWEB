@@ -182,6 +182,7 @@ class AuthGroups extends ShieldAuthGroups
         // Catalog module
         'catalog.access'      => 'Can access catalog module',
         'catalog.manage'      => 'Can manage products and categories',
+        'catalog.manage-suppliers' => 'Can manage suppliers and purchase orders',
     ];
 
     /**

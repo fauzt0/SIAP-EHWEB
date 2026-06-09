@@ -35,11 +35,13 @@ $this->endSection(); ?>
                                     <div>
                                         <button type="button" class="btn btn-light btn-lg me-2"><i class="fas fa-download"></i> Export</button>
                                     </div>
+                                    <?php if (auth()->user()->can('catalog.manage')): ?>
                                     <div>
                                         <button type="button" class="btn btn-primary btn-lg" id="btn-nueva-categoria">
                                             <i class="fas fa-plus"></i> Nueva Categoría
                                         </button>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

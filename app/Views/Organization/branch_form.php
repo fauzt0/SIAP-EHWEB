@@ -15,7 +15,7 @@
                 <h1 class="h3 mb-0"><?= esc($pageTitle) ?></h1>
             </div>
             <div class="col-auto ms-auto text-end">
-                <a href="<?= base_url('nat/organization/branches') ?>" class="btn btn-outline-secondary">
+                <a href="<?= route_to('organization.branches') ?>" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left"></i> Volver al listado
                 </a>
             </div>
@@ -23,7 +23,7 @@
 
         <form id="branch-form" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?= $response['isEdit'] ? esc($response['branch']->id) : '' ?>">
-            <input type="hidden" name="company_id" value="<?= !empty($response['company']) ? $response['company']->id : 1 ?>">
+            <input type="hidden" name="company_id" value="<?= !empty($response['company']) ? (int) $response['company']->id : '' ?>">
 
             <div class="row">
                 <div class="col-xl-8 col-lg-7">
@@ -126,7 +126,7 @@
 </main>
 <?php $this->endSection(); ?>
 
-<?php $this->section('scripts'); ?>
+<?php $this->section('pageFooterScripts'); ?>
 <script>
 document.getElementById('logo').addEventListener('change', function(e) {
     if(this.files && this.files[0]) {
@@ -149,12 +149,18 @@ $('#branch-form').on('submit', function(e) {
     btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Guardando...').prop('disabled', true);
 
     $.ajax({
-        url: '<?= base_url("nat/organization/branch/save") ?>',
+        url: '<?= route_to('organization.branch.save') ?>',
         type: 'POST',
         data: formData,
         processData: false,
         contentType: false,
-        success: function(res) {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            '<?= csrf_header() ?>': csrfToken
+        },
+        success: function(res, textStatus, xhr) {
+            const headerToken = xhr.getResponseHeader('<?= csrf_header() ?>');
+            if (headerToken) document.getElementById('csrf_token').value = headerToken;
             btn.html(originalHtml).prop('disabled', false);
             if(res.csrf) document.getElementById('csrf_token').value = res.csrf;
             if(res.success) {
@@ -163,7 +169,7 @@ $('#branch-form').on('submit', function(e) {
                 } else {
                     alert(res.message);
                 }
-                setTimeout(() => window.location.href = '<?= base_url("nat/organization/branches") ?>', 1500);
+                setTimeout(() => window.location.href = '<?= route_to('organization.branches') ?>?saved=1', 1200);
             } else {
                 if(typeof notifyShow === 'function') {
                     notifyShow(res.message, 'danger');

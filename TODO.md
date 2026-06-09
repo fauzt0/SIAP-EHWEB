@@ -64,7 +64,15 @@ Ver **Roadmap ERP** (Proveedores → CRM → Ventas).
 
 Orden sugerido según dependencias de negocio:
 
-- [ ] **[PROVEEDORES]** Alta de proveedores, datos fiscales/bancarios, tabla `catalog_product_suppliers` (costo base)
+- [/] **[PROVEEDORES]** Módulo integral de proveedores
+  - [x] Fase 1: BD y Modelos — migración ejecutada (Batch 18). Los 4 modelos completos y verificados.
+  - [x] Fase 2: Controladores y Rutas — 33 rutas nombradas, 3 controladores, Shield, auditoría.
+  - [x] Fase 3 (Vista principal): `suppliers_index.php` funcional (2,147 líneas) — DataTable SSR, CSRF, Offcanvas 4 tabs, todos los modales.
+  - [ ] **[PENDIENTE — ALTA]** `PurchaseOrderController::download(int $id)` + ruta `purchase-orders/download/(:num)` → PDF con `PdfLibrary` (vista previa + descarga). Ver §9 en `003_catalog_suppliers_part3_views.md`.
+  - [ ] **[PENDIENTE — MEDIA]** Timeline de actividad: endpoint AJAX `suppliers/(:num)/activity` → filtra `UserActivityLogsModel` por acciones del proveedor y rellena `#oc-activity-timeline`.
+  - [ ] **[PENDIENTE — MEDIA]** Gastos recurrentes: `fin_recurring_expenses` ya existe (Batch 6, FK a `fin_suppliers`). Crear `FinRecurringExpenseModel` + endpoints para listar/vincular al proveedor. El UI modal ya existe en la vista.
+  - [ ] **[PENDIENTE — BAJA]** Vista standalone de Órdenes de Compra: `Financial/PurchaseOrders/purchase_orders_index.php` (el controlador ya tiene el método `index()`).
+  - [ ] **[POLISH — OPCIONAL]** Split de la vista en partials (`Partials/supplier_modals.php`, `supplier_offcanvas.php`). Cursor pointer en filas del DataTable. Búsqueda con debounce.
 - [ ] **[CLIENTES / CRM]** Compradores, contactos técnicos, perfiles de facturación
 - [ ] **[VENTAS / POS]** Órdenes de venta, renovaciones, utilidad neta (requiere proveedores + clientes)
 - [ ] **[CONTABILIDAD]** Cruce ingresos (ventas) vs egresos (proveedores)
@@ -94,3 +102,5 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 - [ ] **[UI]** Estandarizar tablas a `table-striped`
 - [ ] **[TÉCNICO]** Corregir dependencia de token CSRF en `main_users.php`
 - [ ] Revisar controladores legado que aún usen `$db->transStart()` directo (mover a modelos, ver §9 documentación)
+- [ ] **[SEGURIDAD]** Mover el almacenamiento de imágenes y archivos cargados (productos, logotipos, etc.) fuera de `public_html` (ej. a `WRITEPATH . 'uploads/'`) y servirlos a través de un controlador seguro con validación de permisos.
+- [ ] **[UI/UX]** Corregir la vista responsive de todas las tablas DataTables del sistema

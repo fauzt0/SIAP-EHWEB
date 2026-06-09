@@ -77,11 +77,13 @@
                                     <div>
                                         <button type="button" class="btn btn-light btn-lg me-2"><i class="fas fa-download"></i> Export</button>
                                     </div>
+                                    <?php if (auth()->user()->can('catalog.manage')): ?>
                                     <div>
                                         <a href="<?= route_to('catalog.products.create') ?>" class="btn btn-primary btn-lg">
                                             <i class="fas fa-plus"></i> Nuevo Producto
                                         </a>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -145,6 +147,7 @@
                                     <th>Planes</th>
                                     <th>Estatus</th>
                                     <th style="width:120px;">Acciones</th>
+                                    <th style="width:40px;"></th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -197,7 +200,12 @@ function initProductsTable() {
     window.productsTable = $('#datatables-products').DataTable({
         processing: true,
         serverSide: true,
-        responsive: true,
+        responsive: {
+            details: {
+                type: 'column',
+                target: -1
+            }
+        },
         dom: "<'row'<'col-sm-12 col-md-6'><'col-sm-12 col-md-6 text-end'l>>" +
              "<'row'<'col-sm-12'tr>>" +
              "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-md-end'p>>",
@@ -221,7 +229,8 @@ function initProductsTable() {
             { data: 4 },                                       // Tipo
             { data: 5, orderable: false, searchable: false },  // Planes
             { data: 6, orderable: false, searchable: false },  // Estatus
-            { data: 7, orderable: false, searchable: false }   // Acciones
+            { data: 7, orderable: false, searchable: false },  // Acciones
+            { data: null, defaultContent: '', orderable: false, searchable: false, className: 'dtr-control' }
         ],
         language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-MX.json' },
         pageLength: 15,
