@@ -149,7 +149,7 @@ class AlertController extends BaseController
 
     /**
      * POST via AJAX (DataTable)
-     * Devuelve JSON paginado con todas las alertas del usuario.
+     * Devuelve JSON paginado con alertas almacenadas + alertas automáticas en vivo.
      *
      * Endpoint: /nat/alerts/history-ajax
      */
@@ -164,34 +164,48 @@ class AlertController extends BaseController
 
         $start   = (int) ($this->request->getPost('start') ?? 0);
         $length  = (int) ($this->request->getPost('length') ?? 10);
-        $page    = ($length > 0) ? (int) floor($start / $length) + 1 : 1;
         $perPage = ($length > 0) ? $length : 10;
 
-        $result = $alertService->getAllByUser($userId, $page, $perPage);
+        $autoAlerts = $this->_detectAll();
+        $autoCount  = count($autoAlerts);
+        $autoRows   = ($start === 0) ? array_map(fn ($alert) => $this->_formatHistoryRow($alert, true), $autoAlerts) : [];
 
-        $data = [];
-        foreach ($result['data'] as $alert) {
-            $data[] = [
-                'id'         => $alert->id,
-                'pivot_id'   => $alert->pivot_id,
-                'title'      => $alert->title,
-                'message'    => $alert->message,
-                'type'       => $alert->type,
-                'icon'       => $alert->icon,
-                'target_url' => $alert->target_url,
-                'module'     => $alert->module,
-                'is_read'    => (int) $alert->is_read,
-                'created_at' => $alert->created_at,
-            ];
-        }
+        $storedOffset = ($start === 0) ? 0 : max(0, $start - $autoCount);
+        $storedLimit  = ($start === 0) ? max(0, $perPage - $autoCount) : $perPage;
+
+        $storedResult = $alertService->getAllByUserSlice($userId, $storedOffset, $storedLimit);
+        $storedRows   = array_map(fn ($alert) => $this->_formatHistoryRow($alert, false), $storedResult['data']);
+
+        $data        = array_merge($autoRows, $storedRows);
+        $recordsTotal = $storedResult['total'] + $autoCount;
 
         return $this->response->setJSON([
             'draw'            => (int) ($this->request->getPost('draw') ?? 1),
-            'recordsTotal'    => $result['total'],
-            'recordsFiltered' => $result['total'],
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsTotal,
             'data'            => $data,
             'csrf'            => csrf_hash(),
         ]);
+    }
+
+    /**
+     * Normaliza una alerta (almacenada o automática) para el DataTable del historial.
+     */
+    private function _formatHistoryRow(object $alert, bool $isAuto): array
+    {
+        return [
+            'id'         => (int) ($alert->id ?? 0),
+            'pivot_id'   => $isAuto ? 0 : (int) ($alert->pivot_id ?? 0),
+            'title'      => $alert->title ?? '',
+            'message'    => $alert->message ?? '',
+            'type'       => $alert->type ?? 'info',
+            'icon'       => $alert->icon ?? 'fa-bell',
+            'target_url' => $alert->target_url ?? '',
+            'module'     => $alert->module ?? '',
+            'is_auto'    => $isAuto ? 1 : 0,
+            'is_read'    => $isAuto ? 0 : (int) ($alert->is_read ?? 0),
+            'created_at' => $alert->created_at ?? date('Y-m-d H:i:s'),
+        ];
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -209,7 +223,7 @@ class AlertController extends BaseController
         $this->setViewSuccess('Historial de notificaciones cargado correctamente.');
         $this->setPageTittleAhead('Notificaciones', 'Historial de Notificaciones');
 
-        $this->viewData['breadCrumb'] = $this->breadcrumb->getBreadCrumbHtml([
+        $this->viewData['breadcrumb'] = $this->breadcrumb->getBreadCrumbHtml([
             'Inicio'         => route_to('dashboard.index'),
             'Notificaciones' => '',
         ]);

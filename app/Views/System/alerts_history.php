@@ -19,19 +19,14 @@
             </div>
             <div class="col-auto ms-auto text-end mt-n1">
                 <nav aria-label="breadcrumb">
-                    <?= isset($breadcrumb) ? $breadcrumb : '' ?>
+                    <?= $breadcrumb ?? '' ?>
                 </nav>
             </div>
         </div>
 
-        <?php /* Botón "Marcar todo como leído" */ ?>
-        <div class="row mb-3">
-            <div class="col-12">
-                <button type="button" class="btn btn-outline-primary" id="btnMarkAllRead">
-                    <i class="fas fa-check-double fa-fw"></i> Marcar todo como leído
-                </button>
-            </div>
-        </div>
+        
+        
+        
 
         <?php /* Tabla de historial */ ?>
         <div class="card">
@@ -41,6 +36,23 @@
                 </h5>
             </div>
             <div class="card-body">
+
+            <!-- Botón "Marcar todo como leído" — solo aplica a notificaciones almacenadas  -->
+            <div class="row mb-2">
+                <div class="col-12 d-flex flex-wrap align-items-end">
+                    <button type="button" class="btn btn-primary" id="btnMarkAllRead"
+                        title="Solo marca como leídas las notificaciones almacenadas">
+                        <i class="fas fa-check-double fa-fw"></i> Marcar notificaciones como leídas
+                    </button>
+                    <p class="text-muted">
+                        Las alertas <span class="badge bg-info text-white">En vivo</span> no se pueden marcar como leídas;
+                        desaparecen cuando se corrige la condición en el sistema.
+                    </p>
+                </div>
+            </div>
+
+
+
                 <table id="alertsTable" class="table table-striped table-hover" style="width:100%">
                     <thead>
                         <tr>
@@ -48,6 +60,7 @@
                             <th>Título</th>
                             <th>Mensaje</th>
                             <th>Módulo</th>
+                            <th>Tipo</th>
                             <th>Fecha</th>
                             <th>Estado</th>
                             <th width="50px">Acción</th>
@@ -62,18 +75,29 @@
 
 <?php $this->endSection(); ?>
 
-<?php $this->section('scripts'); ?>
+<?php $this->section('pageFooterScripts'); ?>
 <script>
 /**
  * DataTable del historial de notificaciones.
  * Carga todas las alertas del usuario autenticado vía AJAX.
  */
-if ($.fn.dataTable.isDataTable('#alertsTable')) return;
+let alertsTable = null;
 
-const alertsTable = $('#alertsTable').DataTable({
+document.addEventListener('DOMContentLoaded', function () {
+    initAlertsHistoryTable();
+    bindMarkAllReadButton();
+});
+
+function initAlertsHistoryTable() {
+    if ($.fn.dataTable.isDataTable('#alertsTable')) return;
+
+    alertsTable = $('#alertsTable').DataTable({
+    processing: true,
+    serverSide: true,
     ajax: {
         url: '<?= route_to('alerts.history_ajax') ?>',
         type: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         data: function (d) {
             d['<?= csrf_token() ?>'] = document.getElementById('csrf_token').value;
         }
@@ -104,8 +128,23 @@ const alertsTable = $('#alertsTable').DataTable({
             }
         },
         {
-            data: 'created_at',
+            data: 'is_auto',
+            orderable: false,
             render: function (data) {
+                return data == 1
+                    ? '<span class="badge bg-info text-dark" title="Detectada en tiempo real según datos del sistema">'
+                        + '<i class="fas fa-broadcast-tower me-1"></i>En vivo</span>'
+                    : '<span class="badge bg-light text-dark border" title="Notificación almacenada en el sistema">'
+                        + '<i class="fas fa-inbox me-1"></i>Notificación</span>';
+            }
+        },
+        {
+            data: 'created_at',
+            render: function (data, type, row) {
+                if (row.is_auto == 1) {
+                    return '<span class="text-muted" title="Se actualiza en cada consulta">'
+                        + '<i class="fas fa-sync-alt fa-fw me-1"></i>Tiempo real</span>';
+                }
                 if (!data) return '';
                 const d = new Date(data.replace(' ', 'T') + 'Z');
                 return d.toLocaleDateString('es-MX', {
@@ -116,7 +155,12 @@ const alertsTable = $('#alertsTable').DataTable({
         },
         {
             data: 'is_read',
-            render: function (data) {
+            orderable: false,
+            render: function (data, type, row) {
+                if (row.is_auto == 1) {
+                    return '<span class="badge bg-warning text-dark" title="Visible mientras la condición persista en el sistema">'
+                        + '<i class="fas fa-exclamation-circle me-1"></i>Activa</span>';
+                }
                 return data == 1
                     ? '<span class="badge bg-secondary"><i class="fas fa-check me-1"></i>Leída</span>'
                     : '<span class="badge bg-primary"><i class="fas fa-circle me-1"></i>Nueva</span>';
@@ -124,34 +168,36 @@ const alertsTable = $('#alertsTable').DataTable({
         },
         {
             data: 'target_url',
-            render: function (data) {
+            orderable: false,
+            render: function (data, type, row) {
                 if (!data) return '';
-                return '<a href="' + data + '" class="btn btn-sm btn-outline-primary" title="Ir a la sección">'
+                const title = row.is_auto == 1 ? 'Ir a corregir la condición' : 'Ir a la sección';
+                return '<a href="' + data + '" class="btn btn-sm btn-outline-primary" title="' + title + '">'
                     + '<i class="fas fa-external-link-alt"></i></a>';
             }
         }
     ],
-    order: [[4, 'desc']],
+    order: [[5, 'desc']],
     language: {
         url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-MX.json'
     },
     pageLength: 10,
     responsive: true,
     autoWidth: true,
-});
+    });
 
-// Actualizar token CSRF en cada recarga de DataTable
-$('#alertsTable').on('xhr.dt', function (e, settings, json, xhr) {
-    if (xhr && xhr.getResponseHeader('<?= csrf_header() ?>')) {
-        document.getElementById('csrf_token').value = xhr.getResponseHeader('<?= csrf_header() ?>');
-    }
-    if (json && json.csrf) {
-        document.getElementById('csrf_token').value = json.csrf;
-    }
-});
+    $('#alertsTable').on('xhr.dt', function (e, settings, json, xhr) {
+        if (xhr && xhr.getResponseHeader('<?= csrf_header() ?>')) {
+            document.getElementById('csrf_token').value = xhr.getResponseHeader('<?= csrf_header() ?>');
+        }
+        if (json && json.csrf) {
+            document.getElementById('csrf_token').value = json.csrf;
+        }
+    });
+}
 
-// Botón "Marcar todo como leído"
-document.getElementById('btnMarkAllRead').addEventListener('click', function () {
+function bindMarkAllReadButton() {
+    document.getElementById('btnMarkAllRead').addEventListener('click', function () {
     const currentToken = document.getElementById('csrf_token').value;
 
     fetch('<?= route_to('alerts.mark_all_read') ?>', {
@@ -169,7 +215,7 @@ document.getElementById('btnMarkAllRead').addEventListener('click', function () 
         return response.json();
     })
     .then(data => {
-        if (data.success) {
+        if (data.success && alertsTable) {
             alertsTable.ajax.reload(null, false);
             if (typeof notifyShow === 'function') {
                 notifyShow(data.message, 'success');
@@ -186,6 +232,7 @@ document.getElementById('btnMarkAllRead').addEventListener('click', function () 
             notifyShow('Error de conexión al marcar alertas', 'danger');
         }
     });
-});
+    });
+}
 </script>
 <?php $this->endSection(); ?>

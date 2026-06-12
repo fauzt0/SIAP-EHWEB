@@ -281,16 +281,15 @@ class AlertService
     }
 
     /**
-     * Obtiene todas las alertas de un usuario (leídas y no leídas) con paginación.
+     * Obtiene alertas almacenadas del usuario con offset/limit (para DataTables).
      *
-     * @param int $userId  ID del usuario.
-     * @param int $page    Número de página.
-     * @param int $perPage Registros por página.
-     * @return array Con claves: data, total, page, perPage.
+     * @return array{data: array, total: int}
      */
-    public function getAllByUser(int $userId, int $page = 1, int $perPage = 20): array
+    public function getAllByUserSlice(int $userId, int $offset, int $limit): array
     {
-        $offset = ($page - 1) * $perPage;
+        if ($limit < 1) {
+            return ['data' => [], 'total' => $this->countAllByUser($userId)];
+        }
 
         $builder = $this->alertUserModel
             ->select('
@@ -317,12 +316,43 @@ class AlertService
 
         $data = $builder
             ->orderBy('sys_alerts.created_at', 'DESC')
-            ->limit($perPage, $offset)
+            ->limit($limit, $offset)
             ->findAll();
 
         return [
-            'data'    => $data,
-            'total'   => $total,
+            'data'  => $data,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Cuenta todas las alertas almacenadas asignadas a un usuario.
+     */
+    public function countAllByUser(int $userId): int
+    {
+        return $this->alertUserModel
+            ->join('sys_alerts', 'sys_alerts.id = sys_alert_user.alert_id')
+            ->where('sys_alert_user.user_id', $userId)
+            ->where('sys_alerts.deleted_at', null)
+            ->countAllResults();
+    }
+
+    /**
+     * Obtiene todas las alertas de un usuario (leídas y no leídas) con paginación.
+     *
+     * @param int $userId  ID del usuario.
+     * @param int $page    Número de página.
+     * @param int $perPage Registros por página.
+     * @return array Con claves: data, total, page, perPage.
+     */
+    public function getAllByUser(int $userId, int $page = 1, int $perPage = 20): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $slice  = $this->getAllByUserSlice($userId, $offset, $perPage);
+
+        return [
+            'data'    => $slice['data'],
+            'total'   => $slice['total'],
             'page'    => $page,
             'perPage' => $perPage,
         ];
