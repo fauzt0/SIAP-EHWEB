@@ -590,14 +590,52 @@ El sistema se compone de los siguientes elementos clave:
 *   Si la condición se cumple, construye un objeto `stdClass` con la estructura de una alerta, marcando `is_auto=1`.
 *   Estas alertas no se almacenan; desaparecen cuando la condición subyacente se corrige en la base de datos.
 *   Los errores en la ejecución de un detector son capturados (`_safeDetect()`) para no afectar al resto del sistema.
+*   **Inclusión en Historial:** Las alertas automáticas se incluyen en la respuesta de `history_ajax()`, permitiendo que aparezcan en la vista de historial completo junto a las alertas almacenadas.
 
-### D. Interacción con el Frontend (`loggedin_topbar.php`)
+### D. Interacción con el Frontend
+
+#### 1. TopBar (`loggedin_topbar.php`)
 
 *   **Polling:** El JavaScript en `loggedin_topbar.php` realiza una petición AJAX cada 60 segundos a `AlertController::get_unread_ajax()`.
 *   **Manejo de Clicks:**
     *   **Alertas Automáticas (`is_auto=1`):** Al hacer click, el sistema solo navega a la URL de destino (`target_url`). No se marcan como leídas porque no están persistidas.
     *   **Alertas Almacenadas (`is_auto=0`):** Al hacer click, el sistema envía una petición AJAX a `AlertController::mark_read_ajax()` para marcar la alerta como leída y luego navega a la `target_url`.
 *   **CSRF:** El token CSRF se maneja globalmente en el layout `user_loggedin_layout.php` y se actualiza en cada petición/respuesta AJAX para evitar errores de seguridad.
+
+#### 2. Formato de Respuesta (JSON)
+
+Tanto `get_unread_ajax()` como `history_ajax()` devuelven alertas con el siguiente formato unificado:
+
+```json
+{
+  "id": 0,
+  "pivot_id": 0,
+  "title": "Proveedores sin RFC",
+  "message": "3 proveedores sin RFC registrado",
+  "type": "warning",
+  "icon": "fa-file-invoice",
+  "target_url": "/nat/suppliers",
+  "module": "Proveedores",
+  "is_auto": 1,
+  "is_read": 0,
+  "created_at": "2026-06-12 18:30:00"
+}
+```
+
+*   **`is_auto=1`:** Alerta automática (CHISA-style). `id` y `pivot_id` son siempre `0`.
+*   **`is_auto=0`:** Alerta almacenada. `id` y `pivot_id` contienen los IDs reales de las tablas `sys_alerts` y `sys_alert_user`.
+
+#### 3. Historial de Notificaciones (`alerts_history.php`)
+
+*   **Fusión de Alertas:** La vista de historial (`AlertController::history_ajax()`) muestra tanto alertas almacenadas como alertas automáticas en una sola tabla. Las alertas automáticas aparecen primero en la página 1.
+*   **Identificación Visual:** Cada fila incluye una columna **Tipo** que distingue:
+    *   **En vivo** (badge azul `bg-info`): Alertas automáticas detectadas en tiempo real según condiciones de datos del sistema.
+    *   **Notificación** (badge gris claro): Alertas almacenadas persistentes despachadas manualmente vía `AlertService::dispatch()`.
+*   **Estado Diferenciado:**
+    *   Alertas automáticas muestran estado **Activa** (badge amarillo) y fecha **Tiempo real**.
+    *   Alertas almacenadas muestran estados **Nueva** / **Leída** con su timestamp real.
+*   **Marcado Masivo:** El botón "Marcar notificaciones como leídas" solo afecta a alertas almacenadas. Las alertas automáticas no se pueden marcar como leídas; desaparecen automáticamente cuando se corrige la condición subyacente en la base de datos.
+*   **Navegación:** El link "Ver todas las notificaciones" en el dropdown del topbar dirige a esta vista de historial completo.
 
 ### E. Cómo Agregar un Nuevo Detector Automático
 
