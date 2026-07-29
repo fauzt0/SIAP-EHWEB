@@ -41,6 +41,6 @@ Options -Indexes
 AuthGroupFile /dev/null
 AuthType Basic
 AuthUserFile /home/st32477/domains/sandbox.especialistashosting.com/.htpasswd/public_html/.htpasswd
-AuthName "Área de desarrollo"
+AuthName "area de desarrollo"
 require valid-user
 ErrorDocument 401 "Unauthorized Access"
