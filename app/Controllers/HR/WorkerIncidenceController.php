@@ -2,8 +2,22 @@
 
 namespace App\Controllers\HR;
 
+use App\Models\HR\HrIncidenceModel;
+use App\Models\Users\UserActivityLogsModel;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
+
 class WorkerIncidenceController extends BaseHrController
 {
+    protected HrIncidenceModel $incidenceModel;
+
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
+    {
+        parent::initController($request, $response, $logger);
+        $this->incidenceModel = new HrIncidenceModel();
+    }
+
     /**
      * Registra una nueva incidencia vía AJAX (Fase 2)
      */
@@ -23,10 +37,16 @@ class WorkerIncidenceController extends BaseHrController
         ];
 
         if ($this->recordIncidence($data)) {
+            (new UserActivityLogsModel())->logActivity(
+                'create_incidence',
+                'Registró incidencia ' . $data['incidence_type'] . ' para profile_id: ' . $data['profile_id'] . ' (fecha: ' . $data['date'] . ')'
+            );
             $this->setOutputSuccess('Incidencia registrada correctamente.');
         } else {
             $this->setOutputError('No se pudo registrar la incidencia.');
         }
+
+        $this->outputData['csrf'] = csrf_hash();
 
         return $this->response->setJSON($this->outputData);
     }
@@ -44,78 +64,34 @@ class WorkerIncidenceController extends BaseHrController
         $status      = $this->request->getPost('status');
         $notes       = $this->request->getPost('notes');
 
-        if ($this->updateIncidenceStatus((int)$incidenceId, $status, $notes)) {
+        if ($this->updateIncidenceStatus((int) $incidenceId, $status, $notes)) {
+            (new UserActivityLogsModel())->logActivity(
+                'update_incidence',
+                'Actualizó estatus de incidencia ID: ' . $incidenceId . ' a: ' . $status
+            );
             $this->setOutputSuccess('Estatus de incidencia actualizado.');
         } else {
             $this->setOutputError('Error al actualizar el estatus.');
         }
 
+        $this->outputData['csrf'] = csrf_hash();
+
         return $this->response->setJSON($this->outputData);
     }
 
     /**
-     * Lógica interna para registrar incidencia
+     * Delega el registro de incidencia al modelo (transacción en capa de datos).
      */
     private function recordIncidence(array $data): bool
     {
-        $db = \Config\Database::connect();
-        $db->transStart();
-
-        $incidenceModel = new \App\Models\HR\HrIncidenceModel();
-        $incidenceModel->insert($data);
-
-        // Notificar al usuario vinculado si existe
-        $profile = $this->profileModel->find($data['profile_id']);
-        if ($profile && !empty($profile->user_id)) {
-            $typeLabels = ['falta' => 'Falta', 'retardo' => 'Retardo', 'permiso' => 'Permiso', 'incapacidad' => 'Incapacidad'];
-            $label = $typeLabels[$data['incidence_type']] ?? $data['incidence_type'];
-
-            (new \App\Models\System\SysNotificationModel())->insert([
-                'user_id'    => $profile->user_id,
-                'title'      => 'Nueva Incidencia Registrada',
-                'message'    => "Se ha registrado un(a) {$label} para la fecha {$data['date']}.",
-                'type'       => 'incidence',
-                'is_read'    => 0,
-                'target_url' => null
-            ]);
-        }
-
-        cache()->delete('hr_dashboard_stats');
-        $db->transComplete();
-        return $db->transStatus();
+        return $this->incidenceModel->recordIncidence($data);
     }
 
     /**
-     * Lógica interna para actualizar estatus
+     * Delega la actualización de estatus al modelo (transacción en capa de datos).
      */
-    private function updateIncidenceStatus(int $incidenceId, string $status, string $notes = null): bool
+    private function updateIncidenceStatus(int $incidenceId, string $status, ?string $notes = null): bool
     {
-        $incidenceModel = new \App\Models\HR\HrIncidenceModel();
-        $incidence = $incidenceModel->find($incidenceId);
-        if (!$incidence) return false;
-
-        $db = \Config\Database::connect();
-        $db->transStart();
-
-        $incidenceModel->update($incidenceId, ['status' => $status, 'notes' => $notes]);
-
-        $profile = $this->profileModel->find($incidence->profile_id);
-        if ($profile && !empty($profile->user_id)) {
-            $statusLabels = ['justificada' => 'Justificada', 'descontada' => 'Descontada', 'rechazada' => 'Rechazada'];
-            $statusText = $statusLabels[$status] ?? $status;
-
-            (new \App\Models\System\SysNotificationModel())->insert([
-                'user_id'    => $profile->user_id,
-                'title'      => 'Actualización de Incidencia',
-                'message'    => "Tu incidencia del {$incidence->date} ha sido marcada como: {$statusText}.",
-                'type'       => 'incidence',
-                'is_read'    => 0,
-                'target_url' => null
-            ]);
-        }
-
-        cache()->delete('hr_dashboard_stats');
-        $db->transComplete();
-        return $db->transStatus();
+        return $this->incidenceModel->updateIncidenceStatus($incidenceId, $status, $notes);
     }
 }

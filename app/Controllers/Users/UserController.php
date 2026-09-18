@@ -1094,4 +1094,154 @@ class UserController extends RoleController
     return redirect()->to(route_to('user.profile'))->with('exito', 'Perfil actualizado correctamente.');
   }
 
+  /**
+   * auditLog()
+   * -------------------------------------------------------------------
+   * Vista global de bitácora (todos los movimientos del sistema).
+   * Solo administradores con permiso admin.audit-log.
+   */
+  public function auditLog(): string
+  {
+    $this->assertPermission('admin.audit-log');
+
+    $this->setViewSuccess('Bitácora global del sistema');
+    $this->setPageTittleAhead('Bitácora Global', 'Administrador — Bitácora Global');
+
+    $logModel = new \App\Models\Users\UserActivityLogsModel();
+    $typesRaw = $logModel->select('type')->distinct()->orderBy('type', 'ASC')->findAll();
+    $types    = array_map(static function ($t) {
+      return $t->type;
+    }, $typesRaw);
+
+    $users = $this->usersProvider
+      ->select('id, username, first_name, last_name')
+      ->orderBy('first_name', 'ASC')
+      ->orderBy('last_name', 'ASC')
+      ->findAll();
+
+    $this->viewData['response'] = [
+      'activityTypes' => $types,
+      'users'         => $users,
+    ];
+
+    $auditBreadcrumb = new Breadcrumb();
+    $this->viewData['breadcrumb'] = $auditBreadcrumb->getBreadCrumbHtml([
+      'Inicio'          => route_to('dashboard.index'),
+      'Administrador'   => '#',
+      'Bitácora Global' => '',
+    ]);
+
+    return $this->renderLayout('Layouts/user_loggedin_layout', 'Users/global_activity');
+  }
+
+  /**
+   * auditLog_ajax()
+   * -------------------------------------------------------------------
+   * POST AJAX — DataTables server-side de la bitácora global.
+   */
+  public function auditLog_ajax(): ResponseInterface
+  {
+    $this->assertAjaxPost();
+    $this->assertPermission('admin.audit-log');
+
+    $postData            = $this->request->getPost();
+    $postData['scope']   = 'global';
+    $postData['filter_user']      = $this->request->getPost('filter_user');
+    $postData['filter_action']    = $this->request->getPost('filter_action');
+    $postData['filter_date_from'] = $this->request->getPost('filter_date_from');
+    $postData['filter_date_to']   = $this->request->getPost('filter_date_to');
+
+    $model = new \App\Models\Users\UserActivityLogsModel();
+    $list  = $model->get_datatables($postData);
+    $data  = [];
+
+    foreach ($list as $log) {
+      $createdRaw = is_object($log->created_at) ? (string) $log->created_at : (string) ($log->created_at ?? '');
+      $logDate    = $createdRaw !== '' ? date('d/m/Y H:i', strtotime($createdRaw)) : '—';
+
+      $fullName = trim(($log->first_name ?? '') . ' ' . ($log->last_name ?? ''));
+      $username = $log->username ?? '';
+      $userHtml = $fullName !== ''
+        ? esc($fullName) . '<br><small class="text-muted">' . esc($username) . '</small>'
+        : '<span class="text-muted">' . ($username !== '' ? esc($username) : 'Sistema') . '</span>';
+
+      $badgeColor = 'primary';
+      switch ($log->type) {
+        case 'login':
+          $badgeColor = 'success';
+          break;
+        case 'logout':
+          $badgeColor = 'dark';
+          break;
+        case 'create_user':
+          $badgeColor = 'info';
+          break;
+        case 'update_user':
+        case 'update_profile':
+          $badgeColor = 'warning';
+          break;
+        case 'delete_user':
+          $badgeColor = 'danger';
+          break;
+        case 'restore_user':
+          $badgeColor = 'secondary';
+          break;
+      }
+      $typeHtml = '<span class="badge bg-' . $badgeColor . '">' . esc($log->type) . '</span>';
+
+      $data[] = [
+        (int) $log->id,
+        $userHtml,
+        $typeHtml,
+        esc($log->description),
+        esc($log->ip_address ?? '—'),
+        $logDate,
+      ];
+    }
+
+    $countModel = new \App\Models\Users\UserActivityLogsModel();
+
+    $this->setOutputSuccess('Bitácora global cargada');
+    $this->outputData['draw']            = (int) $this->request->getPost('draw');
+    $this->outputData['recordsTotal']    = $countModel->count_all();
+    $this->outputData['recordsFiltered'] = $countModel->count_filtered($postData);
+    $this->outputData['data']            = $data;
+
+    return $this->jsonWithCsrf($this->outputData);
+  }
+
+  /**
+   * Valida petición AJAX POST; oculta el endpoint ante acceso directo (§1).
+   */
+  protected function assertAjaxPost(): void
+  {
+    if (! $this->request->isAJAX() || ! $this->request->is('post')) {
+      throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound(
+        'Endpoint exclusivo para peticiones AJAX.'
+      );
+    }
+  }
+
+  /**
+   * Respuesta JSON con token CSRF renovado (§2 / §15).
+   */
+  protected function jsonWithCsrf(array $payload = []): ResponseInterface
+  {
+    if (! isset($payload['csrf'])) {
+      $payload['csrf'] = csrf_hash();
+    }
+
+    return $this->response->setJSON($payload);
+  }
+
+  /**
+   * Defensa en profundidad además del filtro de ruta Shield (§7).
+   */
+  protected function assertPermission(string $permission): void
+  {
+    if (! auth()->loggedIn() || ! auth()->user()->can($permission)) {
+      throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+    }
+  }
+
 }

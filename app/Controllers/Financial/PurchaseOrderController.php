@@ -75,7 +75,10 @@ class PurchaseOrderController extends BaseFinancialController
 
             // Actions (§7)
             $pid     = $po->id;
-            $actions = '<div class="d-flex gap-1 align-items-center">';
+            $actions = '<div class="d-flex gap-1 align-items-center flex-wrap">';
+
+            $actions .= '<button class="btn btn-outline-primary btn-sm btn-view-po" '
+                      . 'data-id="' . $pid . '" title="Ver detalle"><i class="fas fa-eye"></i></button>';
             
             $actions .= '<a href="' . route_to('suppliers.po.download', $pid) . '?action=view" target="_blank" rel="noopener" '
                       . 'class="btn btn-outline-info btn-sm" title="Ver PDF"><i class="fas fa-file-pdf"></i></a>';
@@ -84,18 +87,23 @@ class PurchaseOrderController extends BaseFinancialController
                       . 'class="btn btn-outline-secondary btn-sm" title="Descargar PDF"><i class="fas fa-download"></i></a>';
 
             if (auth()->user()->can('catalog.manage-suppliers')) {
-                if (in_array($po->status, ['draft', 'sent'])) {
-                    $actions .= '<button class="btn btn-outline-warning btn-sm btn-edit-po" '
-                              . 'data-id="' . $pid . '" title="Editar"><i class="fas fa-edit"></i></button>';
-                }
+                if (!empty($po->deleted_at)) {
+                    $actions .= '<button class="btn btn-outline-success btn-sm btn-restore-po" '
+                              . 'data-id="' . $pid . '" title="Restaurar"><i class="fas fa-undo"></i></button>';
+                } else {
+                    if (in_array($po->status, ['draft', 'sent'])) {
+                        $actions .= '<button class="btn btn-outline-warning btn-sm btn-edit-po" '
+                                  . 'data-id="' . $pid . '" title="Editar"><i class="fas fa-edit"></i></button>';
+                    }
 
-                // Status transition buttons
-                $transitions = $this->_allowedTransitionButtons($po->status, $pid);
-                $actions    .= $transitions;
+                    // Status transition buttons
+                    $transitions = $this->_allowedTransitionButtons($po->status, $pid);
+                    $actions    .= $transitions;
 
-                if (!in_array($po->status, ['completed', 'cancelled'])) {
-                    $actions .= '<button class="btn btn-outline-danger btn-sm btn-delete-po" '
-                              . 'data-id="' . $pid . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
+                    if (!in_array($po->status, ['completed', 'cancelled'])) {
+                        $actions .= '<button class="btn btn-outline-danger btn-sm btn-delete-po" '
+                                  . 'data-id="' . $pid . '" title="Eliminar"><i class="fas fa-trash"></i></button>';
+                    }
                 }
             }
             $actions .= '</div>';
@@ -103,6 +111,7 @@ class PurchaseOrderController extends BaseFinancialController
             $data[] = [
                 '<span class="font-monospace small fw-semibold">' . esc($po->po_number) . '</span>',
                 esc($po->supplier_name ?? '—'),
+                esc($po->branch_name ?? $po->branch_commercial_name ?? '—'),
                 $statusBadge,
                 $amount,
                 esc($po->currency ?? 'MXN'),
@@ -114,7 +123,9 @@ class PurchaseOrderController extends BaseFinancialController
 
         return $this->response->setJSON([
             'draw'            => (int) $this->request->getPost('draw'),
-            'recordsTotal'    => $this->purchaseOrderModel->count_all(),
+            'recordsTotal'    => $this->purchaseOrderModel->count_all(
+                !empty($postData['filter_deleted']) ? ['only_deleted' => 1] : []
+            ),
             'recordsFiltered' => $this->purchaseOrderModel->count_filtered($postData),
             'data'            => $data,
         ]);
@@ -407,8 +418,13 @@ class PurchaseOrderController extends BaseFinancialController
         // Determinar modo: view (inline) o download (attachment)
         $action = $this->request->getGet('action') === 'view' ? 'I' : 'D';
 
+        $company = (new \App\Models\Organization\OrgCompanyModel())->getProfile();
+
         // Renderizar la vista PDF con los datos de la orden
-        $html = view('Financial/PurchaseOrders/purchase_order_pdf', ['po' => $order]);
+        $html = view('Financial/PurchaseOrders/purchase_order_pdf', [
+            'po'      => $order,
+            'company' => $company,
+        ]);
 
         // Generar el PDF usando la librería centralizada (formato Letter para OC)
         $pdf = new \App\Libraries\PdfLibrary(['format' => 'Letter']);

@@ -23,7 +23,7 @@ class FinSupplierModel extends Model
     protected $useSoftDeletes   = true;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'supplier_type',
+        'category_id',
         'legal_name',
         'commercial_name',
         'tax_id',
@@ -46,9 +46,9 @@ class FinSupplierModel extends Model
 
     // Validation
     protected $validationRules = [
-        'supplier_type' => [
-            'label' => 'Tipo de Proveedor',
-            'rules' => 'required|in_list[infrastructure,hardware,services,administrative]',
+        'category_id' => [
+            'label' => 'Categoría',
+            'rules' => 'permit_empty|is_natural_no_zero',
         ],
         'commercial_name' => [
             'label' => 'Nombre Comercial',
@@ -77,9 +77,8 @@ class FinSupplierModel extends Model
     ];
 
     protected $validationMessages = [
-        'supplier_type' => [
-            'required' => 'El tipo de proveedor es obligatorio.',
-            'in_list'  => 'El tipo de proveedor seleccionado no es válido.',
+        'category_id' => [
+            'is_natural_no_zero' => 'La categoría seleccionada no es válida.',
         ],
         'commercial_name' => [
             'required'   => 'El nombre comercial es obligatorio.',
@@ -94,7 +93,7 @@ class FinSupplierModel extends Model
     protected $datatableConfig = [
         'column_order'  => [
             null,
-            'fin_suppliers.supplier_type',
+            'fsc.name',
             'fin_suppliers.commercial_name',
             'fin_suppliers.legal_name',
             'fin_suppliers.tax_id',
@@ -109,6 +108,7 @@ class FinSupplierModel extends Model
             'fin_suppliers.tax_id',
             'fin_suppliers.contact_email',
             'fin_suppliers.contact_phone',
+            'fsc.name',
         ],
         'order' => ['fin_suppliers.id' => 'desc'],
     ];
@@ -124,17 +124,19 @@ class FinSupplierModel extends Model
         $this->builder()
             ->select([
                 'fin_suppliers.*',
+                'fsc.name AS category_name',
                 '(SELECT COUNT(*) FROM fin_supplier_contacts WHERE fin_supplier_contacts.fin_supplier_id = fin_suppliers.id AND fin_supplier_contacts.deleted_at IS NULL) AS contacts_count',
                 '(SELECT COUNT(*) FROM fin_purchase_orders WHERE fin_purchase_orders.fin_supplier_id = fin_suppliers.id AND fin_purchase_orders.deleted_at IS NULL) AS orders_count',
-            ]);
+            ])
+            ->join('fin_supplier_categories fsc', 'fsc.id = fin_suppliers.category_id', 'left');
 
         $this->_applyStatusFilter($postData);
 
-        // Filtro por tipo de proveedor
-        if (!empty($postData['filter_supplier_type'])) {
+        // Filtro por categoría de proveedor
+        if (!empty($postData['filter_category_id'])) {
             $this->builder()->where(
-                'fin_suppliers.supplier_type',
-                $postData['filter_supplier_type']
+                'fin_suppliers.category_id',
+                (int) $postData['filter_category_id']
             );
         }
 
@@ -268,19 +270,28 @@ class FinSupplierModel extends Model
 
     /**
      * getSupplierTypes
-     * 
-     * Retorna los tipos de proveedor disponibles para formularios.
+     *
+     * Delegado a FinSupplierCategoryModel::getForSelect() (id => name).
+     * Conservado para compatibilidad con llamadas existentes.
      *
      * @return array
      */
     public function getSupplierTypes(): array
     {
-        return [
-            'infrastructure'  => 'Infraestructura',
-            'hardware'        => 'Hardware',
-            'services'        => 'Servicios',
-            'administrative'  => 'Administrativo',
-        ];
+        return (new FinSupplierCategoryModel())->getForSelect();
+    }
+
+    /**
+     * findWithCategory
+     *
+     * Obtiene un proveedor con el nombre de su categoría (LEFT JOIN).
+     */
+    public function findWithCategory(int $id)
+    {
+        return $this->select('fin_suppliers.*, fsc.name AS category_name')
+            ->join('fin_supplier_categories fsc', 'fsc.id = fin_suppliers.category_id', 'left')
+            ->where('fin_suppliers.id', $id)
+            ->first();
     }
 
     /**

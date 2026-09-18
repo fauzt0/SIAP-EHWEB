@@ -11,6 +11,8 @@ class WorkerContractController extends BaseHrController
             return redirect()->to(route_to('hr.workers'))->with('error', 'Trabajador no encontrado.');
         }
 
+        $contractModel = new \App\Models\HR\WorkerContractModel();
+
         $this->setViewSuccess('Historial de Contratos');
         $this->setPageTittleAhead('Historial de Contratos', 'Empleado: ' . esc($profile->first_name . ' ' . $profile->last_name));
 
@@ -21,9 +23,10 @@ class WorkerContractController extends BaseHrController
         ]);
 
         $this->viewData['response'] = [
-            'profile_id'  => $profileId,
-            'worker_name' => $profile->first_name . ' ' . $profile->last_name,
-            'contracts'   => (new \App\Models\HR\WorkerContractModel())->getHistoryByProfile($profileId),
+            'profile_id'    => $profileId,
+            'worker_name'   => $profile->first_name . ' ' . $profile->last_name,
+            'contracts'     => $contractModel->getHistoryByProfile($profileId),
+            'contract_tree' => $contractModel->getContractTree($profileId),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/contracts/worker_contracts_history');
@@ -39,13 +42,14 @@ class WorkerContractController extends BaseHrController
         $endDate   = $this->request->getGet('end_date');
 
         $workerContractModel = new \App\Models\HR\WorkerContractModel();
-        
+
         $query = $workerContractModel->select('hr_contracts.*, hr_cat_contract_types.name as contract_type_name, hr_cat_contract_templates.name as template_name')
-                                     ->join('hr_cat_contract_types', 'hr_cat_contract_types.id = hr_contracts.contract_type_id', 'left')
-                                     ->join('hr_cat_contract_templates', 'hr_cat_contract_templates.id = hr_contracts.template_id', 'left')
-                                     ->where('hr_contracts.profile_id', $profileId)
-                                     ->orderBy('hr_contracts.created_at', 'DESC');
-                                     
+            ->join('hr_cat_contract_types', 'hr_cat_contract_types.id = hr_contracts.contract_type_id', 'left')
+            ->join('hr_cat_contract_templates', 'hr_cat_contract_templates.id = hr_contracts.template_id', 'left')
+            ->where('hr_contracts.profile_id', $profileId)
+            ->orderBy('hr_contracts.version', 'DESC')
+            ->orderBy('hr_contracts.created_at', 'DESC');
+
         if (!empty($startDate)) {
             $query->where('DATE(hr_contracts.created_at) >=', $startDate);
         }
@@ -62,15 +66,17 @@ class WorkerContractController extends BaseHrController
     public function downloadContract(int $contractId)
     {
         $action  = $this->request->getGet('action') === 'view' ? 'I' : 'D';
-        $service = new \App\Services\ContractService(); // TODO: Mover lógica de este servicio aquí en el futuro
+        $service = new \App\Services\ContractService();
         $pdfData = $service->exportToPdf($contractId);
-        
-        $response = $this->response
+
+        if (!$pdfData) {
+            return redirect()->back()->with('error', 'No se pudo generar el PDF del contrato.');
+        }
+
+        return $this->response
             ->setHeader('Content-Type', 'application/pdf')
             ->setHeader('Content-Disposition', ($action === 'I' ? 'inline' : 'attachment') . '; filename="' . $pdfData['filename'] . '"')
             ->setBody($pdfData['content']);
-
-        return $response;
     }
 
     public function generateContractView(int $profileId, int $contractId = 0)
@@ -80,14 +86,15 @@ class WorkerContractController extends BaseHrController
             return redirect()->to(route_to('hr.workers'))->with('error', 'Trabajador no encontrado.');
         }
 
-        $editContent = '';
-        $editType = '';
+        $editContent       = '';
+        $editType          = '';
+        $parentContractId  = 0;
         if ($contractId > 0) {
             $contractModel = new \App\Models\HR\WorkerContractModel();
             $contract = $contractModel->find($contractId);
             if ($contract && $contract->profile_id == $profileId) {
-                $editContent = $contract->content_snapshot;
-                // Intentar extraer el tipo de contrato del reason
+                $editContent      = $contract->content_snapshot;
+                $parentContractId = $contract->id;
                 if (strpos($contract->reason, ' - ') !== false) {
                     $parts = explode(' - ', $contract->reason, 2);
                     $editType = $parts[0];
@@ -111,6 +118,7 @@ class WorkerContractController extends BaseHrController
             'contract_types'     => (new \App\Models\HR\HrContractTypeModel())->findAll(),
             'edit_content'       => $editContent,
             'edit_type'          => $editType,
+            'parent_contract_id' => $parentContractId,
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/contracts/worker_contract_generate');
@@ -132,13 +140,12 @@ class WorkerContractController extends BaseHrController
 
         try {
             $contractService = new \App\Services\ContractService();
-            // LFT is a special case. Let's assume if templateId is 'lft', we load a default text.
             if ($templateId === 'lft') {
-                $html = $contractService->getLftTemplateHtml($profileId); // We will implement this or just return static text
+                $html = $contractService->getLftTemplateHtml($profileId);
             } else {
-                $html = $contractService->previewTemplateRender($profileId, (int)$templateId);
+                $html = $contractService->previewTemplateRender($profileId, (int) $templateId);
             }
-            
+
             $this->setOutputSuccess('Plantilla cargada.');
             $this->outputData['html'] = $html;
         } catch (\Exception $e) {
@@ -154,15 +161,17 @@ class WorkerContractController extends BaseHrController
     {
         $html = $this->request->getPost('content');
         if (empty($html)) {
-            return "No hay contenido para previsualizar.";
+            return $this->response->setStatusCode(400)->setBody('No hay contenido para previsualizar.');
         }
 
-        // Generar PDF al vuelo
         try {
-            $pdf = new \App\Libraries\PdfLibrary([
-                'format' => 'Letter'
-            ]);
+            $profileId  = (int) $this->request->getPost('profile_id');
+            $templateId = $this->request->getPost('template_id') ? (int) $this->request->getPost('template_id') : null;
 
+            $contractService = new \App\Services\ContractService();
+            $html            = $contractService->buildPdfHtml($html, $profileId > 0 ? $profileId : null, $templateId);
+
+            $pdf = new \App\Libraries\PdfLibrary(['format' => 'Letter']);
             $pdf->loadHtml($html);
             $binary = $pdf->getAsString();
 
@@ -170,10 +179,9 @@ class WorkerContractController extends BaseHrController
                 ->setHeader('Content-Type', 'application/pdf')
                 ->setHeader('Content-Disposition', 'inline; filename="Previsualizacion_Contrato.pdf"')
                 ->setBody($binary);
-
         } catch (\Exception $e) {
             log_message('error', 'Error mPDF preview: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setBody("Error al generar la previsualización del PDF.");
+            return $this->response->setStatusCode(500)->setBody('Error al generar la previsualización del PDF.');
         }
     }
 
@@ -183,11 +191,12 @@ class WorkerContractController extends BaseHrController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $typeId       = $this->request->getPost('contract_type_id');
-        $templateId   = $this->request->getPost('template_id');
-        $reason       = $this->request->getPost('reason') ?: 'Generación manual';
-        $content      = $this->request->getPost('content');
-        $saveTemplate = $this->request->getPost('save_as_template');
+        $typeId           = $this->request->getPost('contract_type_id');
+        $templateId       = $this->request->getPost('template_id');
+        $reason           = $this->request->getPost('reason') ?: 'Generación manual';
+        $content          = $this->request->getPost('content');
+        $saveTemplate     = $this->request->getPost('save_as_template');
+        $parentContractId = $this->request->getPost('parent_contract_id') ? (int) $this->request->getPost('parent_contract_id') : null;
 
         if (empty($typeId) || empty($content)) {
             $this->setOutputError('El tipo de contrato y el contenido son obligatorios.');
@@ -195,48 +204,38 @@ class WorkerContractController extends BaseHrController
         }
 
         try {
-            // Guardar el snapshot en worker_contracts
-            $workerContractModel = new \App\Models\HR\WorkerContractModel();
-            
-            $contractData = [
-                'profile_id'       => $profileId,
-                'template_id'      => $templateId ?: null,
-                'contract_type_id' => $typeId,
-                'content_snapshot' => $content,
-                'reason'           => $reason,
-                'status'           => 'active'
-            ];
+            $contractService = new \App\Services\ContractService();
+            $newId = $contractService->saveManualContractVersion(
+                $profileId,
+                $content,
+                (int) $typeId,
+                $templateId ? (int) $templateId : null,
+                $reason,
+                $parentContractId,
+                in_array($saveTemplate, ['true', '1', 'on'], true)
+            );
 
-            if (!$workerContractModel->insert($contractData)) {
-                $this->setOutputError('Error de validación al guardar contrato.', $workerContractModel->errors());
+            if (!$newId) {
+                $this->setOutputError('Error al guardar el contrato.');
                 $this->outputData['csrf'] = csrf_hash();
                 return $this->response->setJSON($this->outputData);
             }
 
-            // Guardar como nueva plantilla global si se solicitó
-            if ($saveTemplate === 'true' || $saveTemplate === '1' || $saveTemplate === 'on') {
-                $templateModel = new \App\Models\HR\ContractTemplateModel();
-                $typeModel = new \App\Models\HR\HrContractTypeModel();
-                $typeData = $typeModel->find($typeId);
-                $typeName = $typeData ? $typeData->name : 'Manual';
-                $templateData = [
-                    'name'        => substr('Plantilla: ' . $typeName . ' (' . date('Y-m-d H:i') . ')', 0, 99),
-                    'description' => 'Plantilla generada a partir de un contrato manual.',
-                    'content'     => $content,
-                    'base_model'  => 'corporate' // Valor por defecto para pasar validación
-                ];
-
-                if (!$templateModel->insert($templateData)) {
-                    log_message('error', 'Error al guardar plantilla: ' . json_encode($templateModel->errors()));
-                    // No detenemos el proceso, solo logueamos, el contrato ya se guardó
-                }
-            }
+            $logModel = new \App\Models\Users\UserActivityLogsModel();
+            $savedContract = (new \App\Models\HR\WorkerContractModel())->find($newId);
+            $versionLabel  = $savedContract ? ('v' . (int) $savedContract->version) : ('ID ' . $newId);
+            $logModel->logActivity(
+                'create_contract',
+                'Contrato manual ' . $versionLabel . ' para profile_id: ' . $profileId
+            );
 
             $this->setOutputSuccess('Contrato generado y guardado correctamente.');
+            $this->outputData['response'] = ['contract_id' => $newId, 'redirect' => route_to('hr.contracts.history', $profileId)];
         } catch (\Exception $e) {
             log_message('error', 'Error en saveManualContract: ' . $e->getMessage());
             $this->setOutputError('Error interno al guardar el contrato.');
         }
+
         $this->outputData['csrf'] = csrf_hash();
         return $this->response->setJSON($this->outputData);
     }

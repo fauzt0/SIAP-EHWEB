@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 use App\Libraries\Breadcrumb;
 
 use App\Models\Financial\FinSupplierModel;
+use App\Models\Financial\FinSupplierCategoryModel;
 use App\Models\Financial\FinPurchaseOrderModel;
 
 /**
@@ -23,6 +24,7 @@ class BaseFinancialController extends BaseController
 
     protected Breadcrumb $breadcrumb;
     protected FinSupplierModel $supplierModel;
+    protected FinSupplierCategoryModel $categoryModel;
     protected FinPurchaseOrderModel $purchaseOrderModel;
 
     public function initController(
@@ -33,6 +35,7 @@ class BaseFinancialController extends BaseController
         parent::initController($request, $response, $logger);
 
         $this->supplierModel      = new FinSupplierModel();
+        $this->categoryModel      = new FinSupplierCategoryModel();
         $this->purchaseOrderModel = new FinPurchaseOrderModel();
 
         $this->breadcrumb = new Breadcrumb([
@@ -41,5 +44,23 @@ class BaseFinancialController extends BaseController
         ]);
 
         $this->setPageTittleAhead('Proveedores', 'Gestión de Proveedores');
+    }
+
+    protected function assertAjaxPost(): void
+    {
+        if (! $this->request->isAJAX() || ! $this->request->is('post')) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound(
+                'Endpoint exclusivo para peticiones AJAX.'
+            );
+        }
+    }
+
+    protected function jsonWithCsrf(array $payload = []): ResponseInterface
+    {
+        if (! isset($payload['csrf'])) {
+            $payload['csrf'] = csrf_hash();
+        }
+
+        return $this->response->setJSON($payload);
     }
 }

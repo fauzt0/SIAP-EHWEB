@@ -194,6 +194,46 @@ $hasCompany = ! empty($company);
                             <label class="form-label">Logo</label>
                             <input type="file" class="form-control" name="logo" id="branch-logo" accept="image/*">
                         </div>
+                        <div class="col-12">
+                            <hr class="my-1">
+                            <h6 class="mb-0">
+                                <i class="fas fa-folder-open me-1 text-primary"></i>Documentación legal
+                            </h6>
+                            <p class="small text-muted mb-0">PDF o imagen. Al reemplazar un archivo se elimina el anterior.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="branch-csf">
+                                <i class="fas fa-file-pdf text-danger me-1"></i>CSF
+                                <span id="badge-csf"></span>
+                            </label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="csf" id="branch-csf"
+                                       accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*">
+                                <label class="input-group-text" for="branch-csf"><i class="fas fa-upload"></i></label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="branch-address-proof">
+                                <i class="fas fa-file-pdf text-danger me-1"></i>Comprobante de domicilio
+                                <span id="badge-address-proof"></span>
+                            </label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="address_proof" id="branch-address-proof"
+                                       accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*">
+                                <label class="input-group-text" for="branch-address-proof"><i class="fas fa-upload"></i></label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="branch-incorporation-act">
+                                <i class="fas fa-file-pdf text-danger me-1"></i>Acta constitutiva
+                                <span id="badge-incorporation-act"></span>
+                            </label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="incorporation_act" id="branch-incorporation-act"
+                                       accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*">
+                                <label class="input-group-text" for="branch-incorporation-act"><i class="fas fa-upload"></i></label>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="form-check form-switch mt-4">
                                 <input class="form-check-input" type="checkbox" name="is_main" id="branch-is-main" value="1">
@@ -254,6 +294,8 @@ $hasCompany = ! empty($company);
                 <dd class="col-sm-8" id="oc-address">—</dd>
                 <dt class="col-sm-4">Impresora POS</dt>
                 <dd class="col-sm-8" id="oc-printer">—</dd>
+                <dt class="col-sm-4">Documentos</dt>
+                <dd class="col-sm-8" id="oc-docs">—</dd>
                 <dt class="col-sm-4">Alta</dt>
                 <dd class="col-sm-8" id="oc-created">—</dd>
             </dl>
@@ -392,12 +434,31 @@ function initBranchesDataTable() {
     document.getElementById('btn-new-branch')?.addEventListener('click', openBranchModal);
 }
 
+function setDocBadge(elId, url) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.innerHTML = url
+        ? ' <a href="' + url + '" target="_blank" class="badge bg-success text-decoration-none"><i class="fas fa-check-circle me-1"></i>Descargar</a>'
+        : '';
+}
+
+function clearLegalDocFields() {
+    ['branch-csf', 'branch-address-proof', 'branch-incorporation-act'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+    });
+    setDocBadge('badge-csf', null);
+    setDocBadge('badge-address-proof', null);
+    setDocBadge('badge-incorporation-act', null);
+}
+
 function openBranchModal() {
     const form = document.getElementById('form-branch');
     form.reset();
     document.getElementById('branch-id').value = '';
     document.getElementById('branch-active').checked = true;
     document.getElementById('modal-branch-title').textContent = 'Nueva Sucursal';
+    clearLegalDocFields();
     const nameEl = document.getElementById('branch-name');
     const commercialEl = document.getElementById('branch-commercial-name');
     if (!nameEl._syncCommercial) {
@@ -444,6 +505,12 @@ function fillBranchForm(b) {
     document.getElementById('branch-printer').value = b.pos_printer_name || '';
     document.getElementById('branch-is-main').checked = b.is_main == 1;
     document.getElementById('branch-active').checked = b.active == 1;
+    document.getElementById('branch-csf').value = '';
+    document.getElementById('branch-address-proof').value = '';
+    document.getElementById('branch-incorporation-act').value = '';
+    setDocBadge('badge-csf', b.csf_url || null);
+    setDocBadge('badge-address-proof', b.address_proof_url || null);
+    setDocBadge('badge-incorporation-act', b.incorporation_act_url || null);
 }
 
 function bindBranchForm() {
@@ -522,6 +589,17 @@ function openBranchOffcanvas(id) {
         document.getElementById('oc-email').textContent = b.email || '—';
         document.getElementById('oc-address').textContent = b.address || '—';
         document.getElementById('oc-printer').textContent = b.pos_printer_name || '—';
+        const docs = [];
+        if (b.csf_url) {
+            docs.push('<a href="' + b.csf_url + '" target="_blank" class="badge bg-success text-decoration-none me-1"><i class="fas fa-file-pdf me-1"></i>CSF</a>');
+        }
+        if (b.address_proof_url) {
+            docs.push('<a href="' + b.address_proof_url + '" target="_blank" class="badge bg-success text-decoration-none me-1"><i class="fas fa-file-pdf me-1"></i>Domicilio</a>');
+        }
+        if (b.incorporation_act_url) {
+            docs.push('<a href="' + b.incorporation_act_url + '" target="_blank" class="badge bg-success text-decoration-none me-1"><i class="fas fa-file-pdf me-1"></i>Acta</a>');
+        }
+        document.getElementById('oc-docs').innerHTML = docs.length ? docs.join(' ') : '—';
         document.getElementById('oc-created').textContent = b.created_at
             ? new Date(b.created_at).toLocaleDateString('es-MX') : '—';
 

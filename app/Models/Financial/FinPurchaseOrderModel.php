@@ -109,9 +109,9 @@ class FinPurchaseOrderModel extends Model
     // DataTable configuration
     protected $datatableConfig = [
         'column_order'  => [
-            null,
             'fin_purchase_orders.po_number',
             'fin_suppliers.commercial_name',
+            'org_branches.name',
             'fin_purchase_orders.status',
             'fin_purchase_orders.total_amount',
             'fin_purchase_orders.currency',
@@ -122,6 +122,7 @@ class FinPurchaseOrderModel extends Model
         'column_search' => [
             'fin_purchase_orders.po_number',
             'fin_suppliers.commercial_name',
+            'org_branches.name',
             'fin_purchase_orders.notes',
         ],
         'order' => ['fin_purchase_orders.id' => 'desc'],
@@ -134,6 +135,10 @@ class FinPurchaseOrderModel extends Model
      */
     protected function _get_datatables_query($postData = [])
     {
+        if (!empty($postData['filter_deleted'])) {
+            $this->withDeleted();
+        }
+
         $this->builder()
             ->select([
                 'fin_purchase_orders.*',
@@ -143,8 +148,13 @@ class FinPurchaseOrderModel extends Model
                 'org_branches.branch_code AS branch_code',
             ])
             ->join('fin_suppliers', 'fin_suppliers.id = fin_purchase_orders.fin_supplier_id', 'left')
-            ->join('org_branches', 'org_branches.id = fin_purchase_orders.org_branch_id', 'left')
-            ->where('fin_purchase_orders.deleted_at IS NULL');
+            ->join('org_branches', 'org_branches.id = fin_purchase_orders.org_branch_id', 'left');
+
+        if (!empty($postData['filter_deleted'])) {
+            $this->builder()->where('fin_purchase_orders.deleted_at IS NOT NULL', null, false);
+        } else {
+            $this->builder()->where('fin_purchase_orders.deleted_at IS NULL');
+        }
 
         // Filtro por estatus de la orden
         if (!empty($postData['filter_status'])) {
@@ -162,6 +172,14 @@ class FinPurchaseOrderModel extends Model
             );
         }
 
+        // Filtro por sucursal
+        if (!empty($postData['filter_branch_id'])) {
+            $this->builder()->where(
+                'fin_purchase_orders.org_branch_id',
+                (int) $postData['filter_branch_id']
+            );
+        }
+
         $this->_apply_datatables_filters($postData);
     }
 
@@ -173,7 +191,12 @@ class FinPurchaseOrderModel extends Model
     public function count_all($where = [])
     {
         $builder = $this->db->table($this->table);
-        $builder->where('deleted_at IS NULL');
+        if (!empty($where['only_deleted'])) {
+            $builder->where('deleted_at IS NOT NULL', null, false);
+            unset($where['only_deleted']);
+        } else {
+            $builder->where('deleted_at IS NULL');
+        }
         if (!empty($where)) {
             $builder->where($where);
         }
@@ -330,6 +353,10 @@ class FinPurchaseOrderModel extends Model
         $order = $this->select([
                 'fin_purchase_orders.*',
                 'fin_suppliers.commercial_name AS supplier_name',
+                'fin_suppliers.legal_name AS supplier_legal_name',
+                'fin_suppliers.tax_id AS supplier_tax_id',
+                'fin_suppliers.contact_email AS supplier_contact_email',
+                'fin_suppliers.contact_phone AS supplier_contact_phone',
                 'org_branches.name AS branch_name',
                 'org_branches.commercial_name AS branch_commercial_name',
                 'org_branches.legal_name AS branch_legal_name',
@@ -337,6 +364,7 @@ class FinPurchaseOrderModel extends Model
                 'org_branches.address AS branch_address',
                 'org_branches.phone AS branch_phone',
                 'org_branches.email AS branch_email',
+                'org_branches.logo_path AS branch_logo_path',
             ])
             ->join('fin_suppliers', 'fin_suppliers.id = fin_purchase_orders.fin_supplier_id', 'left')
             ->join('org_branches', 'org_branches.id = fin_purchase_orders.org_branch_id', 'left')

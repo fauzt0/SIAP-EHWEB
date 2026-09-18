@@ -21,9 +21,11 @@ $templates    = $response['contract_templates'] ?? [];
 $contractTypes = $response['contract_types'] ?? [];
 $editContent  = $response['edit_content'] ?? '';
 $editType     = $response['edit_type'] ?? '';
+$parentContractId = $response['parent_contract_id'] ?? 0;
 ?>
 
 <input type="hidden" id="csrf_token" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
+<input type="hidden" id="parent_contract_id" value="<?= (int) $parentContractId ?>">
 
 <main class="content">
   <div class="container-fluid p-0">
@@ -120,6 +122,8 @@ $editType     = $response['edit_type'] ?? '';
 <form id="form-preview" action="<?= route_to('hr.contracts.preview_raw') ?>" method="POST" target="_blank" style="display:none;">
   <?= csrf_field() ?>
   <input type="hidden" name="content" id="preview_content">
+  <input type="hidden" name="profile_id" value="<?= (int) $profileId ?>">
+  <input type="hidden" name="template_id" id="preview_template_id" value="">
 </form>
 <?php $this->endSection(); ?>
 
@@ -254,6 +258,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const html = tinymce.activeEditor.getContent();
         if (!html || html.trim() === '') return;
         document.getElementById('preview_content').value = html;
+        document.getElementById('preview_template_id').value = document.getElementById('template_id').value || '';
         document.getElementById('form-preview').submit();
     });
 
@@ -282,6 +287,7 @@ document.addEventListener("DOMContentLoaded", function() {
         fd.append('reason', document.getElementById('reason').value);
         fd.append('content', html);
         fd.append('save_as_template', document.getElementById('save_as_template').checked ? 1 : 0);
+        fd.append('parent_contract_id', document.getElementById('parent_contract_id').value || '');
         fd.append('<?= csrf_token() ?>', getCsrf());
 
         fetch('<?= route_to('hr.contracts.save_manual', $profileId) ?>', {

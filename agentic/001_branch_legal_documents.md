@@ -45,9 +45,27 @@ Create a migration to add three nullable columns to the `org_branches` table:
 
 ---
 
-## Security & Rules
-- **AJAX and CSRF:** Ensure the fetch/form request renews the CSRF token (§2 of `DOCUMENTACION_TECNICA.md`).
-- **Bitácora:** Log the activity inside the controller upon successful upload (§8 of `DOCUMENTACION_TECNICA.md`):
-  ```php
-  (new UserActivityLogsModel())->logActivity('upload_branch_docs', 'Uploaded legal documents for Branch ID: ' . $id);
-  ```
+## Security & Rules — Cumplimiento TOTAL con DOCUMENTACION_TECNICA.md
+
+| § | Estándar | Aplicación en esta tarea |
+|---|----------|--------------------------|
+| §1 | AJAX backend guard | `saveBranch()` debe llamar `$this->assertAjaxPost()` al inicio |
+| §2 | CSRF | El `<form>` en `branch_form.php` ya tiene el input hidden CSRF. El fetch de subida debe inyectar el token en header `<?= csrf_header() ?>` y actualizar el DOM con el nuevo token de la respuesta |
+| §3 | Rutas con alias | No crear nuevas rutas sin `'as' => '...'`. Usar `route_to()` en vistas, nunca `site_url()` |
+| §4 | Sidebar activo | No aplica (no se añaden nuevas entradas al sidebar) |
+| §5/§16 | DataTableTrait | No aplica a este endpoint de upload |
+| §6 | DataTables Guard | No aplica |
+| §7 | Permisos Shield | La ruta `saveBranch` ya tiene `permission:admin.manage-organization`. Verificar que aplica al procesar archivos |
+| §8 | Bitácora | `$this->activityLogModel->logActivity('upload_branch_docs', 'Subió documentos legales para sucursal ID: ' . $savedId)` — registrar cada archivo que se sube o reemplaza con su nombre |
+| §9 | Transacciones en modelo | `saveBranch()` en `OrgBranchModel` debe manejar los 3 archivos junto con los datos dentro de la misma operación del modelo, no en el controlador |
+| §10 | Select2 | No aplica |
+| §11 | Fechas | No aplica a este módulo |
+| §12 | FontAwesome | Usar `fas fa-file-pdf`, `fas fa-upload`, `fas fa-check-circle` para los botones de documento |
+| §13 | Breadcrumbs | No se crean nuevas vistas de página completa; el form ya existe |
+| §14 | Vistas/Layouts | No se crea vista nueva; solo se modifica `branch_form.php` existente |
+| §15 | viewData/outputData | El controlador usa `$this->setOutputSuccess()` / `$this->setOutputError()` y devuelve `$this->jsonWithCsrf($this->outputData)` |
+| §17 | notifyShow | El JS del form ya usa `notifyShow(res.message, 'success')`. Verificar que el handler del upload lo use también (no `alert()`) |
+| §18 | Uploads | `FCPATH . 'uploads/organization/'` · `$file->getRandomName()` · ruta relativa en DB · eliminar archivo anterior si existe |
+| §19 | Soft Delete / allowedFields | Añadir `csf_path`, `address_proof_path`, `incorporation_act_path` a `$allowedFields` en `OrgBranchModel` |
+| §20 | Catálogos estáticos | No aplica |
+| §21 | Sistema de alertas | No aplica a este módulo directamente |

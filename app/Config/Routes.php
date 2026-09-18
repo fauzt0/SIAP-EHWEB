@@ -58,6 +58,14 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
     });//fin del grupo user
 
     // -----------------------------------------------------------------------
+    // Bitácora global de administrador (Task 009)
+    // -----------------------------------------------------------------------
+    $routes->group('admin', function ($routes) {
+      $routes->get('audit-log', 'Users\UserController::auditLog', ['as' => 'admin.audit_log', 'filter' => 'permission:admin.audit-log']);
+      $routes->post('audit-log/ajax', 'Users\UserController::auditLog_ajax', ['as' => 'admin.audit_log_ajax', 'filter' => 'permission:admin.audit-log']);
+    });
+
+    // -----------------------------------------------------------------------
     // Rutas del módulo de Recursos Humanos
     // -----------------------------------------------------------------------
     $routes->group('hr', ['filter' => 'permission:hr.access'], function ($routes) {
@@ -114,6 +122,10 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
           // Puestos
           $routes->post('jobs/save', 'HR\CatalogController::saveJob', ['as' => 'hr.catalogs.job.save']);
           $routes->post('jobs/delete/(:num)', 'HR\CatalogController::deleteJob/$1', ['as' => 'hr.catalogs.job.delete']);
+
+          // Turnos / Horarios
+          $routes->post('shifts/save', 'HR\CatalogController::saveShift', ['as' => 'hr.catalogs.shift.save']);
+          $routes->post('shifts/delete/(:num)', 'HR\CatalogController::deleteShift/$1', ['as' => 'hr.catalogs.shift.delete']);
       });
 
       // ── Contratos y Plantillas ──────────────────────────────────────────
@@ -138,6 +150,26 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
           $routes->post('render-template', 'HR\WorkerContractController::getRenderedTemplateAjax', ['as' => 'hr.contracts.render_template']);
           $routes->post('preview-raw', 'HR\WorkerContractController::previewPdfRaw', ['as' => 'hr.contracts.preview_raw']);
           $routes->post('save-manual/(:num)', 'HR\WorkerContractController::saveManualContract/$1', ['as' => 'hr.contracts.save_manual']);
+      });
+
+      // ── Nóminas (Payroll) ──────────────────────────────────────────────
+      $routes->group('payroll', ['filter' => 'permission:hr.access'], function ($routes) {
+          $routes->get('/', 'HR\PayrollController::index', ['as' => 'hr.payroll.index']);
+          $routes->post('list_ajax', 'HR\PayrollController::list_ajax', ['as' => 'hr.payroll.list_ajax']);
+          $routes->get('create', 'HR\PayrollController::create', ['as' => 'hr.payroll.create', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('store', 'HR\PayrollController::store', ['as' => 'hr.payroll.store', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->get('show/(:num)', 'HR\PayrollController::show/$1', ['as' => 'hr.payroll.show']);
+          $routes->post('approve/(:num)', 'HR\PayrollController::approve/$1', ['as' => 'hr.payroll.approve', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('cancel/(:num)', 'HR\PayrollController::cancel/$1', ['as' => 'hr.payroll.cancel', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('entry/update/(:num)', 'HR\PayrollController::updateEntry/$1', ['as' => 'hr.payroll.entry.update', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('entry/mark-paid/(:num)', 'HR\PayrollController::markPaid/$1', ['as' => 'hr.payroll.entry.paid', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('period/mark-paid/(:num)', 'HR\PayrollController::markPeriodPaid/$1', ['as' => 'hr.payroll.period.paid', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->get('receipt/(:num)', 'HR\PayrollController::receipt/$1', ['as' => 'hr.payroll.receipt']);
+          $routes->get('schedule', 'HR\PayrollController::schedule', ['as' => 'hr.payroll.schedule']);
+          $routes->post('schedule_ajax', 'HR\PayrollController::schedule_ajax', ['as' => 'hr.payroll.schedule_ajax']);
+          $routes->post('schedule/store', 'HR\PayrollController::storeSchedule', ['as' => 'hr.payroll.schedule.store', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('schedule/update/(:num)', 'HR\PayrollController::updateSchedule/$1', ['as' => 'hr.payroll.schedule.update', 'filter' => 'permission:hr.manage-payroll']);
+          $routes->post('schedule/delete/(:num)', 'HR\PayrollController::deleteSchedule/$1', ['as' => 'hr.payroll.schedule.delete', 'filter' => 'permission:hr.manage-payroll']);
       });
 
     }); // fin del grupo hr
@@ -173,6 +205,16 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
             $routes->post('restore/(:num)', 'Financial\SupplierController::restore/$1', ['as' => 'suppliers.restore', 'filter' => 'permission:catalog.manage-suppliers']);
             $routes->post('toggle_status/(:num)', 'Financial\SupplierController::toggle_status/$1', ['as' => 'suppliers.toggle_status', 'filter' => 'permission:catalog.manage-suppliers']);
 
+            // Categorías de proveedores (CRUD propio, soft-delete)
+            $routes->group('categories', ['filter' => 'permission:catalog.access'], function ($routes) {
+                $routes->get('/', 'Financial\SupplierCategoryController::index', ['as' => 'suppliers.categories.index']);
+                $routes->post('list_ajax', 'Financial\SupplierCategoryController::list_ajax', ['as' => 'suppliers.categories.list_ajax']);
+                $routes->post('store', 'Financial\SupplierCategoryController::store', ['as' => 'suppliers.categories.store', 'filter' => 'permission:catalog.manage-suppliers']);
+                $routes->post('update/(:num)', 'Financial\SupplierCategoryController::update/$1', ['as' => 'suppliers.categories.update', 'filter' => 'permission:catalog.manage-suppliers']);
+                $routes->post('delete/(:num)', 'Financial\SupplierCategoryController::delete/$1', ['as' => 'suppliers.categories.delete', 'filter' => 'permission:catalog.manage-suppliers']);
+                $routes->post('restore/(:num)', 'Financial\SupplierCategoryController::restore/$1', ['as' => 'suppliers.categories.restore', 'filter' => 'permission:catalog.manage-suppliers']);
+            });
+
             // Asociación de productos del catálogo al proveedor
             $routes->get('(:num)/products', 'Financial\SupplierController::get_linked_products/$1', ['as' => 'suppliers.products.list']);
             $routes->post('(:num)/products/link', 'Financial\SupplierController::link_product/$1', ['as' => 'suppliers.products.link', 'filter' => 'permission:catalog.manage-suppliers']);
@@ -203,12 +245,39 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
             // ── PDF Export — Purchase Order Download (§9) ─────────────────
             $routes->get('purchase-orders/download/(:num)', 'Financial\PurchaseOrderController::download/$1', ['as' => 'suppliers.po.download']);
 
+            // ── Documentos de OC ─────────────────────────────────────────
+            $routes->get('purchase-orders/(:num)/documents', 'Financial\PurchaseOrderDocumentController::list_documents/$1', ['as' => 'suppliers.po.documents.list']);
+            $routes->post('purchase-orders/(:num)/documents', 'Financial\PurchaseOrderDocumentController::upload_document/$1', ['as' => 'suppliers.po.documents.upload', 'filter' => 'permission:catalog.po-documents']);
+            $routes->get('purchase-orders/documents/download/(:num)', 'Financial\PurchaseOrderDocumentController::download_document/$1', ['as' => 'suppliers.po.documents.download']);
+            $routes->post('purchase-orders/documents/delete/(:num)', 'Financial\PurchaseOrderDocumentController::delete_document/$1', ['as' => 'suppliers.po.documents.delete', 'filter' => 'permission:catalog.po-documents']);
+
+            // ── Correo de OC ─────────────────────────────────────────────
+            $routes->get('purchase-orders/(:num)/email/compose', 'Financial\PurchaseOrderDocumentController::compose_email/$1', ['as' => 'suppliers.po.email.compose']);
+            $routes->post('purchase-orders/(:num)/email/send', 'Financial\PurchaseOrderDocumentController::send_email/$1', ['as' => 'suppliers.po.email.send', 'filter' => 'permission:catalog.po-send-email']);
+
+            // ── Servicios recurrentes ────────────────────────────────────
+            $routes->get('recurring', 'Financial\RecurringExpenseController::index', ['as' => 'suppliers.recurring.index']);
+            $routes->post('recurring/list_ajax', 'Financial\RecurringExpenseController::list_ajax', ['as' => 'suppliers.recurring.list_ajax']);
+            $routes->get('recurring/calendar_ajax', 'Financial\RecurringExpenseController::calendar_ajax', ['as' => 'suppliers.recurring.calendar_ajax']);
+            $routes->post('recurring/generate', 'Financial\RecurringExpenseController::generate', ['as' => 'suppliers.recurring.generate', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->post('recurring/templates/store', 'Financial\RecurringExpenseController::store_template', ['as' => 'suppliers.recurring.templates.store', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->get('recurring/templates/get_ajax/(:num)', 'Financial\RecurringExpenseController::get_template/$1', ['as' => 'suppliers.recurring.templates.get']);
+            $routes->post('recurring/templates/update/(:num)', 'Financial\RecurringExpenseController::update_template/$1', ['as' => 'suppliers.recurring.templates.update', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->post('recurring/templates/toggle/(:num)', 'Financial\RecurringExpenseController::toggle_template/$1', ['as' => 'suppliers.recurring.templates.toggle', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->post('recurring/expenses/(:num)/pay', 'Financial\RecurringExpenseController::mark_paid/$1', ['as' => 'suppliers.recurring.pay', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->post('recurring/expenses/(:num)/cancel', 'Financial\RecurringExpenseController::cancel_expense/$1', ['as' => 'suppliers.recurring.cancel', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->post('recurring/expenses/(:num)/reschedule', 'Financial\RecurringExpenseController::reschedule_expense/$1', ['as' => 'suppliers.recurring.reschedule', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->get('recurring/expenses/(:num)/documents', 'Financial\RecurringExpenseController::list_documents/$1', ['as' => 'suppliers.recurring.documents.list']);
+            $routes->post('recurring/expenses/(:num)/documents', 'Financial\RecurringExpenseController::upload_document/$1', ['as' => 'suppliers.recurring.documents.upload', 'filter' => 'permission:catalog.recurring-manage']);
+            $routes->get('recurring/documents/download/(:num)', 'Financial\RecurringExpenseController::download_document/$1', ['as' => 'suppliers.recurring.documents.download']);
+            $routes->post('recurring/documents/delete/(:num)', 'Financial\RecurringExpenseController::delete_document/$1', ['as' => 'suppliers.recurring.documents.delete', 'filter' => 'permission:catalog.recurring-manage']);
+
             // ── Activity Timeline (Offcanvas) (§10) ──────────────────────
             $routes->get('(:num)/activity', 'Financial\SupplierController::activity/$1', ['as' => 'suppliers.activity']);
 
             // ── Recurring Expenses / Services Association (§11) ──────────
             $routes->get('(:num)/services', 'Financial\SupplierController::list_services/$1', ['as' => 'suppliers.services.list']);
-            $routes->post('(:num)/services/store', 'Financial\SupplierController::store_service/$1', ['as' => 'suppliers.services.store', 'filter' => 'permission:catalog.manage-suppliers']);
+            $routes->post('(:num)/services/store', 'Financial\SupplierController::store_service/$1', ['as' => 'suppliers.services.store', 'filter' => 'permission:catalog.recurring-manage']);
 
         }); // fin del grupo suppliers
 

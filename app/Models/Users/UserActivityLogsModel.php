@@ -8,11 +8,32 @@ class UserActivityLogsModel extends Model
 {
     use \App\Traits\DataTableTrait;
 
+    /**
+     * §5/§16 — Columnas ordenables y buscables (DataTableTrait lee $datatableConfig;
+     * estas propiedades se mantienen sincronizadas y se reconfiguran en modo global).
+     */
+    private $column_order = [
+        'users_activity_logs.id',
+        'type',
+        'description',
+        'ip_address',
+        'user_agent',
+        'created_at',
+    ];
+
+    private $column_search = [
+        'type',
+        'description',
+        'ip_address',
+        'user_agent',
+        'created_at',
+    ];
+
     protected $datatableConfig = [
-        'table' => 'users_activity_logs',
-        'column_order' => ['users_activity_logs.id', 'type', 'description', 'ip_address', 'user_agent', 'created_at'], // Orden manual
-        'column_search' => ['type', 'description', 'ip_address', 'user_agent', 'created_at'], // Columnas buscables globalmente
-        'order' => ['created_at' => 'DESC'] // Default: más reciente
+        'table'         => 'users_activity_logs',
+        'column_order'  => ['users_activity_logs.id', 'type', 'description', 'ip_address', 'user_agent', 'created_at'],
+        'column_search' => ['type', 'description', 'ip_address', 'user_agent', 'created_at'],
+        'order'         => ['created_at' => 'DESC'],
     ];
 
     protected $table            = 'users_activity_logs';
@@ -40,8 +61,60 @@ class UserActivityLogsModel extends Model
     protected $deletedField  = '';
 
     /**
+     * Configuración DataTables para la bitácora de un usuario (vista existente).
+     */
+    private function _configureUserDatatable(): void
+    {
+        $this->column_order = [
+            'users_activity_logs.id',
+            'type',
+            'description',
+            'ip_address',
+            'user_agent',
+            'created_at',
+        ];
+        $this->column_search = [
+            'type',
+            'description',
+            'ip_address',
+            'user_agent',
+            'created_at',
+        ];
+        $this->datatableConfig['column_order']  = $this->column_order;
+        $this->datatableConfig['column_search'] = $this->column_search;
+        $this->datatableConfig['order']         = ['created_at' => 'DESC'];
+    }
+
+    /**
+     * Configuración DataTables para la bitácora global (JOIN users).
+     * Columnas UI: ID, Usuario, Acción, Descripción, IP, Fecha.
+     */
+    private function _configureGlobalDatatable(): void
+    {
+        $this->column_order = [
+            'users_activity_logs.id',
+            'users.username',
+            'users_activity_logs.type',
+            'users_activity_logs.description',
+            'users_activity_logs.ip_address',
+            'users_activity_logs.created_at',
+        ];
+        $this->column_search = [
+            'users.username',
+            'users.first_name',
+            'users.last_name',
+            'users_activity_logs.type',
+            'users_activity_logs.description',
+            'users_activity_logs.ip_address',
+        ];
+        $this->datatableConfig['column_order']  = $this->column_order;
+        $this->datatableConfig['column_search'] = $this->column_search;
+        $this->datatableConfig['order']         = ['users_activity_logs.created_at' => 'DESC'];
+    }
+
+    /**
      * Registra rápida y estandarizadamente una acción en la bitácora
-     * 
+     *
      * @param int|null $userId ID del usuario que generó la acción (si es nulo asume el usuario logueado en la request actual)
      * @param string $type Tipo de actividad (ej. 'login', 'create_user', 'update_order')
      * @param string $description Texto descriptivo detallado (ej. "El usuario editó el producto ID 15")
@@ -49,7 +122,7 @@ class UserActivityLogsModel extends Model
     public function logActivity(string $type, string $description, ?int $userId = null)
     {
         $request = service('request');
-        
+
         // Si no mandan ID y tenemos Shield disponible, usamos el logueado
         if ($userId === null && function_exists('user_id')) {
             $userId = user_id();
@@ -86,31 +159,108 @@ class UserActivityLogsModel extends Model
     }
 
     /**
+     * getGlobalActivity()
+     * -------------------------------------------------------------------
+     * Listado completo de bitácora con JOIN a users y filtros de
+     * usuario / acción / rango de fechas. Pensado para exportaciones
+     * y consultas de lectura (la DataTable server-side usa el Trait).
+     *
+     * Filtros aceptados: user_id|filter_user, action|filter_action,
+     * date_from|filter_date_from, date_to|filter_date_to.
+     */
+    public function getGlobalActivity(array $filters = []): array
+    {
+        $query = $this->db->table('users_activity_logs ual')
+            ->select('ual.id, ual.type AS action, ual.description, ual.ip_address, ual.created_at,
+                      ual.users_id, u.username, u.first_name, u.last_name')
+            ->join('users u', 'u.id = ual.users_id', 'left')
+            ->orderBy('ual.created_at', 'DESC');
+
+        $userId = $filters['user_id'] ?? $filters['filter_user'] ?? null;
+        if (! empty($userId)) {
+            $query->where('ual.users_id', $userId);
+        }
+
+        $action = $filters['action'] ?? $filters['filter_action'] ?? null;
+        if (! empty($action)) {
+            $query->like('ual.type', $action);
+        }
+
+        $dateFrom = $filters['date_from'] ?? $filters['filter_date_from'] ?? null;
+        if (! empty($dateFrom)) {
+            $query->where('ual.created_at >=', $dateFrom . ' 00:00:00');
+        }
+
+        $dateTo = $filters['date_to'] ?? $filters['filter_date_to'] ?? null;
+        if (! empty($dateTo)) {
+            $query->where('ual.created_at <=', $dateTo . ' 23:59:59');
+        }
+
+        return $query->get()->getResultArray();
+    }
+
+    /**
      * _get_datatables_query()
      * -------------------------------------------------------------------
      * Lógica personalizada para el Trait DataTable.
-     * Implementa filtro para el users_id, rango de fechas y tipo.
+     * Modo por usuario: filtro users_id + tipo + fechas.
+     * Modo global (scope=global): JOIN users + filtros usuario/acción/fecha.
      */
     protected function _get_datatables_query($postData = [])
     {
-        // 1. Siempre filtramos por el usuario actual
-        if (isset($postData['users_id'])) {
-            $this->builder()->where('users_id', $postData['users_id']);
+        $isGlobal = ! empty($postData['scope']) && $postData['scope'] === 'global';
+
+        if ($isGlobal) {
+            $this->_configureGlobalDatatable();
+
+            $this->builder()
+                ->select('users_activity_logs.id,
+                          users_activity_logs.users_id,
+                          users_activity_logs.type,
+                          users_activity_logs.description,
+                          users_activity_logs.ip_address,
+                          users_activity_logs.created_at,
+                          users.username,
+                          users.first_name,
+                          users.last_name')
+                ->join('users', 'users.id = users_activity_logs.users_id', 'left');
+
+            $userId = $postData['filter_user'] ?? $postData['user_id'] ?? $postData['users_id'] ?? null;
+            if (! empty($userId)) {
+                $this->builder()->where('users_activity_logs.users_id', $userId);
+            }
+
+            $action = $postData['filter_action'] ?? $postData['action'] ?? $postData['type'] ?? null;
+            if (! empty($action)) {
+                $this->builder()->like('users_activity_logs.type', $action);
+            }
+
+            $dateFrom = $postData['filter_date_from'] ?? $postData['date_from'] ?? $postData['start_date'] ?? null;
+            if (! empty($dateFrom)) {
+                $this->builder()->where('users_activity_logs.created_at >=', $dateFrom . ' 00:00:00');
+            }
+
+            $dateTo = $postData['filter_date_to'] ?? $postData['date_to'] ?? $postData['end_date'] ?? null;
+            if (! empty($dateTo)) {
+                $this->builder()->where('users_activity_logs.created_at <=', $dateTo . ' 23:59:59');
+            }
+        } else {
+            $this->_configureUserDatatable();
+
+            if (isset($postData['users_id'])) {
+                $this->builder()->where('users_id', $postData['users_id']);
+            }
+
+            if (! empty($postData['type'])) {
+                $this->builder()->where('type', $postData['type']);
+            }
+
+            if (! empty($postData['start_date']) && ! empty($postData['end_date'])) {
+                $this->builder()->where('DATE(created_at) >=', $postData['start_date']);
+                $this->builder()->where('DATE(created_at) <=', $postData['end_date']);
+            }
         }
 
-        // 2. Filtro extendido: Tipo de Acción
-        if (!empty($postData['type'])) {
-            $this->builder()->where('type', $postData['type']);
-        }
-
-        // 3. Filtro extendido: Rango de fechas (DateRangePicker devuelve string ej. '01/01/2026 - 05/01/2026' o usamos 2 celdas)
-        // Por consistencia y sencillez para el postData, asumiremos start_date y end_date enviados desde js.
-        if (!empty($postData['start_date']) && !empty($postData['end_date'])) {
-            $this->builder()->where('DATE(created_at) >=', $postData['start_date']);
-            $this->builder()->where('DATE(created_at) <=', $postData['end_date']);
-        }
-
-        // 4. (Obligatorio) Llamar la lógica genérica del Trait para la búsqueda global y ordenación
         $this->_apply_datatables_filters($postData);
     }
 }

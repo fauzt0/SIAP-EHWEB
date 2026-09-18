@@ -55,6 +55,7 @@
 <?php 
   //Render final scripts (footer required scripts)
   $this->renderSection('pageFooterScripts');
+  $this->renderSection('scripts');
 ?>
 
 </html>

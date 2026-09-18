@@ -328,6 +328,7 @@ class WorkerController extends BaseHrController
             'managers'           => $managers,
             'autoEmployeeNumber' => $autoEmployeeNumber,
             'document_types'     => (new \App\Models\HR\HrDocumentTypeModel())->findAll(),
+            'shifts'             => (new \App\Models\HR\HrShiftModel())->orderBy('name', 'ASC')->findAll(),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/worker_form');
@@ -335,8 +336,8 @@ class WorkerController extends BaseHrController
 
     public function create()
     {
-        if (!$this->request->is('post')) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Método no válido');
+        if (!$this->request->isAJAX()) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
         $userId = $this->request->getPost('user_id') ? (int) $this->request->getPost('user_id') : null;
@@ -415,22 +416,37 @@ class WorkerController extends BaseHrController
         }
         $newProfileId = $this->profileModel->getInsertID();
 
+        // Asignar horario si se proporcionó
+        $shiftId = $this->request->getPost('shift_id') ? (int) $this->request->getPost('shift_id') : null;
+        $scheduleStart = $this->request->getPost('schedule_start_date') ?: $employmentData['hiring_date'] ?? date('Y-m-d');
+        if ($shiftId) {
+            (new \App\Models\HR\HrWorkerScheduleModel())->assignSchedule($newProfileId, $shiftId, $scheduleStart);
+        }
+
         // PROCESAR DOCUMENTOS DEL EXPEDIENTE
         $this->processDocuments($newProfileId);
 
         // GENERACIÓN AUTOMÁTICA DE CONTRATO
-        try {
-            $contractService = new \App\Services\ContractService();
-            $contractService->generateContract($newProfileId, null, 'Contrato generado automáticamente al alta');
-        } catch (\Exception $e) {
-            log_message('error', 'Error al generar contrato automático en alta: ' . $e->getMessage());
+        $contractWarning = null;
+        $contractService = new \App\Services\ContractService();
+        $contractId      = $contractService->generateContract($newProfileId, null, 'Contrato generado automáticamente al alta', 'auto');
+        if (! $contractId) {
+            $contractWarning = 'El trabajador se registró, pero no se pudo generar el contrato automático. Verifique las plantillas.';
+            log_message('error', 'Error al generar contrato automático en alta para profile_id: ' . $newProfileId);
+        } else {
+            $contractService->persistPdf($contractId);
         }
 
         $logModel = new \App\Models\Users\UserActivityLogsModel();
         $logModel->logActivity('create_worker', 'Alta del trabajador con profile_id: ' . $newProfileId);
 
-        $this->setOutputSuccess('Trabajador registrado correctamente.', ResponseInterface::HTTP_CREATED);
-        $this->outputData['response'] = ['profile_id' => $newProfileId, 'redirect' => route_to('hr.workers')];
+        $successMsg = $contractWarning ?: 'Trabajador registrado correctamente.';
+        $this->setOutputSuccess($successMsg, ResponseInterface::HTTP_CREATED);
+        $this->outputData['response'] = [
+            'profile_id'       => $newProfileId,
+            'redirect'         => route_to('hr.workers'),
+            'contract_warning' => $contractWarning,
+        ];
 
         return $this->response->setJSON($this->outputData);
     }
@@ -485,6 +501,8 @@ class WorkerController extends BaseHrController
                                     ->where('profile_id', $profileId)
                                     ->withDeleted() // CARGAR TODOS PARA EL FILTRO
                                     ->findAll(),
+            'shifts'             => (new \App\Models\HR\HrShiftModel())->orderBy('name', 'ASC')->findAll(),
+            'schedule'           => (new \App\Models\HR\HrWorkerScheduleModel())->getCurrentSchedule($profileId),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'HR/worker_form');
@@ -492,8 +510,8 @@ class WorkerController extends BaseHrController
 
     public function update(int $profileId)
     {
-        if (!$this->request->is('post')) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Método no válido');
+        if (!$this->request->isAJAX()) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
         $profile    = $this->profileModel->find($profileId);
@@ -503,6 +521,13 @@ class WorkerController extends BaseHrController
             $this->setOutputError('Trabajador no encontrado', null, ResponseInterface::HTTP_NOT_FOUND);
             return $this->response->setJSON($this->outputData);
         }
+
+        // Snapshot para detectar cambios que requieren fork de contrato
+        $oldProfileSnapshot    = clone $profile;
+        $oldEmploymentSnapshot = $employment ? clone $employment : null;
+        $scheduleModel         = new \App\Models\HR\HrWorkerScheduleModel();
+        $currentSchedule       = $scheduleModel->getCurrentSchedule($profileId);
+        $oldShiftId            = $currentSchedule ? (int) $currentSchedule->shift_id : null;
 
         $userId = $this->request->getPost('user_id') ? (int) $this->request->getPost('user_id') : null;
 
@@ -565,12 +590,35 @@ class WorkerController extends BaseHrController
         // PROCESAR NUEVOS DOCUMENTOS DEL EXPEDIENTE
         $this->processDocuments($profileId);
 
-        // GENERACIÓN AUTOMÁTICA DE CONTRATO POR CAMBIOS
-        try {
+        // Asignar horario (solo si se envió shift_id)
+        $scheduleChanged = false;
+        $forkNewShiftId  = $oldShiftId;
+        $newShiftId      = $this->request->getPost('shift_id') ? (int) $this->request->getPost('shift_id') : null;
+        $scheduleStart   = $this->request->getPost('schedule_start_date') ?: date('Y-m-d');
+        if ($newShiftId) {
+            $scheduleResult  = $scheduleModel->assignSchedule($profileId, $newShiftId, $scheduleStart);
+            $scheduleChanged = $scheduleResult['changed'];
+            if ($scheduleChanged) {
+                $forkNewShiftId = $newShiftId;
+            }
+        }
+
+        // Fork de contrato solo si cambiaron datos relevantes
+        if ($oldEmploymentSnapshot) {
             $contractService = new \App\Services\ContractService();
-            $contractService->generateContract($profileId, null, 'Actualización automática por cambios en datos del trabajador');
-        } catch (\Exception $e) {
-            log_message('error', 'Error al generar contrato automático en actualización: ' . $e->getMessage());
+            $newContractId   = $contractService->forkOnDataChange(
+                $profileId,
+                $oldProfileSnapshot,
+                $oldEmploymentSnapshot,
+                $profileData,
+                $employmentData,
+                $oldShiftId,
+                $forkNewShiftId,
+                $scheduleChanged
+            );
+            if ($newContractId) {
+                $contractService->persistPdf($newContractId);
+            }
         }
 
         $logModel = new \App\Models\Users\UserActivityLogsModel();

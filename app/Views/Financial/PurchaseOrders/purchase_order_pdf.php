@@ -5,9 +5,12 @@
     <title>Orden de Compra <?= esc($po->po_number) ?></title>
     <style>
         body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 10pt; color: #2c3e50; line-height: 1.6; margin: 0; padding: 0; }
-        .header { border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+        .header { border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        .header-table { width: 100%; border-collapse: collapse; }
+        .header-table td { vertical-align: top; }
         .header h1 { font-size: 18pt; color: #1a5276; margin: 0 0 5px 0; text-transform: uppercase; }
         .header .subtitle { font-size: 8pt; color: #7f8c8d; }
+        .logo { max-height: 60px; max-width: 180px; }
         .po-info { background: #f8f9fa; border-left: 4px solid #3498db; padding: 10px 15px; margin-bottom: 18px; }
         .po-info table { width: 100%; border-collapse: collapse; }
         .po-info td { padding: 3px 8px; font-size: 9pt; vertical-align: top; }
@@ -39,28 +42,53 @@
 </head>
 <body>
 
+<?php
+$company = $company ?? null;
+$buyerName    = $po->branch_commercial_name ?? $po->branch_name ?? $company->commercial_name ?? '';
+$buyerLegal   = $po->branch_legal_name ?? $company->legal_name ?? '';
+$buyerTaxId   = $po->branch_tax_id ?? $company->tax_id ?? '';
+$buyerAddress = $po->branch_address ?? '';
+$buyerPhone   = $po->branch_phone ?? $company->primary_phone ?? '';
+$buyerEmail   = $po->branch_email ?? $company->primary_email ?? '';
+$logoPath     = $po->branch_logo_path ?? $company->logo_path ?? null;
+$supplierName = $po->supplier_legal_name ?? $po->supplier_name ?? '—';
+$supplierRfc  = $po->supplier_tax_id ?? '';
+?>
+
 <div class="header">
-    <h1>Orden de Compra</h1>
-    <div class="subtitle">Documento generado por el sistema ERP</div>
+    <table class="header-table">
+        <tr>
+            <td style="width:25%;">
+                <?php if (!empty($logoPath) && is_file(FCPATH . $logoPath)): ?>
+                <img src="<?= FCPATH . esc($logoPath) ?>" class="logo" alt="Logo">
+                <?php endif; ?>
+            </td>
+            <td style="width:50%; text-align:center;">
+                <h1>Orden de Compra</h1>
+                <div class="subtitle">Documento generado por el sistema ERP</div>
+            </td>
+            <td style="width:25%;"></td>
+        </tr>
+    </table>
 </div>
 
-<?php if (! empty($po->branch_commercial_name) || ! empty($po->branch_name)): ?>
+<?php if (!empty($buyerName)): ?>
 <div class="supplier-box" style="margin-bottom:12px;">
     <h3>Comprador / Sucursal</h3>
-    <p><strong><?= esc($po->branch_commercial_name ?? $po->branch_name) ?></strong></p>
-    <?php if (! empty($po->branch_legal_name)): ?>
-    <p>Razón social: <?= esc($po->branch_legal_name) ?></p>
+    <p><strong><?= esc($buyerName) ?></strong></p>
+    <?php if (!empty($buyerLegal)): ?>
+    <p>Razón social: <?= esc($buyerLegal) ?></p>
     <?php endif; ?>
-    <?php if (! empty($po->branch_tax_id)): ?>
-    <p>RFC: <?= esc($po->branch_tax_id) ?></p>
+    <?php if (!empty($buyerTaxId)): ?>
+    <p>RFC: <?= esc($buyerTaxId) ?></p>
     <?php endif; ?>
-    <?php if (! empty($po->branch_address)): ?>
-    <p><?= esc($po->branch_address) ?></p>
+    <?php if (!empty($buyerAddress)): ?>
+    <p><?= esc($buyerAddress) ?></p>
     <?php endif; ?>
-    <?php if (! empty($po->branch_phone) || ! empty($po->branch_email)): ?>
+    <?php if (!empty($buyerPhone) || !empty($buyerEmail)): ?>
     <p>
-        <?= ! empty($po->branch_phone) ? 'Tel: ' . esc($po->branch_phone) : '' ?>
-        <?= ! empty($po->branch_email) ? ' · ' . esc($po->branch_email) : '' ?>
+        <?= !empty($buyerPhone) ? 'Tel: ' . esc($buyerPhone) : '' ?>
+        <?= !empty($buyerEmail) ? ' · ' . esc($buyerEmail) : '' ?>
     </p>
     <?php endif; ?>
 </div>
@@ -88,8 +116,10 @@
 
 <div class="supplier-box">
     <h3>Proveedor</h3>
-    <p><strong><?= esc($po->supplier_name ?? '—') ?></strong></p>
-    <?php if (!empty($po->tax_id)): ?><p>RFC: <?= esc($po->tax_id) ?></p><?php endif; ?>
+    <p><strong><?= esc($supplierName) ?></strong></p>
+    <?php if (!empty($supplierRfc)): ?><p>RFC: <?= esc($supplierRfc) ?></p><?php endif; ?>
+    <?php if (!empty($po->supplier_contact_email)): ?><p>Email: <?= esc($po->supplier_contact_email) ?></p><?php endif; ?>
+    <?php if (!empty($po->supplier_contact_phone)): ?><p>Tel: <?= esc($po->supplier_contact_phone) ?></p><?php endif; ?>
 </div>
 
 <?php $items = $po->items ?? []; ?>

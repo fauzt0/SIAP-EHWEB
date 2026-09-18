@@ -3,6 +3,7 @@
 namespace App\Models\Financial;
 
 use CodeIgniter\Model;
+use App\Traits\DataTableTrait;
 
 /**
  * FinRecurringExpenseModel
@@ -25,6 +26,7 @@ use CodeIgniter\Model;
  */
 class FinRecurringExpenseModel extends Model
 {
+    use DataTableTrait;
     /**
      * Tipos de gasto recurrente (catálogo México / ERP).
      * Clave = valor en BD; valor = etiqueta en UI.
@@ -78,6 +80,7 @@ class FinRecurringExpenseModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'supplier_id',
+        'org_branch_id',
         'category_id',
         'account_id',
         'description',
@@ -85,7 +88,12 @@ class FinRecurringExpenseModel extends Model
         'amount',
         'currency',
         'billing_day',
+        'billing_weekday',
         'frequency',
+        'start_date',
+        'end_date',
+        'next_due_date',
+        'notify_days_before',
         'last_generated_at',
         'is_active',
     ];
@@ -139,6 +147,30 @@ class FinRecurringExpenseModel extends Model
             'label' => 'Activo',
             'rules' => 'permit_empty|in_list[0,1]',
         ],
+        'org_branch_id' => [
+            'label' => 'Sucursal',
+            'rules' => 'permit_empty|is_natural_no_zero|is_not_unique[org_branches.id]',
+        ],
+        'start_date' => [
+            'label' => 'Fecha de inicio',
+            'rules' => 'permit_empty|valid_date',
+        ],
+        'end_date' => [
+            'label' => 'Fecha de fin',
+            'rules' => 'permit_empty|valid_date',
+        ],
+        'next_due_date' => [
+            'label' => 'Próximo vencimiento',
+            'rules' => 'permit_empty|valid_date',
+        ],
+        'billing_weekday' => [
+            'label' => 'Día de la semana',
+            'rules' => 'permit_empty|integer|greater_than[0]|less_than[8]',
+        ],
+        'notify_days_before' => [
+            'label' => 'Días de aviso',
+            'rules' => 'permit_empty|integer|greater_than_equal_to[0]|less_than[366]',
+        ],
     ];
 
     protected $validationMessages = [
@@ -164,6 +196,68 @@ class FinRecurringExpenseModel extends Model
 
     protected $skipValidation       = false;
     protected $cleanValidationRules = true;
+
+    protected $datatableConfig = [
+        'column_order'  => [
+            'fin_recurring_expenses.description',
+            'fin_suppliers.commercial_name',
+            'org_branches.name',
+            'fin_recurring_expenses.service_type',
+            'fin_recurring_expenses.amount',
+            'fin_recurring_expenses.frequency',
+            'fin_recurring_expenses.next_due_date',
+            'fin_recurring_expenses.is_active',
+            null,
+        ],
+        'column_search' => [
+            'fin_recurring_expenses.description',
+            'fin_suppliers.commercial_name',
+            'org_branches.name',
+        ],
+        'order' => ['fin_recurring_expenses.id' => 'desc'],
+    ];
+
+    protected function _get_datatables_query($postData = [])
+    {
+        $this->builder()
+            ->select([
+                'fin_recurring_expenses.*',
+                'fin_suppliers.commercial_name AS supplier_name',
+                'org_branches.name AS branch_name',
+            ])
+            ->join('fin_suppliers', 'fin_suppliers.id = fin_recurring_expenses.supplier_id', 'left')
+            ->join('org_branches', 'org_branches.id = fin_recurring_expenses.org_branch_id', 'left')
+            ->where('fin_recurring_expenses.deleted_at IS NULL');
+
+        if (isset($postData['filter_active']) && $postData['filter_active'] !== '') {
+            $this->builder()->where('fin_recurring_expenses.is_active', (int) $postData['filter_active']);
+        }
+
+        if (!empty($postData['filter_supplier_id'])) {
+            $this->builder()->where('fin_recurring_expenses.supplier_id', (int) $postData['filter_supplier_id']);
+        }
+
+        if (!empty($postData['filter_branch_id'])) {
+            $this->builder()->where('fin_recurring_expenses.org_branch_id', (int) $postData['filter_branch_id']);
+        }
+
+        if (!empty($postData['filter_service_type'])) {
+            $this->builder()->where('fin_recurring_expenses.service_type', $postData['filter_service_type']);
+        }
+
+        $this->_apply_datatables_filters($postData);
+    }
+
+    public function count_all($where = [])
+    {
+        $builder = $this->db->table($this->table);
+        $builder->where('deleted_at IS NULL');
+        if (!empty($where)) {
+            $builder->where($where);
+        }
+
+        return $builder->countAllResults();
+    }
 
     public function __construct()
     {
@@ -240,15 +334,25 @@ class FinRecurringExpenseModel extends Model
             $serviceType = 'other';
         }
 
+        $frequency = $data['frequency'] ?? 'monthly';
+        $branchModel = new \App\Models\Organization\OrgBranchModel();
+        $mainBranchId = $branchModel->getMainBranchId();
+
         $payload = [
-            'supplier_id'   => $supplierId,
-            'description'   => trim((string) ($data['description'] ?? '')),
-            'service_type'  => $serviceType,
-            'amount'        => (float) ($data['amount'] ?? 0),
-            'currency'    => strtoupper(trim((string) ($data['currency'] ?? 'MXN'))),
-            'billing_day' => $data['frequency'] === 'weekly' ? null : (int) ($data['billing_day'] ?? 1),
-            'frequency'   => $data['frequency'] ?? 'monthly',
-            'is_active'   => array_key_exists('is_active', $data) ? (int) $data['is_active'] : 1,
+            'supplier_id'          => $supplierId,
+            'org_branch_id'        => !empty($data['org_branch_id']) ? (int) $data['org_branch_id'] : $mainBranchId,
+            'description'          => trim((string) ($data['description'] ?? '')),
+            'service_type'         => $serviceType,
+            'amount'               => (float) ($data['amount'] ?? 0),
+            'currency'             => strtoupper(trim((string) ($data['currency'] ?? 'MXN'))),
+            'billing_day'          => $frequency === 'weekly' ? null : (int) ($data['billing_day'] ?? 1),
+            'billing_weekday'      => $frequency === 'weekly' ? (int) ($data['billing_weekday'] ?? 1) : null,
+            'frequency'            => $frequency,
+            'start_date'           => $data['start_date'] ?? date('Y-m-d'),
+            'end_date'             => !empty($data['end_date']) ? $data['end_date'] : null,
+            'next_due_date'        => $data['next_due_date'] ?? null,
+            'notify_days_before'   => isset($data['notify_days_before']) ? (int) $data['notify_days_before'] : 3,
+            'is_active'            => array_key_exists('is_active', $data) ? (int) $data['is_active'] : 1,
         ];
 
         if (isset($data['category_id'])) {
@@ -262,5 +366,36 @@ class FinRecurringExpenseModel extends Model
         $newId = $this->insert($payload);
 
         return $newId ?: false;
+    }
+
+    public function updateForSupplier(int $id, array $data): bool
+    {
+        $existing = $this->find($id);
+        if (!$existing) {
+            return false;
+        }
+
+        $frequency = $data['frequency'] ?? $existing->frequency;
+
+        $payload = [
+            'description'        => trim((string) ($data['description'] ?? $existing->description)),
+            'service_type'       => $data['service_type'] ?? $existing->service_type,
+            'amount'             => (float) ($data['amount'] ?? $existing->amount),
+            'currency'           => strtoupper(trim((string) ($data['currency'] ?? $existing->currency))),
+            'billing_day'        => $frequency === 'weekly' ? null : (int) ($data['billing_day'] ?? $existing->billing_day ?? 1),
+            'billing_weekday'    => $frequency === 'weekly' ? (int) ($data['billing_weekday'] ?? $existing->billing_weekday ?? 1) : null,
+            'frequency'          => $frequency,
+            'org_branch_id'      => !empty($data['org_branch_id']) ? (int) $data['org_branch_id'] : $existing->org_branch_id,
+            'start_date'         => $data['start_date'] ?? $existing->start_date,
+            'end_date'           => array_key_exists('end_date', $data) ? ($data['end_date'] ?: null) : $existing->end_date,
+            'notify_days_before' => isset($data['notify_days_before']) ? (int) $data['notify_days_before'] : $existing->notify_days_before,
+            'is_active'          => array_key_exists('is_active', $data) ? (int) $data['is_active'] : (int) $existing->is_active,
+        ];
+
+        if (!empty($data['supplier_id'])) {
+            $payload['supplier_id'] = (int) $data['supplier_id'];
+        }
+
+        return $this->update($id, $payload);
     }
 }

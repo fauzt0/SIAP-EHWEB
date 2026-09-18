@@ -17,6 +17,7 @@ class Email extends BaseConfig
 
     /**
      * The mail sending protocol: mail, sendmail, smtp
+     * Cuando existan credenciales SMTP, cambiar a 'smtp' y completar SMTPHost/SMTPUser/SMTPPass.
      */
     public string $protocol = 'mail';
 
@@ -118,4 +119,51 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $fromEmail = env('email.fromEmail');
+        if (is_string($fromEmail) && $fromEmail !== '') {
+            $this->fromEmail = $fromEmail;
+        }
+
+        $fromName = env('email.fromName');
+        if (is_string($fromName) && $fromName !== '') {
+            $this->fromName = $fromName;
+        }
+
+        $smtpHost = env('email.SMTPHost');
+        if (is_string($smtpHost) && $smtpHost !== '') {
+            $this->SMTPHost = $smtpHost;
+        }
+
+        $smtpUser = env('email.SMTPUser');
+        if (is_string($smtpUser) && $smtpUser !== '') {
+            $this->SMTPUser = $smtpUser;
+        }
+
+        $smtpPass = env('email.SMTPPass');
+        if (is_string($smtpPass) && $smtpPass !== '') {
+            $this->SMTPPass = $smtpPass;
+        }
+
+        $smtpPort = env('email.SMTPPort');
+        if ($smtpPort !== null && $smtpPort !== '' && $smtpPort !== false) {
+            $this->SMTPPort = (int) $smtpPort;
+        }
+
+        $smtpCrypto = env('email.SMTPCrypto');
+        if (is_string($smtpCrypto)) {
+            $this->SMTPCrypto = $smtpCrypto;
+        }
+
+        $protocol = env('email.protocol');
+        if (is_string($protocol) && $protocol !== '') {
+            $this->protocol = $protocol;
+        } elseif ($this->SMTPHost !== '' && $this->SMTPUser !== '') {
+            $this->protocol = 'smtp';
+        }
+    }
 }

@@ -40,6 +40,13 @@
           </ul>
         </li>
       <?php endif; ?>
+      <?php if (auth()->user()->can('admin.audit-log')): ?>
+        <li class="sidebar-item <?= url_is('nat/admin/audit-log*') ? 'active' : '' ?>">
+          <a class="sidebar-link" href="<?= route_to('admin.audit_log') ?>">
+            <i class="fas fa-fw fa-clipboard-list me-1"></i> <span class="align-middle">Bitácora Global</span>
+          </a>
+        </li>
+      <?php endif; ?>
       
       <?php if (auth()->user()->can('hr.access')): ?>
         <li class="sidebar-item <?= url_is('nat/hr*') ? 'active' : '' ?>">
@@ -60,6 +67,11 @@
             </li>
             <li class="sidebar-item <?= url_is('nat/hr/contracts/templates*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= base_url('nat/hr/contracts/templates') ?>">Plantillas (Contratos)</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/hr/payroll*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('hr.payroll.index') ?>">
+                <i class="fas fa-fw fa-money-check-alt me-1"></i> Nóminas
+              </a>
             </li>
           </ul>
         </li>
@@ -109,11 +121,17 @@
           </a>
           <ul id="suppliers-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/suppliers*') ? 'show' : '' ?>"
             data-bs-parent="#sidebar">
-            <li class="sidebar-item <?= (url_is('nat/suppliers') && !url_is('nat/suppliers/purchase-orders*')) ? 'active' : '' ?>">
+            <li class="sidebar-item <?= (url_is('nat/suppliers') && !url_is('nat/suppliers/purchase-orders*') && !url_is('nat/suppliers/categories*') && !url_is('nat/suppliers/recurring*')) ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('suppliers.index') ?>">Proveedores</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/suppliers/categories*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('suppliers.categories.index') ?>"><i class="fas fa-fw fa-tags me-1"></i>Categorías</a>
             </li>
             <li class="sidebar-item <?= url_is('nat/suppliers/purchase-orders*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('suppliers.po.index') ?>">Órdenes de Compra</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/suppliers/recurring*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('suppliers.recurring.index') ?>">Servicios recurrentes</a>
             </li>
           </ul>
         </li>

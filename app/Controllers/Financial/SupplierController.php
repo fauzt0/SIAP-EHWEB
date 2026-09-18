@@ -41,10 +41,10 @@ class SupplierController extends BaseFinancialController
         $branchModel = new \App\Models\Organization\OrgBranchModel();
 
         $this->viewData['response'] = [
-            'stats'                 => $stats,
-            'supplier_types'        => $this->supplierModel->getSupplierTypes(),
-            'branches'              => $branchModel->getActive(),
-            'default_branch_id'     => $branchModel->getMainBranchId(),
+            'stats'                   => $stats,
+            'supplier_categories'     => $this->categoryModel->getForSelect(),
+            'branches'                => $branchModel->getActive(),
+            'default_branch_id'       => $branchModel->getMainBranchId(),
             'recurring_service_types' => \App\Models\Financial\FinRecurringExpenseModel::getServiceTypeGroups(),
         ];
 
@@ -78,17 +78,11 @@ class SupplierController extends BaseFinancialController
                     : '<span class="badge badge-subtle-danger"><i class="fas fa-times-circle me-1"></i>Inactivo</span>';
             }
 
-            // Supplier type badge (§12 — fas icons only)
-            $typeMap = [
-                'infrastructure' => ['label' => 'Infraestructura', 'color' => 'info',      'icon' => 'fa-server'],
-                'hardware'       => ['label' => 'Hardware',        'color' => 'secondary',  'icon' => 'fa-hdd'],
-                'services'       => ['label' => 'Servicios',       'color' => 'primary',    'icon' => 'fa-cloud'],
-                'administrative' => ['label' => 'Administrativo',  'color' => 'warning',    'icon' => 'fa-briefcase'],
-            ];
-            $typeInfo    = $typeMap[$supplier->supplier_type] ?? ['label' => ucfirst($supplier->supplier_type ?? ''), 'color' => 'secondary', 'icon' => 'fa-tag'];
-            $typeBadge   = '<span class="badge badge-subtle-' . $typeInfo['color'] . '">'
-                         . '<i class="fas fa-fw ' . $typeInfo['icon'] . ' me-1"></i>'
-                         . $typeInfo['label'] . '</span>';
+            // Category badge (§12 — fas icons only)
+            $catName   = $supplier->category_name ?? '';
+            $typeBadge = $catName !== ''
+                ? '<span class="badge badge-subtle-info"><i class="fas fa-fw fa-tags me-1"></i>' . esc($catName) . '</span>'
+                : '<span class="text-muted small">—</span>';
 
             // Contact counts
             $contactsCount = (int) ($supplier->contacts_count ?? 0);
@@ -167,7 +161,7 @@ class SupplierController extends BaseFinancialController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
         }
 
-        $supplier = $this->supplierModel->find($id);
+        $supplier = $this->supplierModel->findWithCategory($id);
         if (!$supplier) {
             $this->setOutputError('Proveedor no encontrado.', null, ResponseInterface::HTTP_NOT_FOUND);
             return $this->response->setJSON($this->outputData);
@@ -197,7 +191,7 @@ class SupplierController extends BaseFinancialController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
         }
 
-        $supplier = $this->supplierModel->find($id);
+        $supplier = $this->supplierModel->findWithCategory($id);
         if (!$supplier) {
             $this->setOutputError('Proveedor no encontrado.', null, ResponseInterface::HTTP_NOT_FOUND);
             return $this->response->setJSON($this->outputData);
@@ -582,13 +576,18 @@ class SupplierController extends BaseFinancialController
         $frequency = $this->request->getPost('frequency') ?? 'monthly';
 
         $data = [
-            'description'   => trim((string) $this->request->getPost('description')),
-            'service_type'  => trim((string) ($this->request->getPost('service_type') ?: 'other')),
-            'amount'        => (float) ($this->request->getPost('amount') ?? 0),
-            'currency'      => strtoupper(trim((string) ($this->request->getPost('currency') ?: 'MXN'))),
-            'billing_day'   => $frequency === 'weekly' ? null : (int) ($this->request->getPost('billing_day') ?? 1),
-            'frequency'     => $frequency,
-            'is_active'     => $this->request->getPost('is_active') !== null ? (int) $this->request->getPost('is_active') : 1,
+            'description'        => trim((string) $this->request->getPost('description')),
+            'service_type'       => trim((string) ($this->request->getPost('service_type') ?: 'other')),
+            'amount'             => (float) ($this->request->getPost('amount') ?? 0),
+            'currency'           => strtoupper(trim((string) ($this->request->getPost('currency') ?: 'MXN'))),
+            'billing_day'        => $frequency === 'weekly' ? null : (int) ($this->request->getPost('billing_day') ?? 1),
+            'billing_weekday'    => $frequency === 'weekly' ? (int) ($this->request->getPost('billing_weekday') ?? 1) : null,
+            'frequency'          => $frequency,
+            'org_branch_id'      => (int) ($this->request->getPost('org_branch_id') ?: 0) ?: null,
+            'start_date'         => $this->request->getPost('start_date') ?: date('Y-m-d'),
+            'end_date'           => $this->request->getPost('end_date') ?: null,
+            'notify_days_before' => (int) ($this->request->getPost('notify_days_before') ?? 3),
+            'is_active'          => $this->request->getPost('is_active') !== null ? (int) $this->request->getPost('is_active') : 1,
         ];
 
         $recurringModel = new \App\Models\Financial\FinRecurringExpenseModel();
@@ -669,7 +668,7 @@ class SupplierController extends BaseFinancialController
     private function _extractSupplierData(): array
     {
         return [
-            'supplier_type'  => $this->request->getPost('supplier_type') ?? 'services',
+            'category_id'    => $this->request->getPost('category_id') ? (int) $this->request->getPost('category_id') : null,
             'legal_name'     => trim((string) $this->request->getPost('legal_name')) ?: null,
             'commercial_name'=> trim((string) $this->request->getPost('commercial_name')),
             'tax_id'         => trim((string) $this->request->getPost('tax_id')) ?: null,

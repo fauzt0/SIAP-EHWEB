@@ -8,9 +8,15 @@ class SupplierSeeder extends Seeder
 {
     public function run()
     {
+        $categories = $this->db->table('fin_supplier_categories')->get()->getResult();
+        $map        = [];
+        foreach ($categories as $cat) {
+            $map[$cat->name] = (int) $cat->id;
+        }
+
         $data = [
             [
-                'supplier_type'   => 'infrastructure',
+                'category_id'     => $map['Infraestructura'] ?? null,
                 'commercial_name' => 'Interserver',
                 'legal_name'      => 'InterServer, Inc.',
                 'tax_id'          => 'US123456789',
@@ -26,7 +32,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'infrastructure',
+                'category_id'     => $map['Infraestructura'] ?? null,
                 'commercial_name' => 'Neubox',
                 'legal_name'      => 'Neubox Internet S.A. de C.V.',
                 'tax_id'          => 'NEU040506ABC',
@@ -42,7 +48,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'services',
+                'category_id'     => $map['Servicios'] ?? null,
                 'commercial_name' => 'Telmex',
                 'legal_name'      => 'Teléfonos de México S.A.B. de C.V.',
                 'tax_id'          => 'TEM840315KT6',
@@ -58,7 +64,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'services',
+                'category_id'     => $map['Servicios'] ?? null,
                 'commercial_name' => 'Totalplay',
                 'legal_name'      => 'Total Play Telecomunicaciones S.A. de C.V.',
                 'tax_id'          => 'TPT1009187D3',
@@ -74,7 +80,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'services',
+                'category_id'     => $map['Servicios'] ?? null,
                 'commercial_name' => 'Servicio de Basura Municipal',
                 'legal_name'      => 'Ayuntamiento Municipal - Servicios Públicos',
                 'tax_id'          => 'MUN850101XYZ',
@@ -90,7 +96,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'services',
+                'category_id'     => $map['Servicios'] ?? null,
                 'commercial_name' => 'Limpieza Semanal - EcoClean',
                 'legal_name'      => 'EcoClean Servicios de Limpieza Integral S.A. de C.V.',
                 'tax_id'          => 'ESL150824AA1',
@@ -106,7 +112,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'administrative',
+                'category_id'     => $map['Administrativo'] ?? null,
                 'commercial_name' => 'Papelería Lozano',
                 'legal_name'      => 'Distribuidora de Papelería y Oficina Lozano S.A.',
                 'tax_id'          => 'DPO991231888',
@@ -122,7 +128,7 @@ class SupplierSeeder extends Seeder
                 'updated_at'      => date('Y-m-d H:i:s'),
             ],
             [
-                'supplier_type'   => 'hardware',
+                'category_id'     => $map['Hardware'] ?? null,
                 'commercial_name' => 'Dell México',
                 'legal_name'      => 'Dell México S.A. de C.V.',
                 'tax_id'          => 'DME921102A76',

@@ -19,7 +19,8 @@ class OrgBranchModel extends Model
     protected $allowedFields    = [
         'company_id', 'name', 'commercial_name', 'legal_name', 'tax_id',
         'branch_code', 'is_main', 'address', 'phone', 'email', 'website_url',
-        'pos_printer_name', 'logo_path', 'active',
+        'pos_printer_name', 'logo_path', 'csf_path', 'address_proof_path',
+        'incorporation_act_path', 'active',
     ];
 
     protected $useTimestamps = true;
@@ -193,11 +194,14 @@ class OrgBranchModel extends Model
     }
 
     /**
-     * Alta o edición de sucursal con logo opcional y sucursal principal única.
+     * Alta o edición de sucursal con logo, documentos legales y sucursal principal única.
+     * Los archivos se persisten junto con los datos en la misma operación del modelo (§9, §18).
+     *
+     * @param array<string, UploadedFile|null> $legalFiles csf, address_proof, incorporation_act
      *
      * @return int|false
      */
-    public function saveBranch(array $data, ?UploadedFile $logoFile = null): int|false
+    public function saveBranch(array $data, ?UploadedFile $logoFile = null, array $legalFiles = []): int|false
     {
         $id       = ! empty($data['id']) ? (int) $data['id'] : null;
         $existing = $id ? $this->find($id) : null;
@@ -208,11 +212,30 @@ class OrgBranchModel extends Model
 
         unset($data['id']);
 
+        helper('upload');
+
         if ($logoFile !== null) {
-            helper('upload');
-            $stored = store_public_upload($logoFile, 'organization', $existing->logo_path ?? null);
+            $stored = store_public_upload($logoFile, 'organization', $existing?->logo_path);
             if ($stored !== null) {
                 $data['logo_path'] = $stored;
+            }
+        }
+
+        $legalMap = [
+            'csf'               => 'csf_path',
+            'address_proof'     => 'address_proof_path',
+            'incorporation_act' => 'incorporation_act_path',
+        ];
+
+        foreach ($legalMap as $inputName => $column) {
+            $file = $legalFiles[$inputName] ?? null;
+            if (! $file instanceof UploadedFile) {
+                continue;
+            }
+
+            $stored = store_public_upload($file, 'organization', $existing?->{$column});
+            if ($stored !== null) {
+                $data[$column] = $stored;
             }
         }
 

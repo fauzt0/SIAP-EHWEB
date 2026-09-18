@@ -136,6 +136,7 @@ class AuthGroups extends ShieldAuthGroups
         'admin.access'        => 'Can access the admin dashboard',
         'admin.settings'      => 'Can access the main ERP settings',
         'admin.manage-users'  => 'Can manage users',
+        'admin.audit-log'     => 'Ver bitácora global del sistema',
         
         // User management
         'users.create'        => 'Can create new users',
@@ -177,12 +178,16 @@ class AuthGroups extends ShieldAuthGroups
         'hr.edit'             => 'Can edit worker records',
         'hr.delete'           => 'Can delete worker records (soft delete)',
         'hr.payroll'          => 'Can manage payroll',
+        'hr.manage-payroll'   => 'Crear, aprobar y gestionar nóminas',
         'hr.reports'          => 'Can generate HR reports',
 
         // Catalog module
         'catalog.access'      => 'Can access catalog module',
         'catalog.manage'      => 'Can manage products and categories',
         'catalog.manage-suppliers' => 'Can manage suppliers and purchase orders',
+        'catalog.po-documents'     => 'Can upload and delete purchase order documents',
+        'catalog.po-send-email'    => 'Can send purchase order emails with attachments',
+        'catalog.recurring-manage' => 'Can calendarize and mark recurring supplier services as paid',
     ];
 
     /**
@@ -241,6 +246,10 @@ class AuthGroups extends ShieldAuthGroups
         'finance' => [
             'admin.access',
             'finance.*',
+            'catalog.access',
+            'catalog.po-documents',
+            'catalog.po-send-email',
+            'catalog.recurring-manage',
             'users.view',
         ],
         'inventory' => [
@@ -257,6 +266,11 @@ class AuthGroups extends ShieldAuthGroups
         'purchasing' => [
             'admin.access',
             'purchasing.*',
+            'catalog.access',
+            'catalog.manage-suppliers',
+            'catalog.po-documents',
+            'catalog.po-send-email',
+            'catalog.recurring-manage',
             'users.view',
         ],
         'hr' => [

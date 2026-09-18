@@ -63,15 +63,52 @@
 
                     <div class="card shadow-sm mb-4">
                         <div class="card-header bg-white border-bottom">
-                            <h5 class="card-title mb-0">Documentación Legal</h5>
+                            <h5 class="card-title mb-0"><i class="fas fa-folder-open me-2 text-primary"></i>Documentación Legal</h5>
                         </div>
-                        <div class="card-body text-center py-5">
-                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                            <h6 class="text-muted">Carga de Documentación</h6>
-                            <p class="small text-muted mb-3">Aquí podrás cargar constancias de situación fiscal, comprobantes de domicilio y actas constitutivas asociadas a esta sucursal.</p>
-                            <button type="button" class="btn btn-outline-primary" disabled title="Módulo en desarrollo">
-                                <i class="fas fa-upload"></i> Subir Documentos (Próximamente)
-                            </button>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Cargue CSF, comprobante de domicilio y acta constitutiva (PDF o imagen). Al reemplazar un archivo se elimina el anterior.
+                            </p>
+                            <?php
+                            $isEdit = ! empty($response['isEdit']);
+                            $branch = $isEdit ? ($response['branch'] ?? null) : null;
+                            $legalDocs = [
+                                'csf' => [
+                                    'label' => 'CSF (Constancia de Situación Fiscal)',
+                                    'path'  => $branch->csf_path ?? null,
+                                ],
+                                'address_proof' => [
+                                    'label' => 'Comprobante de Domicilio',
+                                    'path'  => $branch->address_proof_path ?? null,
+                                ],
+                                'incorporation_act' => [
+                                    'label' => 'Acta Constitutiva',
+                                    'path'  => $branch->incorporation_act_path ?? null,
+                                ],
+                            ];
+                            ?>
+                            <div class="row g-3">
+                                <?php foreach ($legalDocs as $field => $doc): ?>
+                                <div class="col-12">
+                                    <label class="form-label" for="<?= esc($field, 'attr') ?>">
+                                        <i class="fas fa-file-pdf text-danger me-1"></i><?= esc($doc['label']) ?>
+                                        <?php if (! empty($doc['path'])): ?>
+                                        <a href="<?= base_url($doc['path']) ?>" target="_blank" class="badge bg-success text-decoration-none ms-1">
+                                            <i class="fas fa-check-circle me-1"></i>Descargar
+                                        </a>
+                                        <?php endif; ?>
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="file" class="form-control" id="<?= esc($field, 'attr') ?>" name="<?= esc($field, 'attr') ?>"
+                                               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*">
+                                        <label class="input-group-text" for="<?= esc($field, 'attr') ?>">
+                                            <i class="fas fa-upload"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -128,66 +165,63 @@
 
 <?php $this->section('pageFooterScripts'); ?>
 <script>
-document.getElementById('logo').addEventListener('change', function(e) {
-    if(this.files && this.files[0]) {
-        let reader = new FileReader();
-        reader.onload = function(e) {
+const csrfHeader = '<?= csrf_header() ?>';
+const csrfField  = '<?= csrf_token() ?>';
+
+document.getElementById('logo').addEventListener('change', function () {
+    if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
             document.getElementById('logo-preview').src = e.target.result;
-        }
+        };
         reader.readAsDataURL(this.files[0]);
     }
 });
 
-$('#branch-form').on('submit', function(e) {
+document.getElementById('branch-form').addEventListener('submit', function (e) {
     e.preventDefault();
-    let formData = new FormData(this);
-    let csrfToken = document.getElementById('csrf_token').value;
-    formData.append('<?= csrf_token() ?>', csrfToken);
 
-    let btn = $('#btn-save');
-    let originalHtml = btn.html();
-    btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Guardando...').prop('disabled', true);
+    const formData = new FormData(this);
+    const csrfToken = document.getElementById('csrf_token').value;
+    formData.append(csrfField, csrfToken);
 
-    $.ajax({
-        url: '<?= route_to('organization.branch.save') ?>',
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
+    const btn = document.getElementById('btn-save');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+    btn.disabled = true;
+
+    fetch('<?= route_to('organization.branch.save') ?>', {
+        method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            '<?= csrf_header() ?>': csrfToken
+            [csrfHeader]: csrfToken
         },
-        success: function(res, textStatus, xhr) {
-            const headerToken = xhr.getResponseHeader('<?= csrf_header() ?>');
-            if (headerToken) document.getElementById('csrf_token').value = headerToken;
-            btn.html(originalHtml).prop('disabled', false);
-            if(res.csrf) document.getElementById('csrf_token').value = res.csrf;
-            if(res.success) {
-                if(typeof notifyShow === 'function') {
-                    notifyShow(res.message, 'success');
-                } else {
-                    alert(res.message);
-                }
-                setTimeout(() => window.location.href = '<?= route_to('organization.branches') ?>?saved=1', 1200);
-            } else {
-                if(typeof notifyShow === 'function') {
-                    notifyShow(res.message, 'danger');
-                } else {
-                    alert(res.message);
-                }
+        body: formData
+    })
+    .then(response => {
+        const newToken = response.headers.get(csrfHeader);
+        if (newToken) document.getElementById('csrf_token').value = newToken;
+        return response.json();
+    })
+    .then(res => {
+        if (res.csrf) document.getElementById('csrf_token').value = res.csrf;
+        if (res.success) {
+            notifyShow(res.message, 'success');
+            setTimeout(() => {
+                window.location.href = '<?= route_to('organization.branches') ?>?saved=1';
+            }, 1200);
+        } else {
+            let msg = res.message || 'No se pudo guardar la sucursal.';
+            if (res.errors && typeof res.errors === 'object') {
+                msg += ' ' + Object.values(res.errors).flat().join(' ');
             }
-        },
-        error: function(xhr) {
-            btn.html(originalHtml).prop('disabled', false);
-            let res = xhr.responseJSON;
-            if(res && res.csrf) document.getElementById('csrf_token').value = res.csrf;
-            if(typeof notifyShow === 'function') {
-                notifyShow(res && res.message ? res.message : 'Error de servidor', 'danger');
-            } else {
-                alert(res && res.message ? res.message : 'Error de servidor');
-            }
+            notifyShow(msg, 'danger');
         }
+    })
+    .catch(() => notifyShow('Error de comunicación con el servidor.', 'danger'))
+    .finally(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
     });
 });
 </script>

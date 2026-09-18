@@ -11,6 +11,7 @@ use App\Libraries\Breadcrumb;
 // Modelos principales de HR compartidos
 use App\Models\HR\HrProfileModel;
 use App\Models\HR\HrEmploymentModel;
+use App\Models\Users\UserActivityLogsModel;
 
 /**
  * BaseHrController
@@ -25,14 +26,16 @@ class BaseHrController extends BaseController
 
     protected $profileModel;
     protected $employmentModel;
+    protected UserActivityLogsModel $activityLogModel;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
 
         // Instanciar modelos principales usados en todo el módulo
-        $this->profileModel    = new HrProfileModel();
-        $this->employmentModel = new HrEmploymentModel();
+        $this->profileModel     = new HrProfileModel();
+        $this->employmentModel  = new HrEmploymentModel();
+        $this->activityLogModel = new UserActivityLogsModel();
 
         // Configuración inicial del Breadcrumb para RRHH
         $this->breadcrumb = new Breadcrumb([
@@ -83,5 +86,29 @@ class BaseHrController extends BaseController
             }
         }
         return $businessDays;
+    }
+
+    /**
+     * §1 — Endpoints AJAX POST: oculta el endpoint ante accesos directos.
+     */
+    protected function assertAjaxPost(): void
+    {
+        if (! $this->request->isAJAX() || ! $this->request->is('post')) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound(
+                'Endpoint exclusivo para peticiones AJAX.'
+            );
+        }
+    }
+
+    /**
+     * §2/§15 — Respuesta JSON con hash CSRF renovado.
+     */
+    protected function jsonWithCsrf(array $payload = []): ResponseInterface
+    {
+        if (! isset($payload['csrf'])) {
+            $payload['csrf'] = csrf_hash();
+        }
+
+        return $this->response->setJSON($payload);
     }
 }

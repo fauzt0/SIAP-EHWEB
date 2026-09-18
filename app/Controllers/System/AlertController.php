@@ -262,6 +262,10 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingVacationRequests'));
         }
 
+        if ($user->can('hr.manage-payroll')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingPayrolls'));
+        }
+
         // ── Proveedores ───────────────────────────────────────────────────────
         if ($user->can('purchasing.suppliers') || $user->can('catalog.manage-suppliers')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersInactive'));
@@ -271,6 +275,8 @@ class AlertController extends BaseController
         // ── Catálogo / Inventario ─────────────────────────────────────────────
         if ($user->can('catalog.access')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectLowStockProducts'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueRecurringExpenses'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueSoonRecurringExpenses'));
         }
 
         return $alerts;
@@ -460,6 +466,38 @@ class AlertController extends BaseController
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    //  DETECTOR: RH — Nóminas pendientes de pago
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Detecta entradas de nómina pendientes cuyo periodo cerró hace más de 5 días.
+     */
+    private function _detectPendingPayrolls(): array
+    {
+        $db    = db_connect();
+        $count = $db->table('hr_payroll_entries hpe')
+            ->join('hr_payroll_periods hpp', 'hpp.id = hpe.period_id')
+            ->where('hpe.payment_status', 'pending')
+            ->where('hpp.end_date <', date('Y-m-d', strtotime('-5 days')))
+            ->where('hpe.deleted_at', null)
+            ->where('hpp.deleted_at', null)
+            ->countAllResults();
+
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-money-check-alt',
+            'title'      => 'Nóminas pendientes de pago',
+            'message'    => $count . ' pago(s) de nómina están pendientes.',
+            'module'     => 'RH',
+            'target_url' => route_to('hr.payroll.index'),
+        ])];
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     //  DETECTOR: Proveedores — Inactivos
     // ──────────────────────────────────────────────────────────────────────
 
@@ -516,6 +554,48 @@ class AlertController extends BaseController
             'message'    => $count . ' proveedor' . $s . ' sin RFC registrado',
             'module'     => 'Proveedores',
             'target_url' => route_to('suppliers.index'),
+        ])];
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    //  DETECTOR: Gastos recurrentes vencidos
+    // ──────────────────────────────────────────────────────────────────────
+
+    private function _detectOverdueRecurringExpenses(): array
+    {
+        $expenseModel = new \App\Models\Financial\FinExpenseModel();
+        $count        = $expenseModel->countOverdueRecurring();
+
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-calendar-times',
+            'title'      => 'Servicios recurrentes vencidos',
+            'message'    => $count . ' vencimiento(s) pendiente(s) con fecha pasada',
+            'module'     => 'Proveedores',
+            'target_url' => route_to('suppliers.recurring.index'),
+        ])];
+    }
+
+    private function _detectDueSoonRecurringExpenses(): array
+    {
+        $expenseModel = new \App\Models\Financial\FinExpenseModel();
+        $count        = $expenseModel->countDueSoonRecurring();
+
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-bell',
+            'title'      => 'Servicios recurrentes por vencer',
+            'message'    => $count . ' vencimiento(s) dentro de la ventana de aviso (notify_days_before)',
+            'module'     => 'Proveedores',
+            'target_url' => route_to('suppliers.recurring.index'),
         ])];
     }
 

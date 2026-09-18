@@ -360,6 +360,26 @@ $taxRegimes = [
                       <textarea class="form-control" name="notes" id="notes" rows="2"
                         placeholder="Observaciones, historial relevante..."><?= esc($employment->notes ?? '') ?></textarea>
                     </div>
+
+                    <h6 class="text-uppercase text-muted fw-bold mt-3 mb-0">Horario Laboral</h6>
+                    <hr class="mt-2 mb-3">
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold" for="shift_id">Turno Asignado</label>
+                      <select class="form-select" name="shift_id" id="shift_id">
+                        <option value="">— Sin asignar —</option>
+                        <?php foreach ($response['shifts'] ?? [] as $shift): ?>
+                          <option value="<?= $shift->id ?>" <?= (isset($response['schedule']) && (int)$response['schedule']->shift_id === (int)$shift->id) ? 'selected' : '' ?>>
+                            <?= esc($shift->name) ?> (<?= substr($shift->start_time, 0, 5) ?> - <?= substr($shift->end_time, 0, 5) ?>)
+                          </option>
+                        <?php endforeach; ?>
+                      </select>
+                      <div class="form-text">Administra turnos en <a href="<?= route_to('hr.catalogs.index') ?>">Catálogos RRHH</a>.</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-semibold" for="schedule_start_date">Vigencia del Horario</label>
+                      <input type="date" class="form-control" name="schedule_start_date" id="schedule_start_date"
+                        value="<?= esc(isset($response['schedule']) ? $response['schedule']->start_date : ($employment->hiring_date ?? date('Y-m-d'))) ?>">
+                    </div>
                   </div>
                 </div>
 

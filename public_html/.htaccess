@@ -38,9 +38,9 @@ Options -Indexes
 # Disable server signature start
 	ServerSignature Off
 # Disable server signature end
+AuthName "Area de desarrollo"
 AuthGroupFile /dev/null
 AuthType Basic
-AuthUserFile /home/st32477/domains/sandbox.especialistashosting.com/.htpasswd/public_html/.htpasswd
-AuthName "area de desarrollo"
+AuthUserFile /home/admin/domains/sandbox.especialistashosting.com/.htpasswd/public_html/.htpasswd
 require valid-user
 ErrorDocument 401 "Unauthorized Access"

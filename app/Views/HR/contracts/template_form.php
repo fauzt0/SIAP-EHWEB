@@ -60,12 +60,24 @@
                                         data-var="{{domicilio}}">Domicilio</span>
                                     <span class="badge bg-secondary variable-badge"
                                         data-var="{{nacionalidad}}">Nacionalidad</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{sucursal}}">Sucursal</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{horario}}">Horario</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{horas_semanales}}">Horas Semanales</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{dias_pago}}">Días de Pago</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{nombre_empresa}}">Empresa (Razón Social)</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{rfc_patron}}">RFC Patrón</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{domicilio_patron}}">Domicilio Patrón</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{nss}}">NSS</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{telefono}}">Teléfono</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{email}}">Email</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{nombre_comercial}}">Nombre Comercial</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{telefono_patron}}">Teléfono Patrón</span>
+                                    <span class="badge bg-secondary variable-badge" data-var="{{email_patron}}">Email Patrón</span>
                                 </div>
                                 <div class="mt-2 pt-2 border-top">
                                     <button type="button" class="btn btn-sm btn-outline-dark"
                                         id="btn-insert-signatures">
-                                        <i class="align-middle me-1" data-lucide="pen-tool"></i> Insertar Bloque de
-                                        Firmas
+                                        <i class="fas fa-pen me-1"></i> Insertar Bloque de Firmas
                                     </button>
                                 </div>
                             </div>
@@ -119,6 +131,13 @@
                             </div>
 
                             <div class="mb-3">
+                                <label class="form-label">Texto de Pie de Página (PDF)</label>
+                                <textarea name="footer_text" class="form-control" rows="2"
+                                    placeholder="Ej: Documento generado electrónicamente..."><?= $template ? esc($template->footer_text) : '' ?></textarea>
+                                <div class="form-text">Aparece al final del PDF exportado.</div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label">Logotipo de Cabecera (Opcional)</label>
                                 <?php if ($template && !empty($template->header_logo)): ?>
                                     <div class="mb-2">
@@ -127,14 +146,14 @@
                                     </div>
                                 <?php endif; ?>
                                 <input type="file" name="header_logo" class="form-control" accept="image/*">
-                                <div class="form-text">Imagen que aparecerá en la parte superior del contrato PDF.</div>
+                                <div class="form-text">Si el trabajador tiene sucursal, el logo de la sucursal tiene prioridad en el PDF.</div>
                             </div>
 
                             <hr>
 
                             <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary btn-lg" id="btn-save-template">
-                                    <i class="align-middle me-1" data-lucide="save"></i> Guardar Plantilla
+                                    <i class="fas fa-save me-1"></i> Guardar Plantilla
                                 </button>
                                 <a href="<?= route_to('hr.contracts.templates.index') ?>"
                                     class="btn btn-outline-secondary">Cancelar</a>
@@ -145,10 +164,10 @@
                     <!-- Card de Ayuda -->
                     <div class="card bg-light border-0">
                         <div class="card-body">
-                            <h6><i class="align-middle me-1 text-info" data-lucide="help-circle"></i> Ayuda</h6>
+                            <h6><i class="fas fa-info-circle me-1 text-info"></i> Ayuda</h6>
                             <p class="small text-muted mb-0">
-                                Utiliza las variables dinámicas para que el sistema rellene automáticamente los datos
-                                del trabajador al generar el PDF.
+                                Las variables de empresa y sucursal se resuelven desde la sucursal asignada al trabajador
+                                (módulo Organization). El logo del PDF prioriza: sucursal → plantilla → empresa.
                             </p>
                         </div>
                     </div>

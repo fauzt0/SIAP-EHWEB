@@ -141,3 +141,16 @@
 #--------------------------------------------------------------------
 
 # curlrequest.shareOptions = true
+
+#--------------------------------------------------------------------
+# EMAIL / SMTP (Config\Email)
+#--------------------------------------------------------------------
+# Completar en .env. Sin SMTPHost/SMTPUser el protocolo permanece en mail.
+# email.fromEmail = servidores@especialistashosting.com
+# email.fromName  = Especialistas Hosting
+# email.protocol  = smtp
+# email.SMTPHost  = mail.especialistashosting.com
+# email.SMTPUser  =
+# email.SMTPPass  =
+# email.SMTPPort  = 587
+# email.SMTPCrypto = tls

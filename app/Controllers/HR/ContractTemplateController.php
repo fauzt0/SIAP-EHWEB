@@ -114,9 +114,10 @@ class ContractTemplateController extends BaseController
         $data = [
             'name'        => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
-            'content'     => $this->request->getPost('content'), // Contenido HTML del editor
+            'content'     => $this->request->getPost('content'),
             'base_model'  => $this->request->getPost('base_model'),
             'is_default'  => $this->request->getPost('is_default') ? 1 : 0,
+            'footer_text' => $this->request->getPost('footer_text'),
         ];
 
         // Manejo de la subida del logotipo

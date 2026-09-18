@@ -186,6 +186,12 @@ class OrganizationController extends BaseOrganizationController
             'logo_url'         => $branch->logo_path
                 ? base_url($branch->logo_path)
                 : base_url('bootstrap/img/avatars/avatar.jpg'),
+            'csf_path'                => $branch->csf_path ?? null,
+            'csf_url'                 => ! empty($branch->csf_path) ? base_url($branch->csf_path) : null,
+            'address_proof_path'      => $branch->address_proof_path ?? null,
+            'address_proof_url'       => ! empty($branch->address_proof_path) ? base_url($branch->address_proof_path) : null,
+            'incorporation_act_path'  => $branch->incorporation_act_path ?? null,
+            'incorporation_act_url'   => ! empty($branch->incorporation_act_path) ? base_url($branch->incorporation_act_path) : null,
             'created_at'       => $branch->created_at,
             'updated_at'       => $branch->updated_at,
         ];
@@ -238,9 +244,30 @@ class OrganizationController extends BaseOrganizationController
         ];
 
         $logoFile = $this->request->getFile('logo');
-        $savedId  = $this->branchModel->saveBranch(
+
+        $legalFiles = [
+            'csf'               => $this->request->getFile('csf'),
+            'address_proof'     => $this->request->getFile('address_proof'),
+            'incorporation_act' => $this->request->getFile('incorporation_act'),
+        ];
+
+        $docLabels = [
+            'csf'               => 'CSF',
+            'address_proof'     => 'Comprobante de Domicilio',
+            'incorporation_act' => 'Acta Constitutiva',
+        ];
+
+        $uploadedDocs = [];
+        foreach ($legalFiles as $key => $file) {
+            if ($file && $file->isValid() && ! $file->hasMoved()) {
+                $uploadedDocs[] = $docLabels[$key] . ' (' . $file->getClientName() . ')';
+            }
+        }
+
+        $savedId = $this->branchModel->saveBranch(
             $data,
-            $logoFile && $logoFile->isValid() ? $logoFile : null
+            $logoFile && $logoFile->isValid() ? $logoFile : null,
+            $legalFiles
         );
 
         if ($savedId === false) {
@@ -256,6 +283,13 @@ class OrganizationController extends BaseOrganizationController
             'save_branch',
             ($data['id'] ? 'Actualizó' : 'Creó') . ' la sucursal ID: ' . $savedId
         );
+
+        foreach ($uploadedDocs as $docDesc) {
+            $this->activityLogModel->logActivity(
+                'upload_branch_docs',
+                'Subió ' . $docDesc . ' para sucursal ID: ' . $savedId
+            );
+        }
 
         $this->setOutputSuccess('Sucursal guardada correctamente.');
 

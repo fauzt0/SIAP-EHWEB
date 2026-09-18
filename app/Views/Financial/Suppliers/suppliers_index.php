@@ -117,10 +117,10 @@
                             </div>
                             <div class="col-md-8 mb-2 mb-md-0">
                                 <div class="d-flex gap-2 flex-wrap align-items-center justify-content-md-end">
-                                    <select class="form-select" id="filter-supplier-type" style="max-width:180px;">
-                                        <option value="">Todos los tipos</option>
-                                        <?php foreach ($response['supplier_types'] ?? [] as $key => $label): ?>
-                                            <option value="<?= esc($key) ?>"><?= esc($label) ?></option>
+                                    <select class="form-select" id="filter-supplier-category" style="max-width:180px;">
+                                        <option value="">Todas las categorías</option>
+                                        <?php foreach ($response['supplier_categories'] ?? [] as $catId => $catLabel): ?>
+                                            <option value="<?= esc($catId) ?>"><?= esc($catLabel) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                     <select class="form-select" id="filter-status" style="max-width:180px;">
@@ -146,7 +146,7 @@
                         <table id="datatables-suppliers" class="table table-striped table-hover w-100">
                             <thead>
                                 <tr>
-                                    <th>Tipo</th>
+                                    <th>Categoría</th>
                                     <th>Proveedor</th>
                                     <th>RFC / Fiscal</th>
                                     <th>Email</th>
@@ -193,11 +193,11 @@
                     </h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
-                            <label class="form-label">Tipo de Proveedor <span class="text-danger">*</span></label>
-                            <select name="supplier_type" id="create-supplier-type" class="form-select" required>
+                            <label class="form-label">Categoría <span class="text-danger">*</span></label>
+                            <select name="category_id" id="create-supplier-category" class="form-select" required>
                                 <option value="">— Seleccione —</option>
-                                <?php foreach ($response['supplier_types'] ?? [] as $key => $label): ?>
-                                    <option value="<?= esc($key) ?>"><?= esc($label) ?></option>
+                                <?php foreach ($response['supplier_categories'] ?? [] as $catId => $catLabel): ?>
+                                    <option value="<?= esc($catId) ?>"><?= esc($catLabel) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -334,11 +334,11 @@
                     </h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
-                            <label class="form-label">Tipo de Proveedor <span class="text-danger">*</span></label>
-                            <select name="supplier_type" id="edit-supplier-type" class="form-select" required>
+                            <label class="form-label">Categoría <span class="text-danger">*</span></label>
+                            <select name="category_id" id="edit-supplier-category" class="form-select" required>
                                 <option value="">— Seleccione —</option>
-                                <?php foreach ($response['supplier_types'] ?? [] as $key => $label): ?>
-                                    <option value="<?= esc($key) ?>"><?= esc($label) ?></option>
+                                <?php foreach ($response['supplier_categories'] ?? [] as $catId => $catLabel): ?>
+                                    <option value="<?= esc($catId) ?>"><?= esc($catLabel) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -609,7 +609,7 @@
                         <div id="collapseServices" class="accordion-collapse collapse"
                              data-bs-parent="#accordionProdServ">
                             <div class="accordion-body pt-2">
-                                <?php if (auth()->user()->can('catalog.manage-suppliers')): ?>
+                                <?php if (auth()->user()->can('catalog.recurring-manage')): ?>
                                 <div class="text-end mb-2">
                                     <button type="button" class="btn btn-outline-warning btn-sm"
                                             id="btn-open-add-service">
@@ -909,6 +909,38 @@
                             <label class="form-label">Día de Pago (del mes) <span class="text-danger">*</span></label>
                             <input type="number" name="billing_day" class="form-control" min="1" max="31" placeholder="1–31" value="1" required>
                         </div>
+                        <div class="col-md-4 d-none" id="billing-weekday-field">
+                            <label class="form-label">Día de la semana</label>
+                            <select name="billing_weekday" class="form-select">
+                                <option value="1">Lunes</option><option value="2">Martes</option>
+                                <option value="3">Miércoles</option><option value="4">Jueves</option>
+                                <option value="5">Viernes</option><option value="6">Sábado</option>
+                                <option value="7">Domingo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Sucursal</label>
+                            <select name="org_branch_id" class="form-select">
+                                <option value="">— Matriz —</option>
+                                <?php foreach ($response['branches'] ?? [] as $branch): ?>
+                                <option value="<?= (int) $branch->id ?>" <?= ((int)($response['default_branch_id'] ?? 0) === (int)$branch->id) ? 'selected' : '' ?>>
+                                    <?= esc($branch->commercial_name ?? $branch->name) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Inicio del servicio</label>
+                            <input type="date" name="start_date" class="form-control" value="<?= date('Y-m-d') ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fin (opcional)</label>
+                            <input type="date" name="end_date" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Avisar (días antes)</label>
+                            <input type="number" name="notify_days_before" class="form-control" min="0" max="365" value="3">
+                        </div>
                         <div class="col-md-6 d-flex align-items-end pb-1">
                             <div class="form-check">
                                 <input type="checkbox" name="is_active" id="add-service-is-active"
@@ -929,155 +961,15 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════════════════════
-     MODAL: Generar Orden de Compra  (#modalGeneratePO)
-══════════════════════════════════════════════════════════════════════════ -->
-<div class="modal fade" id="modalGeneratePO" tabindex="-1"
-     aria-labelledby="modalGeneratePOLabel" aria-hidden="true"
-     data-bs-backdrop="static" style="z-index:1065;">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content" style="border-top:4px solid #198754;">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalGeneratePOLabel">
-                    <i class="fas fa-file-invoice-dollar me-2 text-success"></i>Generar Orden de Compra
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <form id="form-generate-po" novalidate>
-                    <input type="hidden" name="fin_supplier_id" id="po-supplier-id">
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label class="form-label">Proveedor</label>
-                            <input type="text" id="po-supplier-name" class="form-control bg-light" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Sucursal / Unidad receptora <span class="text-danger">*</span></label>
-                            <select name="org_branch_id" id="po-branch-id" class="form-select" required
-                                    data-default="<?= (int) ($response['default_branch_id'] ?? 0) ?>">
-                                <option value="">— Seleccione —</option>
-                                <?php foreach ($response['branches'] ?? [] as $branch): ?>
-                                <option value="<?= (int) $branch->id ?>"
-                                    <?= ((int) ($response['default_branch_id'] ?? 0) === (int) $branch->id) ? 'selected' : '' ?>>
-                                    <?= esc($branch->commercial_name ?? $branch->name) ?>
-                                    (<?= esc($branch->branch_code) ?>)
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <small class="text-muted">Define quién recibe la mercancía y a qué RFC se asocia el gasto.</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Número de OC <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="text" name="po_number" id="po-number"
-                                       class="form-control" placeholder="Auto-generado" required>
-                                <button type="button" class="btn btn-outline-secondary"
-                                        id="btn-gen-po-number" title="Generar número">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Estatus Inicial</label>
-                            <select name="status" class="form-select">
-                                <option value="draft">
-                                    <i class="fas fa-file-alt"></i> Borrador
-                                </option>
-                                <option value="sent">Enviada al Proveedor</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Moneda <span class="text-danger">*</span></label>
-                            <select name="currency" id="po-currency" class="form-select">
-                                <option value="MXN">MXN — Peso Mexicano</option>
-                                <option value="USD">USD — Dólar Estadounidense</option>
-                                <option value="EUR">EUR — Euro</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Fecha de Emisión</label>
-                            <input type="date" name="issue_date" id="po-issue-date" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Fecha Estimada de Entrega</label>
-                            <input type="date" name="delivery_date" class="form-control">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Notas / Condiciones de la OC</label>
-                            <textarea name="notes" class="form-control" rows="2"
-                                      placeholder="Términos de pago, condiciones de entrega, observaciones…"></textarea>
-                        </div>
-                    </div>
-
-                    <h6 class="text-muted text-uppercase fw-bold border-bottom pb-2 mb-3">
-                        <i class="fas fa-list-ol me-1"></i>Artículos / Líneas de la Orden
-                        <button type="button" class="btn btn-outline-success btn-sm ms-2"
-                                id="btn-add-po-item">
-                            <i class="fas fa-plus"></i> Agregar Línea
-                        </button>
-                    </h6>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm" id="po-items-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:38%">
-                                        Descripción <span class="text-danger">*</span>
-                                    </th>
-                                    <th style="width:12%">Cantidad</th>
-                                    <th style="width:17%">Precio Unitario</th>
-                                    <th style="width:17%">Total Línea</th>
-                                    <th style="width:6%"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="po-items-tbody"></tbody>
-                            <tfoot>
-                                <tr class="table-secondary fw-bold">
-                                    <td colspan="3" class="text-end pe-3">Total General:</td>
-                                    <td id="po-grand-total" class="font-monospace">$0.00</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <template id="tpl-po-item-row">
-                        <tr class="po-item-row">
-                            <td>
-                                <input type="text" name="items[__idx__][description]"
-                                       class="form-control form-control-sm"
-                                       placeholder="Descripción del artículo o servicio" required>
-                            </td>
-                            <td>
-                                <input type="number" name="items[__idx__][quantity]"
-                                       class="form-control form-control-sm po-qty"
-                                       min="1" value="1">
-                            </td>
-                            <td>
-                                <input type="number" name="items[__idx__][unit_price]"
-                                       class="form-control form-control-sm po-price"
-                                       min="0" step="0.01" value="0.00">
-                            </td>
-                            <td class="po-line-total align-middle text-end font-monospace">$0.00</td>
-                            <td class="text-center">
-                                <button type="button"
-                                        class="btn btn-outline-danger btn-sm btn-remove-po-item"
-                                        title="Eliminar línea">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" id="btn-submit-generate-po">
-                    <i class="fas fa-save me-1"></i>Crear Orden de Compra
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<?php
+$po_mode = 'create';
+$supplier_readonly = true;
+echo view('Financial/PurchaseOrders/partials/po_form_modal', [
+    'response' => $response,
+    'po_mode' => $po_mode,
+    'supplier_readonly' => $supplier_readonly,
+]);
+?>
 
 <!-- ══════════════════════════════════════════════════════════════════════════
      JAVASCRIPT — Suppliers Module
@@ -1134,7 +1026,7 @@ function initSuppliersDataTable() {
             data: function (d) {
                 /* §2 — Inyectar token CSRF actual */
                 d['<?= csrf_token() ?>'] = document.getElementById('csrf_token').value;
-                d.filter_supplier_type   = document.getElementById('filter-supplier-type').value;
+                d.filter_category_id     = document.getElementById('filter-supplier-category').value;
                 d.filter_status          = document.getElementById('filter-status').value;
             }
         },
@@ -1161,7 +1053,7 @@ function initSuppliersDataTable() {
     });
 
     /* Filtros por tipo y estatus */
-    ['filter-supplier-type', 'filter-status'].forEach(function (id) {
+    ['filter-supplier-category', 'filter-status'].forEach(function (id) {
         document.getElementById(id).addEventListener('change', function () {
             if (window.suppliersTable) window.suppliersTable.draw();
         });
@@ -1182,7 +1074,7 @@ function initSuppliersDataTable() {
     }
 
     document.getElementById('btn-clear-filters').addEventListener('click', function () {
-        document.getElementById('filter-supplier-type').value = '';
+        document.getElementById('filter-supplier-category').value = '';
         document.getElementById('filter-status').value = '';
         if (searchInput) searchInput.value = '';
         if (window.suppliersTable) window.suppliersTable.search('').draw();
@@ -1281,16 +1173,11 @@ function loadSupplierProfile(supplierId) {
 }
 
 function renderOffcanvasGeneral(s) {
-    var typeBadges = {
-        'infrastructure': '<span class="badge badge-subtle-info"><i class="fas fa-server me-1"></i>Infraestructura</span>',
-        'hardware':       '<span class="badge badge-subtle-secondary"><i class="fas fa-hdd me-1"></i>Hardware</span>',
-        'services':       '<span class="badge badge-subtle-primary"><i class="fas fa-cloud me-1"></i>Servicios</span>',
-        'administrative': '<span class="badge badge-subtle-warning"><i class="fas fa-briefcase me-1"></i>Administrativo</span>'
-    };
-
     /* ── Cabecera del offcanvas ── */
     document.getElementById('oc-supplier-name').textContent = s.commercial_name || '—';
-    document.getElementById('oc-supplier-type-badge').innerHTML = typeBadges[s.supplier_type] || '';
+    document.getElementById('oc-supplier-type-badge').innerHTML = s.category_name
+        ? '<span class="badge badge-subtle-info"><i class="fas fa-tags me-1"></i>' + esc(s.category_name) + '</span>'
+        : '';
     document.getElementById('oc-supplier-tax-id').textContent =
         s.tax_id ? 'RFC: ' + s.tax_id : (s.legal_name || '—');
 
@@ -1475,7 +1362,7 @@ function loadContactsTab(supplierId) {
     container.innerHTML = '<div class="text-center py-4 text-muted">' +
         '<div class="spinner-border spinner-border-sm me-2"></div>Cargando contactos…</div>';
 
-    fetch('<?= site_url('nat/suppliers/') ?>' + supplierId + '/contacts', {
+    fetch('<?= route_to('suppliers.contacts.list', 0) ?>'.replace('/0', '/' + supplierId), {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(function (r) {
@@ -1532,7 +1419,7 @@ function loadProductsTab(supplierId) {
     container.innerHTML = '<div class="text-center py-4 text-muted">' +
         '<div class="spinner-border spinner-border-sm me-2"></div>Cargando productos…</div>';
 
-    fetch('<?= site_url('nat/suppliers/') ?>' + supplierId + '/products', {
+    fetch('<?= route_to('suppliers.products.list', 0) ?>'.replace('/0', '/' + supplierId), {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(function (r) {
@@ -1653,7 +1540,7 @@ function loadOrdersTab(supplierId) {
     container.innerHTML = '<div class="text-center py-4 text-muted">' +
         '<div class="spinner-border spinner-border-sm me-2"></div>Cargando órdenes…</div>';
 
-    fetch('<?= site_url('nat/suppliers/') ?>' + supplierId + '/purchase-orders', {
+    fetch('<?= route_to('suppliers.po.by_supplier', 0) ?>'.replace('/0', '/' + supplierId), {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(function (r) {
@@ -1679,7 +1566,8 @@ function loadOrdersTab(supplierId) {
             completed: '<span class="badge badge-subtle-primary">Completada</span>',
             cancelled: '<span class="badge badge-subtle-danger">Cancelada</span>'
         };
-        var dlBase = '<?= site_url('nat/suppliers/purchase-orders/download/') ?>';
+        var dlBase = '<?= route_to('suppliers.po.download', 0) ?>'.replace(/\/0$/, '/');
+        var poIndex = '<?= route_to('suppliers.po.index') ?>';
         var html = '<div class="table-responsive"><table class="table table-sm table-hover mb-0">' +
             '<thead class="table-light"><tr><th>OC #</th><th>Estatus</th><th>Total</th>' +
             '<th>Emisión</th><th>Acciones</th></tr></thead><tbody>';
@@ -1694,7 +1582,11 @@ function loadOrdersTab(supplierId) {
                 '<td>' + badge + '</td>' +
                 '<td class="font-monospace">' + total + '</td>' +
                 '<td>' + fmtDate(o.issue_date) + '</td>' +
-                '<td><div class="d-flex gap-1">' +
+                '<td><div class="d-flex gap-1 flex-wrap">' +
+                '<a href="' + poIndex + '?open=' + o.id + '" class="btn btn-outline-primary btn-sm" title="Documentos y correo">' +
+                '<i class="fas fa-folder-open"></i></a>' +
+                '<a href="' + poIndex + '?open=' + o.id + '&tab=emails" class="btn btn-outline-success btn-sm" title="Enviar correo">' +
+                '<i class="fas fa-envelope"></i></a>' +
                 '<a href="' + dlBase + o.id + '?action=view" target="_blank" rel="noopener" ' +
                 'class="btn btn-outline-info btn-sm" title="Previsualizar PDF">' +
                 '<i class="fas fa-eye"></i></a>' +
@@ -1716,12 +1608,12 @@ function loadOrdersTab(supplierId) {
    MODAL CREAR PROVEEDOR
 ────────────────────────────────────────────────────────────────────────── */
 function bindCreateModal() {
-    /* §10 — Select2 con dropdownParent al mostrarse el modal */
+    /* §10 — Select2 con dropdownParent al mostrarse el modal de proveedor */
     $('#modalCreateSupplier').on('shown.bs.modal', function () {
-        if (!$('#create-supplier-type').hasClass('select2-hidden-accessible')) {
-            $('#create-supplier-type').select2({
+        if (!$('#create-supplier-category').hasClass('select2-hidden-accessible')) {
+            $('#create-supplier-category').select2({
                 theme: 'bootstrap-5',
-                placeholder: '— Seleccione un tipo —',
+                placeholder: '— Seleccione una categoría —',
                 allowClear: false,
                 width: '100%',
                 dropdownParent: $('#modalCreateSupplier')
@@ -1751,8 +1643,8 @@ function bindCreateModal() {
         document.getElementById('form-create-supplier').reset();
         document.getElementById('create-contacts-container').innerHTML = '';
         _createCtxIdx = 0;
-        if ($('#create-supplier-type').hasClass('select2-hidden-accessible')) {
-            $('#create-supplier-type').val(null).trigger('change');
+        if ($('#create-supplier-category').hasClass('select2-hidden-accessible')) {
+            $('#create-supplier-category').val(null).trigger('change');
         }
     });
 
@@ -1811,12 +1703,12 @@ function submitCreate() {
    MODAL EDITAR PROVEEDOR
 ────────────────────────────────────────────────────────────────────────── */
 function bindEditModal() {
-    /* §10 — Select2 con dropdownParent */
+    /* §10 — Select2 con dropdownParent al mostrarse el modal de proveedor */
     $('#modalEditSupplier').on('shown.bs.modal', function () {
-        if (!$('#edit-supplier-type').hasClass('select2-hidden-accessible')) {
-            $('#edit-supplier-type').select2({
+        if (!$('#edit-supplier-category').hasClass('select2-hidden-accessible')) {
+            $('#edit-supplier-category').select2({
                 theme: 'bootstrap-5',
-                placeholder: '— Seleccione un tipo —',
+                placeholder: '— Seleccione una categoría —',
                 allowClear: false,
                 width: '100%',
                 dropdownParent: $('#modalEditSupplier')
@@ -1870,11 +1762,11 @@ function loadEditModal(supplierId) {
         document.getElementById('edit-notes').value            = s.notes           || '';
         document.getElementById('edit-status').value           = s.status;
 
-        /* Sync Select2 */
-        if ($('#edit-supplier-type').hasClass('select2-hidden-accessible')) {
-            $('#edit-supplier-type').val(s.supplier_type).trigger('change');
+        /* Sync Select2 de categoría */
+        if ($('#edit-supplier-category').hasClass('select2-hidden-accessible')) {
+            $('#edit-supplier-category').val(s.category_id ? String(s.category_id) : '').trigger('change');
         } else {
-            document.getElementById('edit-supplier-type').value = s.supplier_type || '';
+            document.getElementById('edit-supplier-category').value = s.category_id || '';
         }
         document.getElementById('form-edit-supplier').style.display = 'block';
     })
@@ -2002,7 +1894,7 @@ function submitAddContact() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
 
-    fetch('<?= site_url('nat/suppliers/') ?>' + suppId + '/contacts/store', {
+    fetch('<?= route_to('suppliers.contacts.store', 0) ?>'.replace('/0', '/' + suppId), {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -2260,7 +2152,7 @@ function submitLinkProduct() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
 
-    fetch('<?= site_url('nat/suppliers/') ?>' + suppId + '/products/link', {
+    fetch('<?= route_to('suppliers.products.link', 0) ?>'.replace('/0', '/' + suppId), {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -2294,7 +2186,7 @@ function submitLinkProduct() {
 
 function unlinkProduct(supplierId, linkId) {
     if (!confirm('¿Desvincular este producto del proveedor?')) return;
-    csrfFetch('<?= site_url('nat/suppliers/') ?>' + supplierId + '/products/unlink/' + linkId)
+    csrfFetch('<?= route_to('suppliers.products.unlink', 0, 0) ?>'.replace('/0/products/unlink/0', '/' + supplierId + '/products/unlink/' + linkId))
         .then(function (data) {
             if (data.success) {
                 notifyShow(data.message, 'success');
@@ -2360,15 +2252,19 @@ function toggleBillingDayField() {
 
     if (freq === 'weekly') {
         billingRow.style.display = 'none';
+        var weekdayRow = document.getElementById('billing-weekday-field');
+        if (weekdayRow) weekdayRow.classList.remove('d-none');
         if (billingInput) {
             billingInput.removeAttribute('required');
-            billingInput.disabled = true;   /* Excluir de FormData cuando está oculto */
+            billingInput.disabled = true;
         }
     } else {
         billingRow.style.display = '';
+        var weekdayRow = document.getElementById('billing-weekday-field');
+        if (weekdayRow) weekdayRow.classList.add('d-none');
         if (billingInput) {
             billingInput.setAttribute('required', 'required');
-            billingInput.disabled = false;  /* Re-incluir en FormData */
+            billingInput.disabled = false;
         }
     }
 }
