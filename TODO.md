@@ -121,3 +121,32 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 - [ ] **[DT-3 — Horas extra sin importe]** `hr_payroll_entries.overtime_hours` se almacena pero no se convierte a monto salarial. Falta campo `hourly_rate` en `hr_employment_data`. Añadir el campo + fórmula en `createPeriodWithEntries()`.
 - [ ] **[DT-4 — Export bitácora client-side]** Botón CSV en `global_activity.php` exporta solo la página visible del DataTable (client-side). Para exportar todos los registros filtrados se requiere una ruta server-side adicional (`admin.audit_log_export`).
 - [ ] **[DT-5 — E2E en sandbox sin verificar]** Las 4 nuevas rutas (docs legales, bitácora global, categorías proveedores, nóminas) no se verificaron en navegador — el host devuelve **401 Basic Auth** nginx antes del login Shield. Verificadas via `php spark routes`, `php spark db:table`, `php spark filter:check` y `php -l`.
+
+---
+
+## 🔌 Sistema de Plugins — Arquitectura planificada (2026-09-18)
+
+> Arquitectura diseñada. Implementación pendiente. Ver archivos en `agentic/` para specs completas.
+
+### Plugin System Core (prerequisito — implementar PRIMERO)
+- [ ] **[PLUGIN-000]** Infraestructura del sistema de plugins: `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginHookRegistry`, `PluginMarket` — `app/Libraries/PluginSystem/`
+- [ ] **[PLUGIN-000]** 4 migraciones: `sys_plugins`, `sys_plugin_permissions`, `sys_plugin_settings`, `sys_plugin_backups`
+- [ ] **[PLUGIN-000]** 5 touch points al ERP base: `Events.php`, `Routes.php`, `loggedin_sidebar.php`, `user_loggedin_layout.php`, `AlertController.php`
+- [ ] **[PLUGIN-000]** `PluginMarketController` + vista `plugins_market.php` con flujo Desactivar → Desinstalar → Restaurar → Purgar
+- [ ] **[PLUGIN-000]** Sistema de respaldo de datos en desinstalación: `RENAME TABLE` a `_bak_plg_*` + dump SQL en `WRITEPATH/plugins/backups/`. Purga solo tras confirmación textual ELIMINAR. Plan: `agentic/plugin_000_plugin_system_core.md`
+
+### Plugins individuales (implementar en paralelo tras Plugin-000)
+- [ ] **[PLUGIN-001]** Administrador de Servidores — DirectAdmin API, SSH web, monitor, KB+IA, daemon futuro. Plan: `agentic/plugin_001_server_admin.md`
+- [ ] **[PLUGIN-002]** Cotizaciones Avanzadas — builder multi-ítem, PDF, versioning, conversión a OC. Plan: `agentic/plugin_002_advanced_quotations.md`
+- [ ] **[PLUGIN-003]** Firma Digital — flujo OTP email, PDF sellado, rutas públicas sin Shield. Plan: `agentic/plugin_003_digital_signature.md`
+- [ ] **[PLUGIN-004]** WordPress Admin — REST API multi-site, plugins WP, usuarios, posts. Plan: `agentic/plugin_004_wordpress_admin.md`
+- [ ] **[PLUGIN-005]** Chatbot CRM IA — WhatsApp + Telegram + webchat, Gemini/DeepSeek, handoff humano. Plan: `agentic/plugin_005_chatbot_crm.md`
+- [ ] **[PLUGIN-006]** Administrador de Proyectos — Kanban+Lista+Calendario (FullCalendar), subtareas, time tracking. Plan: `agentic/plugin_006_project_manager.md`
+
+### Decisiones arquitectónicas clave (documentadas en `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md`)
+- Plugins en `plugins/{PascalCase}/` con namespace `Plugins\{PascalCase}\`
+- Tablas con prefijo `plg_{slug}_` — nunca tocan tablas del ERP
+- Sistema de hooks: `PluginHookRegistry::addAction()` / `addFilter()` (patrón WordPress)
+- Rutas en `/nat/plugins/{route_prefix}/`
+- Permisos en `sys_plugin_permissions` (no en `AuthGroups.php`)
+- Desinstalación en 3 etapas: Desactivar → Desinstalar (backup) → Purgar (irreversible)
