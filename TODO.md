@@ -139,13 +139,19 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 - [ ] **[PLUGIN-000]** Respaldo de datos en desinstalación: `RENAME TABLE` atómico a `_bak_plg_*` + dump SQL en `WRITEPATH/plugins/backups/`, registro **antes** de renombrar. Purga solo tras confirmación textual ELIMINAR y sin exigir los archivos del plugin.
 - [ ] **[PLUGIN-000]** Comando `php spark plugin:doctor` + criterios de aceptación CLI (el sandbox no permite verificar en navegador por el 401 Basic Auth, DT-5).
 
-### Plugins individuales (implementar en paralelo tras Plugin-000)
-- [ ] **[PLUGIN-001]** Administrador de Servidores — DirectAdmin API, SSH web, monitor, KB+IA, daemon futuro. Plan: `agentic/plugin_001_server_admin.md`
+### Plugins individuales (orden corregido 2026-10-12)
+
+> **Dependencias:** tras PLUGIN-000, las specs 001–006 deben revisarse contra el contrato de hooks v1 (solo `alert.detect` y `layout.footer`). Hoy 001, 003, 005 y 006 registran hooks reservados sin punto de dispatch.
+> **PLUGIN-000b (nuevo, bloquea a 001 y 006):** definir el mecanismo real de tabs en offcanvas (inyección JSON/partial por plugin) para `supplier.show.tabs` / `catalog.product.show.tabs`, y el dispatch de `dashboard.widgets`.
+> **Paralelizable sin 000b:** 002, 003, 004 y 005 (tras revisar sus specs al contrato v1), cada uno en su rama/worktree.
+
+- [ ] **[PLUGIN-000b]** Mecanismo de tabs en offcanvas + `dashboard.widgets` (prerequisito de 001 y 006). Requiere decisión de diseño previa.
+- [ ] **[PLUGIN-001]** Administrador de Servidores — DirectAdmin API, SSH web, monitor, KB+IA, daemon futuro. Plan: `agentic/plugin_001_server_admin.md` (revisar hooks; depende de 000b)
 - [ ] **[PLUGIN-002]** Cotizaciones Avanzadas — builder multi-ítem, PDF, versioning, conversión a OC. Plan: `agentic/plugin_002_advanced_quotations.md`
-- [ ] **[PLUGIN-003]** Firma Digital — flujo OTP email, PDF sellado, rutas públicas sin Shield. Plan: `agentic/plugin_003_digital_signature.md`
+- [ ] **[PLUGIN-003]** Firma Digital — flujo OTP email, PDF sellado, rutas públicas sin Shield. Plan: `agentic/plugin_003_digital_signature.md` (usa `quotation.show.actions`, hook reservado)
 - [ ] **[PLUGIN-004]** WordPress Admin — REST API multi-site, plugins WP, usuarios, posts. Plan: `agentic/plugin_004_wordpress_admin.md`
-- [ ] **[PLUGIN-005]** Chatbot CRM IA — WhatsApp + Telegram + webchat, Gemini/DeepSeek, handoff humano. Plan: `agentic/plugin_005_chatbot_crm.md`
-- [ ] **[PLUGIN-006]** Administrador de Proyectos — Kanban+Lista+Calendario (FullCalendar), subtareas, time tracking. Plan: `agentic/plugin_006_project_manager.md`
+- [ ] **[PLUGIN-005]** Chatbot CRM IA — WhatsApp + Telegram + webchat, Gemini/DeepSeek, handoff humano. Plan: `agentic/plugin_005_chatbot_crm.md` (usa `chatbot.contact.identified`, hook reservado)
+- [ ] **[PLUGIN-006]** Administrador de Proyectos — Kanban+Lista+Calendario (FullCalendar), subtareas, time tracking. Plan: `agentic/plugin_006_project_manager.md` (revisar hooks; depende de 000b)
 
 ### Decisiones arquitectónicas clave (documentadas en `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md`)
 - Plugins en `plugins/{Directory}/` (PascalCase) con namespace `Plugins\{Directory}\`; `directory` es obligatorio en el manifiesto y distinto del `slug`
