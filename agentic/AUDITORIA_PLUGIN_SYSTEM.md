@@ -1,0 +1,303 @@
+# Auditoría — Sistema de Plugins (parche previo a PLUGIN-000)
+
+> **Fecha:** 2026-10-12 | **Rama:** `feat/plugin-system-architecture` | **Commit base:** `2233d17`
+> **Alcance de este informe:** 3 bloqueantes de arquitectura + 4 defectos de ciclo de vida del `Plugin System Core`.
+> **Estado:** propuesta. No se ha modificado `ARQUITECTURA_PLUGIN_SYSTEM.md` ni `plugin_000_plugin_system_core.md` (decisión explícita del responsable).
+> **Método:** contraste línea a línea del diseño contra el código real — `app/`, CI4 `4.5.3` y Shield `1.1` en `vendor/`, y la base de datos del entorno.
+
+---
+
+## 1. Veredicto
+
+La arquitectura conceptual es correcta y debe conservarse: aislamiento por carpeta y namespace, prefijo de tablas `plg_{slug}_`, ciclo *backup-first* (Desactivar → Desinstalar → Restaurar → Purgar), cuatro tablas `sys_*`, manifiesto `plugin.json` y puntos de enganche únicos al ERP.
+
+Sin embargo, **tal como está especificada, la implementación fallará**: el modelo de permisos queda inutilizable, las migraciones de cada plugin no se ejecutarán (y el *install* reportará éxito), y el mecanismo de autoload propuesto contradice el modelo *drop-in* del Market. Se suman cuatro defectos que rompen el ciclo de vida en el primer plugin real.
+
+| Categoría | Cantidad | En este parche |
+|---|---|---|
+| Bloqueantes de arquitectura | 3 | Sí (P0-1 … P0-3) |
+| Defectos de ciclo de vida | 4 | Sí (C-1 … C-4) |
+| Hallazgos adicionales (anexo A) | 8 | No |
+| Gap del contrato de hooks (anexo B) | 1 | No — bloquea specs 001/006 |
+
+**Recomendación:** aplicar los 7 parches de este informe antes de lanzar PLUGIN-000. No requieren reescribir la arquitectura; son puntuales y verificables.
+
+---
+
+## 2. Bloqueantes de arquitectura
+
+### P0-1 — El modelo de permisos no permite asignar permisos de plugin, y al guardar los borra
+
+**Evidencia**
+
+| Ubicación | Qué demuestra |
+|---|---|
+| `app/Controllers/Users/UserController.php:851` | El catálogo de permisos disponibles es `setting('AuthGroups.permissions')`. `sys_plugin_permissions` no aparece en la UI. |
+| `app/Controllers/Users/UserController.php:950` | `permissions_save()` descarta lo que no exista en ese catálogo: `array_key_exists($sp, $allPermissions)`. |
+| `app/Controllers/Users/UserController.php:956` | `$user->syncPermissions(...)` **reemplaza el set completo**: cualquier permiso de plugin ya concedido se pierde al guardar. |
+| `vendor/codeigniter4/shield/src/Models/PermissionModel.php:40-49` | `getForUser()` lee únicamente `auth_permissions_users` (asignaciones directas). |
+| `vendor/codeigniter4/shield/src/Authorization/Traits/Authorizable.php:227-234` | `hasPermission()` es un `in_array` exacto sobre esa lista. |
+| `vendor/codeigniter4/shield/src/Authorization/Traits/Authorizable.php:267,279-284` | Los permisos de grupo y los comodines se resuelven con `setting('AuthGroups.matrix')` dentro de `can()`. |
+| `app/Config/AuthGroups.php:131,201,214` | Catálogo `$permissions`, matriz `$matrix` y comodín `'admin.*'`. |
+| `vendor/codeigniter4/shield/src/Filters/PermissionFilter.php` | El filtro `permission:` usa `$user->can()`; su alias lo registra Shield (`vendor/codeigniter4/shield/src/Config/Registrar.php`) y `app/Config/Filters.php:22-31` no lo sobreescribe. |
+
+**Impacto:** `permission:servers.access` y cualquier `plugin_can()` devuelven siempre falso. Los plugins se instalan pero son inaccesibles, y no existe forma de conceder sus permisos desde la interfaz. El `PluginPermissionFilter` propuesto en `ARQUITECTURA_PLUGIN_SYSTEM.md §12` no resuelve el problema: añade una segunda comprobación sobre una tabla que nadie escribe. Además, el helper `plugin_can()` de esa misma sección consulta `auth_permissions_users` directamente, por lo que ignoraría los permisos concedidos por grupo.
+
+**Parche propuesto**
+
+1. Integrar los permisos de plugin al catálogo que ya consumen la UI, el guardado y `can()`:
+
+```php
+// app/Controllers/Users/UserController.php — nuevo helper privado
+private function getAllPermissions(): array
+{
+    $permissions = setting('AuthGroups.permissions');
+
+    // Plugin System: permisos declarados por los plugins instalados.
+    if (db_connect()->tableExists('sys_plugin_permissions')) {
+        foreach (db_connect()->table('sys_plugin_permissions')->get()->getResultArray() as $row) {
+            $permissions[$row['permission']] = '[Plugin] ' . $row['description'];
+        }
+    }
+
+    return $permissions;
+}
+```
+
+Sustituir `setting('AuthGroups.permissions')` por `$this->getAllPermissions()` en `permissions()` (línea 851) y en `permissions_save()` (línea 926). El merge en `permissions_save()` **no es opcional**: sin él, `syncPermissions()` sigue borrando los permisos del plugin.
+
+2. Eliminar `plugin_can()` como consulta directa a `auth_permissions_users` y usar la API nativa:
+
+```php
+function plugin_can(string $permission): bool
+{
+    return auth()->user()?->can($permission) ?? false;
+}
+```
+
+3. Descartar `PluginPermissionFilter` (arquitectura §12). Si se conserva por defensa en profundidad, debe **sobreescribir el alias `permission`** en `app/Config/Filters.php` y devolver el error estándar de §15/§17 en peticiones AJAX: el filtro de Shield responde con un `RedirectResponse` (`AbstractAuthFilter::before()`), lo que rompe los POST hechos con `fetch()`.
+
+4. Opcional (decisión de producto): para que un grupo reciba los permisos del plugin por defecto, escribir el override en `Settings` de `AuthGroups.matrix` al instalar (por ejemplo `'admin' => [... 'servers.*']`). Es la única fuente que leen `can()` y `permissions_save()`; nunca editar `app/Config/AuthGroups.php` desde un plugin.
+
+**Verificación:** asignar un permiso de plugin desde `/nat/user/permissions/{id}`, guardar dos veces y comprobar con un script CLI que `$user->can('servers.access')` sigue siendo `true`.
+
+---
+
+### P0-2 — Las migraciones del plugin no se ejecutarán: fallo silencioso en el install
+
+**Evidencia**
+
+| Ubicación | Qué demuestra |
+|---|---|
+| `ARQUITECTURA_PLUGIN_SYSTEM.md §4` — `BasePlugin::runMigrations()` | Usa `Services::migrations()->setNamespace('Plugins\\' . $this->manifest['slug_pascal'])`. |
+| `vendor/codeigniter4/framework/system/Database/MigrationRunner.php:477-482` | `setNamespace()` solo asigna el string; no registra rutas. |
+| `vendor/.../MigrationRunner.php:414-427` | Sin `$this->path`, resuelve con `$locator->listNamespaceFiles($namespace, '/Database/Migrations/')`. |
+| `vendor/.../Autoloader/FileLocator.php:357-383` | Delega en `Autoloader::getNamespace($prefix)`. |
+| `vendor/.../Autoloader/Autoloader.php:226-232` | `getNamespace()` es un **lookup exacto de clave**: `getNamespace('Plugins\ServerAdmin')` devuelve `[]` cuando lo registrado es el prefijo `Plugins\`. |
+| `vendor/.../MigrationRunner.php:157-173` | `latest()` retorna `true` cuando `$migrations === []`. |
+
+**Impacto:** la instalación reporta éxito, `sys_plugins` queda registrado como `active`, y **no se crea ninguna tabla** ni se escribe nada en el log. El plugin falla después, en runtime. Es el peor modo de fallo posible: silencioso en el punto donde el administrador cree haber terminado.
+
+**Parche propuesto**
+
+```php
+// app/Libraries/PluginSystem/BasePlugin.php
+protected function pluginNamespace(): string
+{
+    // 'Plugins\ServerAdmin' — namespace real del plugin (deriva de la carpeta)
+    return 'Plugins\\' . ($this->manifest['directory'] ?? basename($this->pluginPath));
+}
+
+protected function runMigrations(): bool
+{
+    $migrationsPath = $this->pluginPath . '/Database/Migrations';
+    if (! is_dir($migrationsPath)) {
+        return true;
+    }
+
+    // 1. Registrar el namespace EXACTO del plugin. FileLocator::listNamespaceFiles()
+    //    resuelve con Autoloader::getNamespace(), que es un lookup exacto de clave:
+    //    el prefijo amplio 'Plugins\' NO basta para encontrar las migraciones.
+    \Config\Services::autoloader()->addNamespace($this->pluginNamespace(), $this->pluginPath);
+
+    // 2. Ejecutar. getHistory() filtra el historial por namespace, así que este
+    //    runner solo ve las migraciones de este plugin.
+    $runner = \Config\Services::migrations();
+    $runner->setNamespace($this->pluginNamespace());
+
+    // 3. Guarda contra el fallo silencioso: si hay archivos en disco y no se
+    //    descubren, devolver error en lugar de 'instalado sin tablas'.
+    if ($runner->findNamespaceMigrations($this->pluginNamespace()) === []) {
+        log_message('error', '[PluginSystem] {slug}: migraciones presentes pero no descubiertas.', [
+            'slug' => $this->manifest['slug'],
+        ]);
+
+        return false;
+    }
+
+    return $runner->latest() !== false;
+}
+```
+
+**Tres restricciones verificadas de la API de CI4 4.5.3 que condicionan este parche:**
+
+1. **No existe `setPath()`.** `MigrationRunner` solo expone la ruta vía `force($path, $namespace, $group)`, documentado como *"not recommended, provided mostly for testing"*. El descubrimiento estándar de migraciones se hace por namespace vía `FileLocator::listNamespaceFiles()`.
+2. **`setNamespace()` no registra nada**: solo asigna el string (`MigrationRunner.php:477-482`). El namespace exacto hay que registrarlo en el autoloader con `Autoloader::addNamespace()` (`Autoloader.php:195-216`).
+3. **No usar `setGroup()` como etiqueta.** `group` es el grupo de conexión de base de datos: si `groupFilter` no coincide con `$instance->getDBGroup()`, `migrate()` marca `groupSkip = true` y retorna `true` **sin ejecutar** la migración, pero `addHistory()` la registra como aplicada (`MigrationRunner.php:838-853`). Es la misma clase de fallo silencioso que motiva P0-2.
+
+**Invariante de aislamiento a documentar:** el prefijo amplio `Plugins\` → `plugins/` (P0-3) habilita el autoload de clases pero **no** expone migraciones, porque `plugins/Database/Migrations/` no existe. Por eso el namespace exacto (`Plugins\ServerAdmin\`) debe registrarse **solo dentro del flujo de instalación/actualización**, no en `bootActivePlugins()`: si el boot lo registra, el `php spark migrate` global pasará a recorrer las migraciones de todos los plugins instalados y una migración rota de un plugin romperá el comando del ERP.
+
+**Verificación:** instalar un plugin fixture y comprobar con `php spark db:table <tabla_del_plugin>` que las tablas existen; añadir una segunda migración al fixture y repetir el flujo de actualización.
+
+---
+
+### P0-3 — `composer dump-autoload` como paso de instalación rompe el modelo *drop-in*
+
+**Evidencia**
+
+| Ubicación | Qué demuestra |
+|---|---|
+| `composer.json` | No existe sección `psr-4` para la app; solo `exclude-from-classmap`. |
+| `plugin_000_plugin_system_core.md §4` | Propone añadir `"Plugins\\": "plugins/"` a Composer y ejecutar `composer dump-autoload`. |
+| `plugin_000_plugin_system_core.md §7` | El Market incluye subir un plugin (ZIP) en runtime. |
+| `vendor/.../Autoloader/Autoloader.php:146-152,370` | El autoloader de CI4 ya mezcla en runtime los namespaces de Composer (`loadComposerNamespaces()`). |
+
+**Impacto:** el binario `composer` no está garantizado en el servidor ni es usable en un flujo iniciado desde el navegador; cada plugin nuevo exigiría una intervención por SSH y un borrado selectivo de opcache. Además, `composer.json` no es hoy la fuente de verdad de namespaces de esta app (lo es `app/Config/Autoload.php`).
+
+**Parche propuesto**
+
+```php
+// app/Config/Autoload.php
+public $psr4 = [
+    APP_NAMESPACE => APPPATH,
+    'Config'      => APPPATH . 'Config',
+    'Plugins'     => ROOTPATH . 'plugins',   // Plugin System
+];
+```
+
+Una sola línea, un único cambio de ERP, sin `composer dump-autoload` y sin tocar `composer.json`. El autoloader de CI4 resuelve `Plugins\X\...` desde `plugins/X/...`, y las clases nuevas que aparezcan tras subir un ZIP quedan disponibles sin regenerar mapas.
+
+**Verificación:** subir una carpeta de plugin con una clase nueva, sin ejecutar Composer, y comprobar que `class_exists('Plugins\\X\\X')` es `true` vía `php spark`.
+
+---
+
+## 3. Defectos de ciclo de vida
+
+### C-1 — `uninstall()` devuelve `bool`, el Manager espera el array del backup
+
+`PluginInterface::uninstall(): bool` y `BasePlugin::uninstall()` retornan `true`; `PluginManager::uninstall()` hace `basename($backup['backup_file'])` sobre ese booleano y el mensaje de éxito pierde la referencia al respaldo. Además `backupPluginData()` retorna un array que hoy se descarta.
+
+**Parche:** alinear el contrato en la especificación del interface y en el Manager.
+
+```php
+// PluginInterface
+/** @return array{success: bool, backup_file: ?string, archived_tables: array} */
+public function uninstall(): array;
+
+// BasePlugin
+public function uninstall(): array
+{
+    $backup = $this->backupPluginData();   // ['backup_file' => ..., 'archived_tables' => [...]]
+    $this->removePermissions();
+
+    return ['success' => true] + $backup;
+}
+```
+
+Ajustar los tres puntos de uso: `PluginManager::uninstall()`, el mensaje del `PluginMarketController::uninstall()` y `logActivity`.
+
+### C-2 — `restore()` y `purge()` invocan métodos `protected` del plugin
+
+`PluginManager::restore()` llama `$instance->restoreBackupTables($backupId)` y `$instance->registerPermissions()`, y `PluginManager::purge()` llama `$instance->purgeBackup($backupId)`. Los tres son `protected` en `BasePlugin`: cualquier intento termina en `Error: Call to protected method`.
+
+**Parche (recomendado):** extraer el archivado, la restauración y la purga a un servicio del core, `app/Libraries/PluginSystem/PluginBackupService.php`, que opera con la fila de `sys_plugin_backups` y **no necesita instanciar la clase del plugin**. Ventajas: elimina el error de visibilidad, saca de `BasePlugin` una responsabilidad que no es del plugin, y resuelve el hallazgo A-3 del anexo (la purga deja de requerir `plugin.json` en disco). `BasePlugin::uninstall()` delega: `PluginBackupService::archive($manifest)`.
+
+### C-3 — `class_dir` guarda el slug (kebab) pero el boot busca la carpeta (PascalCase)
+
+`PluginManager::install()` inserta `'class_dir' => $slug` (`server-admin`) mientras el boot arma `ROOTPATH . 'plugins/' . $row['class_dir']` y la convención de directorios es `plugins/ServerAdmin/`. `restore()` comete el mismo error (`'class_dir' => $backup['plugin_slug']`). Resultado tras instalar el primer plugin: `file_exists($pluginPath . '/plugin.json')` es falso, el boot hace `continue` y el plugin queda "instalado" **sin hooks, sin rutas y sin sidebar**, otra vez en silencio.
+
+**Parche:**
+
+1. Añadir el campo obligatorio `"directory": "ServerAdmin"` al manifiesto (`§3` de la arquitectura), distinto de `slug` (identidad y URLs) y de `route_prefix`.
+2. Validar en `install()`: `is_dir(ROOTPATH . 'plugins/' . $manifest['directory'])` y que `plugin.json` exista; abortar con error explícito si no.
+3. Persistir la carpeta, no el slug: `'class_dir' => $manifest['directory']`.
+4. Añadir `class_dir VARCHAR(100)` a `sys_plugin_backups` (la migración aún no está implementada, por lo que el cambio no tiene coste) y usarlo en `restore()` y `purge()`.
+
+### C-4 — El historial de migraciones no se limpia al desinstalar: reinstalar deja el plugin sin tablas
+
+El archivado renombra las tablas a `_bak_*`, pero las filas de la tabla `migrations` (`version`, `group`, `namespace` — `vendor/.../MigrationRunner.php:595-598`) permanecen. Al reinstalar (no restaurar), el runner del plugin (`runMigrations()` de P0-2) considera esas migraciones ya aplicadas, no crea tablas y el plugin arranca contra un esquema inexistente.
+
+**Parche:**
+
+1. Ejecutar las migraciones con el `runMigrations()` corregido de P0-2. El historial queda automáticamente acotado al plugin porque `getHistory()` aplica `where('namespace', $this->namespace)` cuando hay namespace (`vendor/.../MigrationRunner.php:648-651`).
+
+> **Advertencia:** no usar `setGroup()`/`latest($slug)` con el slug del plugin. En CI4 `group` es el **grupo de conexión de base de datos**: `migrate()` calcula `$group = $instance->getDBGroup() ?? $this->group` y, si `groupFilter` no coincide, marca `groupSkip = true` y retorna `true` **sin ejecutar la migración** (`vendor/.../MigrationRunner.php:838-853`), pero `addHistory()` la registra igualmente como aplicada. Es decir: `setGroup('server-admin')` produce exactamente el mismo fallo silencioso que P0-2. Y borrar filas por `group` es peligroso: el valor real es `'default'` y arrastraría migraciones del ERP.
+
+2. En la desinstalación, borrar únicamente el historial de ese plugin, identificado por namespace:
+
+```php
+db_connect()->table('migrations')
+    ->where('namespace', $this->pluginNamespace())   // 'Plugins\ServerAdmin'
+    ->delete();
+```
+
+3. Regla de negocio explícita: reinstalar tras desinstalar exige **Restaurar** (los datos viven en `_bak_*` y el SQL). `install()` debe detectar un respaldo pendiente en `sys_plugin_backups` para ese slug y ofrecer `restore()` en lugar de crear tablas nuevas.
+
+---
+
+## 4. Orden de aplicación sugerido
+
+1. `app/Config/Autoload.php` → prefijo `Plugins` (P0-3).
+2. Especificar `PluginBackupService` y reescribir en la spec `runMigrations()`, `uninstall()`, `restore()` y `purge()` (C-1, C-2, C-4, P0-2).
+3. `sys_plugin_backups` + `class_dir`; manifiesto + `directory`; corregir `settings_defaults` → `settings` (C-3 y A-5).
+4. `UserController::getAllPermissions()` y sus dos usos; retirar `PluginPermissionFilter` (P0-1).
+5. Congelar el contrato de hooks v1 y el `PluginBaseController` antes de escribir las specs 001-006 (anexo B).
+
+---
+
+## 5. Criterios de aceptación del parche
+
+- `php spark migrate` crea las cuatro tablas `sys_*` y no falla en un checkout sin plugins.
+- Un plugin fixture crea sus tablas reales (verificado con `php spark db:table`), no solo "instala".
+- `php spark routes` lista las rutas del plugin; `/nat/admin/plugins` responde con sesión válida.
+- Ciclo completo sin errores fatales: activar → desactivar → desinstalar (verificar `_bak_*` y fila en `sys_plugin_backups`) → restaurar → purgar (verificar `DROP` y limpieza del SQL).
+- Reinstalar después de desinstalar no deja el plugin en estado "sin tablas".
+- Un permiso de plugin asignado desde la UI sobrevive a un segundo guardado de permisos del mismo usuario.
+- Un plugin con error fatal en `registerHooks()` no impide cargar el ERP ni el Market.
+
+> Nota operativa: el sandbox responde **401 Basic Auth** antes del login de Shield (DT-5 de `TODO.md`), así que la verificación debe ser CLI (`php spark`, `php -l`, PHPUnit) y no de navegador.
+
+---
+
+## Anexo A — Hallazgos fuera de este parche
+
+| # | Hallazgo | Riesgo |
+|---|---|---|
+| A-1 | `SHOW TABLES LIKE 'plg_x_'` usa `_` como comodín | Puede archivar tablas ajenas que hagan match; usar `ESCAPE` o `str_starts_with()` |
+| A-2 | `RENAME TABLE` una a una y fila de respaldo insertada después | Un fallo a mitad deja tablas `_bak_*` huérfanas, irrecuperables desde la UI; usar un solo `RENAME TABLE a TO b, c TO d` y registrar antes |
+| A-3 | `purge()` exige `plugin.json` en disco | El caso típico de purga es un plugin desinstalado y ya borrado; se resuelve con `PluginBackupService` (C-2) |
+| A-4 | `renderAssets()` busca `FCPATH/plugins/{slug}/css` y el origen es `plugins/{Pascal}/Assets/css`; `public_html/plugins/` fuera de `.gitignore` | Assets que no cargan y artefactos de deploy versionados |
+| A-5 | Manifiesto: `settings_defaults` vs `settings`; `sys_plugin_settings` sin uso | Dos fuentes de verdad para la configuración; elegir una |
+| A-6 | Arranque en `pre_system` sin `tableExists()`, try/catch ni caché; `doAction()`/`applyFilter()` sin try/catch | Un plugin roto o un checkout sin migrar tumba el ERP completo, el Market y `php spark`; comparar con `_safeDetect()` de `AlertController.php:288` |
+| A-7 | `function plugin_can()` y `admin.*` — el paso 10 del plan (añadir a la matriz) es redundante | Cualquier permiso `admin.*` ya se concede por comodín; solo hace falta el catálogo `$permissions` |
+| A-8 | `.gitignore` no cubre `writable/plugins/backups/` ni `public_html/plugins/` | Los dumps SQL con datos de clientes pueden acabar en un commit |
+
+---
+
+## Anexo B — Contrato de hooks: bloqueante para las specs 001 y 006
+
+El catálogo de `ARQUITECTURA_PLUGIN_SYSTEM.md §6` promete 12 hooks; los 5 touch points solo entregan 3–4, y dos de ellos se invocan de forma directa, sin pasar por el bus (`renderSidebar()` en lugar de `sidebar.render`; `renderAssets()` en lugar de `layout.head`).
+
+Además, varios destinos documentados **no existen**:
+
+- `supplier.show.tabs`: `SupplierController::show()` (`app/Controllers/Financial/SupplierController.php:158`) es un endpoint AJAX que devuelve JSON; los tabs viven en el offcanvas de `app/Views/Financial/Suppliers/suppliers_index.php:439`.
+- `catalog.product.show.tabs`: `CatalogProductController` no tiene `show()`.
+- `worker.show.tabs`: `HR\WorkerController` no tiene `show()`, solo `show_ajax()`.
+- `dashboard.widgets`, `layout.head`, `user.can`, `routes.after_load`, `supplier.products.filter`: sin punto de dispatch en el código.
+- Las specs registran hooks fuera del catálogo: `quotation.show.actions` (003), `chatbot.contact.identified` (005), `quotation.converted` (006).
+
+**Consecuencia para la orquestación:** 001 y 006 no pueden desarrollarse en paralelo con 000 como indica el roadmap; dependen de puntos de dispatch que no existen. Antes de escribir esas specs hay que (a) congelar un contrato de hooks v1 con lo que sí está cableado, (b) definir el mecanismo real de tabs en offcanvas (inyección por JSON o partial por plugin) como tarea propia —PLUGIN-000b— y (c) corregir el número de touch points: son más de 5 en cuanto se quiera que el catálogo deje de ser aspiracional.
+
+---
+
+*Informe preparado como insumo de decisión. Los parches descritos son propuestas y no se han aplicado al código ni a la documentación de arquitectura.*
