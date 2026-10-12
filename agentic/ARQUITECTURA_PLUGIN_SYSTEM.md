@@ -1,7 +1,23 @@
 # Arquitectura del Sistema de Plugins — ERP CI4
 
-> **Versión:** 1.0.0 | **Fecha:** 2026-09-18 | **Autor:** Arquitecto ERP
+> **Versión:** 1.1.0 | **Fecha:** 2026-10-12 (v1.0: 2026-09-18) | **Autor:** Arquitecto ERP
 > **Analogía de referencia:** Similar al sistema de plugins de WordPress (actions/filters), pero construido sobre CodeIgniter 4, Shield CI4 y los estándares del proyecto (§1–§21 de `DOCUMENTACION_TECNICA.md`).
+
+> ### Nota de versión 1.1 — parches aplicados
+> Esta versión incorpora los 7 parches de `AUDITORIA_PLUGIN_SYSTEM.md` (commit `7e1dbe5`), verificados contra CI4 4.5.3 y Shield 1.1:
+>
+> | ID | Corrección en este documento |
+> |----|------------------------------|
+> | P0-1 | §12 reescrita: permisos de plugin integrados al catálogo de Shield. Se elimina `PluginPermissionFilter` y el helper `plugin_can()` de consulta directa. |
+> | P0-2 | §6 y §16: descubrimiento de migraciones con namespace exacto (`Autoloader::addNamespace()`); advertencia sobre `group`/`setGroup()`. |
+> | P0-2b | §17: arranque tolerante (guarda de esquema + aislamiento por plugin). |
+> | P0-3 | §16 reescrita: autoload por `Config\Autoload::$psr4`. Se elimina la dependencia de `composer dump-autoload`. |
+> | C-1 | §4: `uninstall()` devuelve `array`, no `bool`. |
+> | C-2 | §4/§5: archivado, restauración y purga pasan a `PluginBackupService`; ningún método `protected` se invoca desde el Manager. |
+> | C-3 | §3, §8 y §9: campo `directory` obligatorio en el manifiesto; `class_dir` guarda la carpeta y se guarda también en `sys_plugin_backups`. |
+> | C-4 | §9: limpieza del historial de migraciones al desinstalar. |
+>
+> **El código de referencia vigente de las clases del core vive en `agentic/plugin_000_plugin_system_core.md` (v1.1), no en §4/§5 de este documento.** Los bloques de código de §4 y §5 se conservan solo como contexto histórico: están marcados como obsoletos y no deben implementarse.
 
 ---
 
@@ -46,7 +62,7 @@ Un plugin es un conjunto autónomo de:
 | Principio | Implementación |
 |-----------|---------------|
 | **Aislamiento** | Cada plugin en `plugins/{Slug}/` con namespace `Plugins\{Slug}` |
-| **No-invasivo** | El ERP base tiene 5 puntos de enganche genéricos — ninguno específico de plugin |
+| **No-invasivo** | El ERP base tiene 7 puntos de enganche genéricos (ver §17) — ninguno específico de plugin |
 | **Reversible** | Desinstalar un plugin revierte sus migraciones y elimina sus permisos |
 | **Independiente** | Un plugin puede actualizarse sin tocar el ERP base ni otros plugins |
 | **Seguro** | Todos los endpoints de plugin pasan por Shield CI4 (§7) y bitácora (§8) |
@@ -118,6 +134,7 @@ Cada plugin tiene un `plugin.json` en su raíz. Es el "package.json" del plugin.
 ```json
 {
   "slug": "server-admin",
+  "directory": "ServerAdmin",
   "class": "Plugins\\ServerAdmin\\ServerAdmin",
   "name": "Administrador de Servidores",
   "version": "1.2.0",
@@ -168,6 +185,7 @@ Cada plugin tiene un `plugin.json` en su raíz. Es el "package.json" del plugin.
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | `slug` | string | Identificador único. Solo `[a-z0-9-]`. Ej: `server-admin` |
+| `directory` | string | **Obligatorio (C-3).** Carpeta real del plugin en `plugins/`, en PascalCase. Debe existir en disco y coincidir con el namespace y con `class`. Ej: `ServerAdmin` |
 | `class` | string | FQCN de la clase principal |
 | `name` | string | Nombre humano legible |
 | `version` | string | SemVer: `MAJOR.MINOR.PATCH` |
@@ -176,9 +194,16 @@ Cada plugin tiene un `plugin.json` en su raíz. Es el "package.json" del plugin.
 | `route_prefix` | string | Prefijo de rutas: aparecerán en `/nat/plugins/{route_prefix}/` |
 | `permissions` | object | Mapa `permiso.nombre → descripción` |
 
+> **Nota (A-5 corregido):** los settings se declaran en la clave `settings` (nunca `settings_defaults`) y se persisten en `sys_plugin_settings` (clave/valor), que es la única fuente de verdad. La columna `sys_plugins.config` fue eliminada en v1.1.
+
 ---
 
 ## 4. Contrato PHP — PluginInterface
+
+> **OBSOLETO EN v1.1.** El código de esta sección se conserva como contexto histórico y **no debe implementarse**.
+> Especificación vigente: `agentic/plugin_000_plugin_system_core.md` §7.1 y §7.2.
+> Bloques reemplazados: constructor de `BasePlugin` (ya no recibe `$config`), `getConfig()`/`setConfig()` (ahora leen y escriben `sys_plugin_settings`), `runMigrations()` (namespace exacto), `backupPluginData()`, `restoreBackupTables()` y `purgeBackup()` (extraídos a `PluginBackupService`), `install()`/`uninstall()` (firma `array` y limpieza de historial).
+> La firma vigente de `uninstall()` es `uninstall(): array` (C-1).
 
 ```php
 // app/Libraries/PluginSystem/PluginInterface.php
@@ -193,10 +218,13 @@ interface PluginInterface
     public function install(): bool;
 
     /**
-     * Ejecutado UNA VEZ al desinstalar.
-     * Revierte migraciones en orden inverso y elimina permisos.
+     * Ejecutado UNA VEZ al desinstalar (el plugin debe estar INACTIVE).
+     * Archiva los datos con RENAME a _bak_* (nunca DROP), elimina permisos y
+     * borra el historial de migraciones del plugin. Ver PluginBackupService.
+     *
+     * @return array{success: bool, backup_id: ?int, backup_file: ?string, archived_tables: array}
      */
-    public function uninstall(): bool;
+    public function uninstall(): array;
 
     /**
      * Ejecutado al activar el plugin (post-install o tras reactivar).
@@ -257,40 +285,56 @@ abstract class BasePlugin implements PluginInterface
     protected array $config   = [];
     protected string $pluginPath;
 
-    public function __construct(string $pluginPath, array $config = [])
+    public function __construct(string $pluginPath)
     {
-        $this->pluginPath = $pluginPath;
-        $this->config     = $config;
-        $this->manifest   = json_decode(
-            file_get_contents($pluginPath . '/plugin.json'), true
-        );
+        $this->pluginPath = rtrim($pluginPath, '/\\') . DIRECTORY_SEPARATOR;
+        $manifestFile     = $this->pluginPath . 'plugin.json';
+
+        if (! is_file($manifestFile)) {
+            throw new \RuntimeException("plugin.json no encontrado en {$this->pluginPath}");
+        }
+
+        $this->manifest = json_decode((string) file_get_contents($manifestFile), true);
     }
 
     public function getManifest(): array { return $this->manifest; }
-    public function getConfig(): array   { return $this->config; }
 
-    public function setConfig(array $config): bool
-    {
-        $db = db_connect();
-        return (bool) $db->table('sys_plugins')
-            ->where('slug', $this->manifest['slug'])
-            ->update(['config' => json_encode($config)]);
-    }
+    // v1.1: la configuración vive en sys_plugin_settings (clave/valor) y se
+    // cachea en $this->config. Ver plugin_000 §7.2 para el código vigente.
+    public function getConfig(): array   { /* defaults del manifiesto + filas de sys_plugin_settings */ }
+    public function setConfig(array $config): bool { /* upsert por clave en sys_plugin_settings */ }
 
     /**
-     * Helper: corre las migraciones del plugin hacia arriba.
+     * v1.1 (P0-2): registra el namespace EXACTO del plugin antes de descubrir
+     * sus migraciones, porque FileLocator::listNamespaceFiles() resuelve con
+     * Autoloader::getNamespace(), que es un lookup exacto de clave.
+     * Código vigente en plugin_000 §7.2.
      */
     protected function runMigrations(): bool
     {
-        $migrationsPath = $this->pluginPath . '/Database/Migrations';
-        if (!is_dir($migrationsPath)) return true;
+        $migrationsPath = $this->pluginPath . 'Database/Migrations';
+        if (! is_dir($migrationsPath)) return true;
 
-        $migrate = \Config\Services::migrations();
-        $migrate->setNamespace('Plugins\\' . $this->manifest['slug_pascal']);
-        return $migrate->latest() !== false;
+        $namespace = 'Plugins\\' . ($this->manifest['directory'] ?? basename($this->pluginPath));
+
+        \Config\Services::autoloader()->addNamespace($namespace, $this->pluginPath);
+
+        $runner = \Config\Services::migrations();
+        $runner->setNamespace($namespace);
+
+        // Guarda contra el fallo silencioso: archivos en disco + 0 descubiertas = error.
+        if ($runner->findNamespaceMigrations($namespace) === []) {
+            log_message('error', "[PluginSystem] {$this->manifest['slug']}: migraciones no descubiertas.");
+            return false;
+        }
+
+        return $runner->latest() !== false;
     }
 
     /**
+     * ⚠ OBSOLETO v1.1 (C-2): movido a PluginBackupService::archive().
+     * Se conserva como referencia histórica; no implementar desde aquí.
+     *
      * Helper: archiva los datos del plugin ANTES de desinstalar.
      * Pasos: (1) exporta SQL a WRITEPATH, (2) renombra tablas con sufijo _bak_{timestamp},
      * (3) registra en sys_plugin_backups.
@@ -370,6 +414,9 @@ abstract class BasePlugin implements PluginInterface
     }
 
     /**
+     * ⚠ OBSOLETO v1.1 (C-2): movido a PluginBackupService::restore().
+     * Se conserva como referencia histórica; no implementar desde aquí.
+     *
      * Helper: restaura tablas archivadas de un backup previo.
      * Renombra _bak_plg_* de vuelta a plg_* y actualiza sys_plugin_backups.
      */
@@ -400,6 +447,9 @@ abstract class BasePlugin implements PluginInterface
     }
 
     /**
+     * ⚠ OBSOLETO v1.1 (C-2): movido a PluginBackupService::purge().
+     * Se conserva como referencia histórica; no implementar desde aquí.
+     *
      * Helper: purga un backup (DROP de tablas _bak_ + elimina archivo SQL).
      * IRREVERSIBLE. Solo llamar tras confirmación explícita del usuario.
      */
@@ -452,12 +502,31 @@ abstract class BasePlugin implements PluginInterface
             ->delete();
     }
 
-    // Implementaciones por defecto (sobreescribir si se necesita lógica específica)
+    /**
+     * ⚠ OBSOLETO v1.1 (C-1/C-4): `install()` ya no registra permisos desde la
+     * instancia de forma ambigua y `uninstall()` devuelve array y limpia el
+     * historial de migraciones. Código vigente: plugin_000 §7.2.
+     *
+     * Implementaciones por defecto (sobreescribir si se necesita lógica específica)
+     */
     public function install(): bool
     {
-        $this->runMigrations();
-        $this->registerPermissions();
+        if (! $this->runMigrations()) {
+            return false;
+        }
+
+        PluginManager::registerPermissions($this->manifest);
+
         return true;
+    }
+
+    public function uninstall(): array
+    {
+        $backup = PluginBackupService::archive($this->manifest, $this->pluginPath);
+        PluginManager::removePermissions($this->getSlug());
+        db_connect()->table('migrations')->where('namespace', $this->getNamespace())->delete();
+
+        return ['success' => true] + $backup;   // C-4: sin esto, reinstalar no recrea tablas
     }
 
     /**
@@ -484,6 +553,10 @@ abstract class BasePlugin implements PluginInterface
 ---
 
 ## 5. PluginManager — Servicio Central
+
+> **OBSOLETO EN v1.1.** El código de esta sección se conserva como contexto histórico y **no debe implementarse**.
+> Especificación vigente: `agentic/plugin_000_plugin_system_core.md` §7.4.
+> Reemplazos: `bootActivePlugins()` (guarda de esquema + `try/catch` por plugin, P0-2b), `install()` (`class_dir = directory`, sin `config`, detección de respaldo pendiente), `uninstall()` (`uninstall(): array`, borrado de la fila tras archivar), `restore()` y `purge()` (delegados en `PluginBackupService`, que ya no exige `plugin.json` para purgar), `registerPermissions()`/`removePermissions()` (operaciones de BD a partir del manifiesto, sin invocar métodos del plugin) y `update()` (nuevo, corre solo migraciones nuevas).
 
 ```php
 // app/Libraries/PluginSystem/PluginManager.php
@@ -598,7 +671,7 @@ class PluginManager
                     'description' => $manifest['description'] ?? '',
                     'icon'        => $manifest['icon'] ?? 'fa-plug',
                     'status'      => 'active',
-                    'config'      => json_encode($manifest['settings_defaults'] ?? []),
+                    // v1.1: sin 'config' y class_dir = $manifest['directory'] (ver plugin_000 §7.4).
                     'installed_at'=> date('Y-m-d H:i:s'),
                 ]);
                 return ['success' => true, 'message' => "Plugin '{$manifest['name']}' instalado."];
@@ -809,21 +882,34 @@ class PluginHookRegistry
 }
 ```
 
-### Catálogo de Hooks disponibles
+### Catálogo de hooks — estado real de cableado (v1.1)
+
+Solo los hooks de la tabla **v1** se despachan en el ERP. Los de la tabla **reservado** están documentados pero **no tienen punto de dispatch**: registrarlos no produce ningún efecto (ver `AUDITORIA_PLUGIN_SYSTEM.md`, anexo B).
+
+#### v1 — cableados y utilizables
 
 | Hook | Tipo | Argumentos | Disparado en | Uso típico |
 |------|------|-----------|--------------|-----------|
-| `sidebar.render` | Action | `$user` | `loggedin_sidebar.php` | Plugin añade ítems al menú |
-| `dashboard.widgets` | Action (Collect) | `$user` | `dashboard view` | Plugin añade cards/widgets |
-| `alert.detect` | Action (Collect) | `$user` | `AlertController::_detectAll()` | Plugin registra detectores |
-| `layout.head` | Action | — | `user_loggedin_layout.php` `<head>` | CSS, meta tags |
-| `layout.footer` | Action | — | `user_loggedin_layout.php` footer | JS global |
-| `catalog.product.show.tabs` | Action (Collect) | `$product` | `CatalogProductController::show()` | Plugin añade tab en ficha de producto |
-| `supplier.show.tabs` | Action (Collect) | `$supplier` | `SupplierController::show()` | Plugin añade tab en ficha de proveedor |
-| `worker.show.tabs` | Action (Collect) | `$worker` | `WorkerController::show()` | Plugin añade tab en ficha de trabajador |
-| `supplier.products.filter` | Filter | `$query, $supplierId` | `FinSupplierModel::_get_datatables_query()` | Plugin inyecta productos propios |
-| `user.can` | Filter | `$result, $perm, $user` | Custom `PluginPermissionFilter` | Plugin extiende verificaciones de permisos |
-| `routes.after_load` | Action | `$routes` | `Routes.php` al final | Plugin añade rutas (alternativo a `loadRoutes()`) |
+| `alert.detect` | Action (Collect) | `$user` | `AlertController::_detectAll()` | Plugin registra detectores de alertas |
+| `layout.footer` | Action | — | `user_loggedin_layout.php`, antes de `</body>` | JS global del plugin |
+
+Además del bus de eventos, el contrato v1 expone tres APIs directas (no son hooks): `getSidebarItems(User)` para el sidebar, `loadRoutes($routes)` para las rutas y `renderAssets()` para los assets declarados en el manifiesto.
+
+#### Reservado — documentado, sin dispatch (no usar en las specs 001–006)
+
+| Hook | Tipo | Destino previsto | Trabajo necesario antes de usarlo |
+|------|------|------------------|-----------------------------------|
+| `sidebar.render` | Action | `loggedin_sidebar.php` | Duplicado de `getSidebarItems()`: decidir uno de los dos mecanismos |
+| `layout.head` | Action | `<head>` del layout | Hoy `renderAssets()` cubre el caso |
+| `dashboard.widgets` | Action (Collect) | Vista de dashboard | Añadir el punto de dispatch en la vista |
+| `catalog.product.show.tabs` | Action (Collect) | Ficha de producto | `CatalogProductController` no tiene `show()`: definir el mecanismo real |
+| `supplier.show.tabs` | Action (Collect) | Offcanvas de proveedor | `SupplierController::show()` devuelve JSON; los tabs viven en `suppliers_index.php` |
+| `worker.show.tabs` | Action (Collect) | Ficha de trabajador | `HR\WorkerController` solo tiene `show_ajax()` |
+| `supplier.products.filter` | Filter | `FinSupplierModel` | No existe el `applyFilter()` correspondiente |
+| `user.can` | Filter | Autorización | No existe el `applyFilter()` correspondiente |
+| `routes.after_load` | Action | `Routes.php` | Alternativa redundante a `loadRoutes()` |
+
+> Los manifiestos deben declarar en `hooks` únicamente hooks v1. `php spark plugin:doctor` reporta como advertencia cualquier hook reservado.
 
 ---
 
@@ -874,15 +960,19 @@ $pluginAlerts = \App\Libraries\PluginSystem\PluginManager::runAlertDetectors($us
 $alerts = array_merge($alerts, $pluginAlerts);
 ```
 
-### Resumen de los 5 touch points
+### Resumen de los 7 touch points (v1.1)
 
-| # | Archivo | Línea aprox. | Código añadido |
-|---|---------|-------------|----------------|
-| 1 | `app/Config/Events.php` | Al final | `PluginManager::bootActivePlugins()` en `pre_system` |
-| 2 | `app/Config/Routes.php` | Al final | `PluginManager::loadRoutes($routes)` |
-| 3 | `loggedin_sidebar.php` | Antes `</nav>` | `PluginManager::renderSidebar($user)` |
-| 4 | `user_loggedin_layout.php` | `<head>` + `</body>` | `renderAssets()` + `doAction('layout.footer')` |
-| 5 | `AlertController.php` | En `_detectAll()` | `PluginManager::runAlertDetectors($user)` |
+| # | Archivo | Ubicación | Código añadido |
+|---|---------|-----------|----------------|
+| 1 | `app/Config/Autoload.php` | `$psr4` | `'Plugins' => ROOTPATH . 'plugins'` (P0-3) |
+| 2 | `app/Config/Events.php` | Al final | `PluginManager::bootActivePlugins()` en `pre_system` (tolerante, P0-2b) |
+| 3 | `app/Config/Routes.php` | Al final | `PluginManager::loadRoutes($routes)` |
+| 4 | `loggedin_sidebar.php` | Antes del cierre del sidebar | `PluginManager::renderSidebar(auth()->user())` |
+| 5 | `user_loggedin_layout.php` | `<head>` + `</body>` | `renderAssets()` + `doAction('layout.footer')` |
+| 6 | `AlertController.php` | En `_detectAll()` | `PluginManager::runAlertDetectors($user)` |
+| 7 | `UserController.php` | `permissions()` + `permissions_save()` | `getAllPermissions()` (P0-1) |
+
+El código exacto de cada uno está en `agentic/plugin_000_plugin_system_core.md` §4.
 
 ---
 
@@ -902,7 +992,6 @@ $this->forge->addField([
     'description'  => ['type' => 'TEXT', 'null' => true],
     'icon'         => ['type' => 'VARCHAR', 'constraint' => 50, 'default' => 'fa-plug'],
     'status'       => ['type' => 'ENUM', 'constraint' => ['active','inactive','installing','error'], 'default' => 'inactive'],
-    'config'       => ['type' => 'JSON', 'null' => true],
     'installed_at' => ['type' => 'DATETIME', 'null' => true],
     'updated_at'   => ['type' => 'DATETIME', 'null' => true],
 ]);
@@ -910,6 +999,8 @@ $this->forge->addKey('id', true);
 $this->forge->addUniqueKey('slug');
 $this->forge->createTable('sys_plugins', true);
 ```
+
+> **v1.1 (A-5):** la columna `config` fue eliminada. La configuración de cada plugin vive en `sys_plugin_settings` (clave/valor) y se lee/escribe con `BasePlugin::getConfig()`/`setConfig()`.
 
 ### Migración: `sys_plugin_permissions` (permisos de plugins)
 
@@ -995,13 +1086,19 @@ El proceso es:
 
 ```
 1. Validar que el plugin esté INACTIVE (no se puede desinstalar estando ACTIVE)
-2. backupPluginData()
-   a. Exportar todas las tablas plg_{slug}_* a un archivo .sql en WRITEPATH/plugins/backups/
-   b. Renombrar tablas: plg_srvadm_servers → _bak_plg_srvadm_servers_20260918_143022
-   c. Registrar el backup en sys_plugin_backups
-3. removePermissions() → eliminar de sys_plugin_permissions
-4. Eliminar de sys_plugins
-5. logActivity('plugin_uninstall', 'Desinstalá plugin: {name}. Backup: {archivo}')
+2. PluginBackupService::archive()   [v1.1 — C-2: antes backupPluginData() en BasePlugin]
+   a. Registrar la fila en sys_plugin_backups ANTES de tocar nada
+      (si el proceso muere a mitad, las tablas _bak_ quedan localizables)
+   b. Exportar las tablas plg_{slug}_* a WRITEPATH/plugins/backups/{slug}_{fecha}.sql
+   c. RENAME atómico en una sola sentencia:
+      plg_srvadm_servers → _bak_plg_srvadm_servers_20260918_143022
+   d. Actualizar backup_size_kb
+3. PluginManager::removePermissions(slug) → eliminar de sys_plugin_permissions
+4. Borrar el historial de migraciones del namespace del plugin   [v1.1 — C-4]
+   DELETE FROM migrations WHERE namespace = 'Plugins\{Directory}'
+   (sin esto, reinstalar el plugin no vuelve a crear sus tablas)
+5. Eliminar la fila de sys_plugins
+6. logActivity('plugin_uninstall', 'Desinstaló plugin: {name}. Backup: {archivo}')
 ```
 
 **Resultado:** El plugin no existe en `sys_plugins`, pero sus datos viven en:
@@ -1020,11 +1117,14 @@ El proceso es:
 ```
 1. Modal de confirmación con texto: "Esta acción eliminará PERMANENTEMENTE todos los datos del plugin.
    Escribe ELIMINAR para confirmar."
-2. Eliminar tablas _bak_plg_{slug}_* con DROP TABLE
-3. Eliminar archivo .sql de WRITEPATH/plugins/backups/
-4. Eliminar registro de sys_plugin_backups
+2. DROP TABLE de las tablas _bak_plg_{slug}_* (irreversible)
+3. Eliminar el archivo .sql de WRITEPATH/plugins/backups/
+4. Marcar purged_at / purged_by en sys_plugin_backups (la fila se conserva como
+   registro de auditoría; nunca se purga un plugin que sigue instalado)
 5. logActivity('plugin_purge', 'Purgó datos del plugin: {name}')
 ```
+
+> **v1.1 (C-2):** la purga se ejecuta desde `PluginBackupService` y **no necesita los archivos del plugin en disco** — el caso típico es un plugin ya desinstalado cuyos archivos se borraron.
 
 > 🔴 **Irreversible. Requiere confirmación explícita por texto.**
 
@@ -1035,11 +1135,14 @@ El proceso es:
 Si el plugin fue desinstalado por error, el Market muestra una sección "Respaldos disponibles":
 
 ```
-1. Leer sys_plugin_backups donde slug = X
-2. Renombrar tablas _bak_plg_* de vuelta a plg_* (RENAME TABLE)
-3. Reinsertar el plugin en sys_plugins con status = 'inactive'
-4. Reinsertar permisos en sys_plugin_permissions
-5. logActivity('plugin_restore', 'Restauró plugin desde respaldo: {name}')
+1. Leer sys_plugin_backups por id (no por slug: un plugin puede tener varios respaldos)
+2. Localizar la carpeta con class_dir y validar que plugin.json existe
+3. Renombrar las tablas _bak_* de vuelta a su nombre original, en una sola
+   sentencia RENAME TABLE (v1.1 — C-2)
+4. Reinsertar el plugin en sys_plugins con status = 'inactive' usando class_dir
+5. Reinsertar permisos en sys_plugin_permissions
+6. Marcar restored_at / restored_by en sys_plugin_backups
+7. logActivity('plugin_restore', 'Restauró plugin desde respaldo: {name}')
 ```
 
 El plugin queda `INACTIVE` — el administrador debe activarlo manualmente después de verificar que todo esté en orden.
@@ -1053,6 +1156,7 @@ id              INT AI PK
 plugin_slug     VARCHAR(100)
 plugin_name     VARCHAR(150)
 plugin_version  VARCHAR(20)
+class_dir       VARCHAR(100)        -- carpeta real del plugin (C-3); permite restaurar/purgar sin slug
 backup_file     VARCHAR(500)        -- ruta relativa en WRITEPATH
 archived_tables JSON               -- lista de tablas _bak_ creadas
 backup_size_kb  INT NULL
@@ -1070,18 +1174,18 @@ notes           TEXT NULL
 ### Proceso de instalación
 
 1. `PluginMarketController::install(slug)` recibe la petición
-2. `PluginManager::install(slug)` instancia la clase principal
-3. **Si existe un respaldo previo (`sys_plugin_backups`):** ofrece opción de restaurar datos anteriores
-4. `BasePlugin::install()` → `runMigrations()` + `registerPermissions()`
-5. Se inserta en `sys_plugins` con `status = 'active'`
+2. `PluginManager::install(slug)` valida el manifiesto: `slug`, `directory` (la carpeta debe existir), `class` instanciable
+3. **Si existe un respaldo pendiente en `sys_plugin_backups` para ese slug:** no se instala nada; se responde ofreciendo **Restaurar** (los datos viven en `_bak_*`)
+4. `BasePlugin::install()` → `runMigrations()` (namespace exacto registrado en runtime) + `PluginManager::registerPermissions($manifest)`
+5. Se inserta en `sys_plugins` con `class_dir = manifest.directory` y `status = 'active'`
 6. `logActivity('plugin_install', 'Instaló plugin: ' . $name)` (§8)
 
 ### Proceso de actualización
 
-1. Subir nuevos archivos a `plugins/{Slug}/` (reemplazar los anteriores)
+1. Subir nuevos archivos a `plugins/{Directory}/` (reemplazar los anteriores)
 2. `PluginMarketController::update(slug)` llama `PluginManager::update(slug)`
-3. Corre **solo las migraciones nuevas** (CI4 track de migrations por namespace)
-4. Actualiza `sys_plugins.version`
+3. Corre **solo las migraciones nuevas** (el historial está acotado por namespace del plugin)
+4. Actualiza `sys_plugins.version` y `updated_at`
 5. `logActivity('plugin_update', '...')`
 
 > ⚠️ Las actualizaciones **nunca revierten** migraciones previas. Solo aplican las nuevas. Si una migración de actualización falla, el plugin vuelve a su estado anterior.
@@ -1162,12 +1266,14 @@ class PluginMarket
 ### Controlador del Market
 
 ```
-Controller: app/Controllers/Admin/PluginMarketController.php
+Controller: app/Controllers/Admin/PluginMarketController.php  (extends PluginBaseController)
 Ruta base:  GET  /nat/admin/plugins           (as: admin.plugins.index)
             POST /nat/admin/plugins/install    (as: admin.plugins.install)
-            POST /nat/admin/plugins/uninstall  (as: admin.plugins.uninstall)
+            POST /nat/admin/plugins/uninstall  (as: admin.plugins.uninstall)   ← exige status inactive
             POST /nat/admin/plugins/activate   (as: admin.plugins.activate)
             POST /nat/admin/plugins/deactivate (as: admin.plugins.deactivate)
+            POST /nat/admin/plugins/restore    (as: admin.plugins.restore)     ← devuelve a INACTIVE
+            POST /nat/admin/plugins/purge      (as: admin.plugins.purge)       ← requiere texto ELIMINAR
             POST /nat/admin/plugins/update     (as: admin.plugins.update)
             GET  /nat/admin/plugins/settings/(:slug) (as: admin.plugins.settings)
             POST /nat/admin/plugins/settings/(:slug) (as: admin.plugins.settings.save)
@@ -1225,86 +1331,86 @@ public function loadRoutes($routes): void
 }
 ```
 
+> **v1.1:** este método se invoca desde `PluginManager::loadRoutes()` al final de `app/Config/Routes.php`, **fuera** del grupo `nat` y de su grupo con `filter => session`. Por eso cada plugin debe declarar en su propio `Config/Routes.php` el `namespace`, el `filter => session` y el `permission:` de cada ruta (plantilla lista en `plugin_000` §11). `Config\Routing::$autoRoute` es `false`: no hay descubrimiento automático de controladores.
+
 ---
 
 ## 12. Integración de Permisos Shield CI4
 
-### Estrategia: Filtro personalizado + tabla `sys_plugin_permissions`
+### Estrategia v1.1 (P0-1): permisos de plugin integrados al catálogo de Shield
 
-En lugar de modificar `AuthGroups.php` en cada instalación, se usa un filtro que extiende las verificaciones de permisos:
+> **Se elimina `PluginPermissionFilter`.** Verificado contra Shield 1.1: `Authorizable::hasPermission()` es un `in_array` exacto sobre `auth_permissions_users`, `can()` resuelve además los comodines de `setting('AuthGroups.matrix')`, y el alias `permission:` ya lo registra Shield. Un filtro propio solo duplica comprobaciones y, además, el filtro de Shield responde con **redirect** (no 403), por lo que tampoco aportaba coherencia en AJAX.
+
+**Flujo completo del permiso de un plugin:**
+
+```
+plugin.json (permissions)
+   └─ al instalar/restaurar: PluginManager::registerPermissions()
+        └─ sys_plugin_permissions          (registro + auditoría + retiro al desinstalar)
+             └─ UserController::getAllPermissions()   [§17.6 — único touch point del ERP]
+                  └─ UI /nat/user/permissions/{id}   (el permiso se ve y se asigna)
+                       └─ Shield guarda en auth_permissions_users
+                            └─ permiso:  en rutas · auth()->user()->can(...) en vistas y controladores
+                                 └─ detectores de alertas y sidebar
+```
+
+**Touch point en `UserController` (una sola vez):**
 
 ```php
-// app/Filters/PluginPermissionFilter.php
-class PluginPermissionFilter implements FilterInterface
+// app/Controllers/Users/UserController.php
+private function getAllPermissions(): array
 {
-    public function before(RequestInterface $request, $arguments = null)
-    {
-        $user = auth()->user();
-        if (!$user) return redirect()->to(route_to('login'));
+    $permissions = setting('AuthGroups.permissions');
 
-        $permission = $arguments[0] ?? null;
-        if (!$permission) return;
-
-        // 1. Verificar primero con Shield nativo
-        if ($user->can($permission)) return; // OK
-
-        // 2. Verificar permisos de plugins
-        $pluginPerm = db_connect()->table('sys_plugin_permissions')
-            ->where('permission', $permission)->get()->getRowArray();
-
-        if (!$pluginPerm) return service('response')->setStatusCode(403);
-
-        // Verificar si el usuario tiene el permiso de plugin (via grupos o asignación directa)
-        $hasPluginPerm = db_connect()->table('auth_permissions_users')
-            ->where('user_id', $user->id)
-            ->where('permission', $permission)
-            ->countAllResults() > 0;
-
-        if (!$hasPluginPerm) return service('response')->setStatusCode(403);
+    if (db_connect()->tableExists('sys_plugin_permissions')) {
+        foreach (db_connect()->table('sys_plugin_permissions')->get()->getResultArray() as $row) {
+            $permissions[$row['permission']] = '[Plugin] ' . $row['description'];
+        }
     }
+
+    return $permissions;
 }
 ```
 
-### Helper global para vistas de plugins
+Se usa en `permissions()` (sustituye a `setting('AuthGroups.permissions')`) y en `permissions_save()`. En `permissions_save()` el merge es **imprescindible**: `syncPermissions()` reemplaza el set completo del usuario y, sin el permiso en el catálogo, lo borraría en el siguiente guardado.
 
-```php
-// En vistas de plugins — verificar permiso de plugin:
-// (funciona igual que auth()->user()->can() del ERP base)
+**Reglas de uso en plugins:**
 
-function plugin_can(string $permission): bool
-{
-    $user = auth()->user();
-    if (!$user) return false;
-    if ($user->can($permission)) return true;
-
-    return db_connect()->table('auth_permissions_users')
-        ->where('user_id', $user->id)
-        ->where('permission', $permission)
-        ->countAllResults() > 0;
-}
-```
+- Rutas: `'filter' => 'permission:servers.access'` (filtro nativo de Shield, sin alias propio).
+- Vistas y controladores: `auth()->user()->can('servers.access')`.
+- No existe ni se crea `plugin_can()`; la comprobación directa contra `auth_permissions_users` ignoraba los permisos concedidos por grupo.
+- Los permisos con prefijo `admin.*` ya se conceden por comodín a los grupos `admin` y `superadmin` (`Authorizable::can()`), por lo que no hay que editar `$matrix`.
+- Al desinstalar se retiran del registro (`removePermissions()`); las asignaciones huérfanas en `auth_permissions_users` son inertes y su limpieza queda como tarea menor no bloqueante.
 
 ---
 
 ## 13. Integración de Assets (CSS/JS)
 
+### Convención de rutas (v1.1 — A-4 corregido en la definición)
+
+| Origen (repo) | Destino público (docroot) | Quién lo lee |
+|---|---|---|
+| `plugins/{Directory}/Assets/css/plugin.css` | `public_html/plugins/{slug}/css/plugin.css` | `PluginManager::renderAssets()` |
+| `plugins/{Directory}/Assets/js/plugin.js` | `public_html/plugins/{slug}/js/plugin.js` | `PluginManager::renderAssets()` |
+
+`renderAssets()` lee **siempre** desde `FCPATH . "plugins/{slug}/..."` (el destino público), nunca desde la carpeta del plugin: así el ERP no depende de que el código fuente sea legible por el servidor web.
+
 ### En desarrollo (local)
 
-Los assets del plugin se sirven desde `plugins/{Slug}/Assets/`:
-- **CSS:** `plugins/ServerAdmin/Assets/css/plugin.css` → accesible en `public_html/plugins/server-admin/css/plugin.css`
-- **JS:** similar
-
-En desarrollo, crear symlinks:
 ```bash
-ln -s ../plugins/ServerAdmin/Assets public_html/plugins/server-admin
+ln -s ../../plugins/ServerAdmin/Assets public_html/plugins/server-admin
 ```
 
 ### En producción (deploy)
 
-El pipeline de deploy copia los assets:
 ```bash
 cp -r plugins/ServerAdmin/Assets/. public_html/plugins/server-admin/
 ```
+
+### Pendiente (A-4, fuera del alcance de PLUGIN-000)
+
+- Añadir a `.gitignore` los artefactos generados: `public_html/plugins/` (copia de deploy) y `writable/plugins/backups/` (los dumps SQL contienen datos de clientes y no deben versionarse).
+- Decidir si `plugins/` (código fuente) se versiona en el repo del ERP o se gestiona como repositorio/submódulo por plugin.
 
 ### Versionado de assets (cache busting)
 
@@ -1331,7 +1437,7 @@ class AlertHook
 
     public static function detect(\CodeIgniter\Shield\Entities\User $user): array
     {
-        if (!plugin_can('servers.access')) return [];
+        if (! auth()->user()?->can('servers.access')) return [];
 
         $db = db_connect();
         $downCount = $db->table('plg_srvadm_servers')
@@ -1387,66 +1493,66 @@ class AlertHook
 
 ---
 
-## 16. Autoloading — Composer
+## 16. Autoloading (v1.1 — sin Composer)
 
-### Modificación a `composer.json`
-
-```json
-{
-  "autoload": {
-    "psr-4": {
-      "Plugins\\": "plugins/"
-    },
-    "exclude-from-classmap": [
-      "**/Database/Migrations/**"
-    ]
-  }
-}
-```
-
-Después de modificar: `composer dump-autoload`
-
-### Autoload de migraciones de plugins
-
-CI4 descubre migraciones por namespace. En `app/Config/Migrations.php`:
+### Modificación a `app/Config/Autoload.php`
 
 ```php
-// Añadir al array de namespaces de búsqueda de migraciones:
-public array $autoNamespaces = true; // Ya configurado si se usa PSR-4 con CI4
+public $psr4 = [
+    APP_NAMESPACE => APPPATH,
+    'Config'      => APPPATH . 'Config',
+    'Plugins'     => ROOTPATH . 'plugins',   // Plugin System
+];
 ```
 
-O en la migración del propio ERP, registrar cada plugin namespace al instalarse.
+**No se toca `composer.json` ni se ejecuta `composer dump-autoload`.** El autoloader de CI4 mezcla en runtime los namespaces de Composer (`Autoloader::loadComposerNamespaces()`), pero el prefijo de los plugins vive mejor en `Config\Autoload`: es la fuente de verdad de namespaces de la app y no exige intervención por SSH en cada instalación, lo que preserva el modelo *drop-in* del Market.
+
+### Autoload y descubrimiento de migraciones de plugins
+
+El prefijo amplio resuelve **clases** pero **no descubre migraciones**: `FileLocator::listNamespaceFiles()` resuelve el namespace con `Autoloader::getNamespace()`, que es un lookup exacto de clave (`Plugins\ServerAdmin` no está en el mapa si lo registrado es `Plugins\`). Por eso:
+
+1. El namespace exacto del plugin se registra **en runtime y solo en el flujo de instalación/actualización**, justo antes de correr sus migraciones:
+
+```php
+\Config\Services::autoloader()->addNamespace('Plugins\\' . $manifest['directory'], $pluginPath);
+$runner = \Config\Services::migrations();
+$runner->setNamespace('Plugins\\' . $manifest['directory']);
+$runner->latest();
+```
+
+2. El `php spark migrate` global **no** recorre migraciones de plugins, porque `plugins/Database/Migrations/` no existe (las de cada plugin viven un nivel más abajo, dentro de su carpeta). Esta es la invariante de aislamiento que hay que conservar.
+
+**Advertencia sobre `setGroup()`:** `group` es el grupo de conexión de base de datos, no una etiqueta libre. Si `groupFilter` no coincide con `$instance->getDBGroup()`, `MigrationRunner::migrate()` marca `groupSkip = true` y retorna `true` **sin ejecutar la migración**, aunque `addHistory()` la registre como aplicada. Nunca usar `setGroup($slug)` para etiquetar migraciones de un plugin.
 
 ---
 
 ## 17. Cambios Mínimos al Código Base (One-Time)
 
-> **Estos 5 cambios se implementan UNA SOLA VEZ como parte de la implementación del sistema de plugins base. Después, cualquier plugin nuevo funciona sin tocar el ERP.**
+> **Estos 7 cambios se implementan UNA SOLA VEZ como parte de la implementación del sistema de plugins base. Después, cualquier plugin nuevo funciona sin tocar el ERP.** (v1.1: eran 5; se añaden el autoload y el catálogo de permisos.)
 
-### Implementación (crear un task agentic separado para esto)
+### Implementación (ver `agentic/plugin_000_plugin_system_core.md` v1.1)
 
 ```
 Task: Implementar PluginSystem Core en el ERP
-Archivos a crear:
-  app/Libraries/PluginSystem/PluginInterface.php
-  app/Libraries/PluginSystem/BasePlugin.php
-  app/Libraries/PluginSystem/PluginManager.php
-  app/Libraries/PluginSystem/PluginHookRegistry.php
-  app/Libraries/PluginSystem/PluginMarket.php
+Archivos a crear (ver plugin_000 §3):
+  app/Libraries/PluginSystem/{PluginInterface,BasePlugin,PluginManager,
+      PluginBackupService,PluginHookRegistry,PluginMarket}.php
+  app/Controllers/PluginSystem/PluginBaseController.php
   app/Controllers/Admin/PluginMarketController.php
   app/Views/Admin/plugins_market.php
-  app/Database/Migrations/System/2026-09-18-200000_CreateSysPlugins.php
-  app/Database/Migrations/System/2026-09-18-200001_CreateSysPluginPermissions.php
-  app/Database/Migrations/System/2026-09-18-200002_CreateSysPluginSettings.php
+  app/Views/PluginSystem/sidebar_section.php
+  app/Database/Migrations/System/2026-09-18-20000{0..3}_*.php   (4 migraciones)
+  app/Commands/PluginDoctor.php
   plugins/.gitkeep
 
-Archivos a modificar (5 touch points):
-  app/Config/Events.php        → +3 líneas (boot)
-  app/Config/Routes.php        → +2 líneas (loadRoutes)
-  loggedin_sidebar.php         → +1 línea (renderSidebar)
-  user_loggedin_layout.php     → +2 líneas (renderAssets + layout.footer)
-  AlertController.php          → +2 líneas (runAlertDetectors)
-  composer.json                → +3 líneas (PSR-4 plugins/)
+Archivos a modificar (7 touch points, con su código en plugin_000 §4):
+  1. app/Config/Autoload.php       → prefijo 'Plugins' (P0-3; sin Composer)
+  2. app/Config/Events.php         → boot en pre_system, tolerante a fallos (P0-2b)
+  3. app/Config/Routes.php         → loadRoutes($routes)
+  4. loggedin_sidebar.php          → renderSidebar(auth()->user())
+  5. user_loggedin_layout.php      → renderAssets() + doAction('layout.footer')
+  6. AlertController.php           → runAlertDetectors($user) en _detectAll()
+  7. UserController.php            → getAllPermissions() + 2 usos (P0-1)
 ```
 
 ---
@@ -1485,8 +1591,11 @@ class PluginTestCase extends \CodeIgniter\Test\CIUnitTestCase
     public function setUp(): void
     {
         parent::setUp();
-        // No cargar otros plugins — solo el que estamos probando
-        PluginManager::bootPlugin(ServerAdmin::class, ROOTPATH . 'plugins/ServerAdmin');
+        // No cargar el sistema de plugins completo: registrar solo el plugin bajo prueba.
+        // El contrato v1 (PluginInterface, helpers del ERP) se congela en plugin_000 §7.1
+        // y PluginBaseController; los tests no bootean plugins ajenos.
+        $this->plugin = new ServerAdmin(ROOTPATH . 'plugins/ServerAdmin');
+        $this->plugin->registerHooks();
     }
 }
 ```
@@ -1497,13 +1606,13 @@ class PluginTestCase extends \CodeIgniter\Test\CIUnitTestCase
 
 | § | Cómo el Plugin System lo garantiza |
 |---|-----------------------------------|
-| §1 | Todos los endpoints de plugins DEBEN llamar `$this->assertAjaxPost()`. `BasePlugin` lo hereda del `BaseController` del ERP que extienden sus controladores |
+| §1 | Los controladores de plugin extienden `App\Controllers\PluginSystem\PluginBaseController`, que aporta `assertAjaxPost()`, `jsonWithCsrf()`, `assertPermission()` y `$activityLogModel`. El `BaseController` del ERP **no** tiene esos helpers (hoy viven duplicados en las bases por módulo) |
 | §2 | Los layouts del ERP ya tienen CSRF. Las vistas de plugins extienden el mismo `$layout` que incluye el token |
 | §3 | Rutas de plugins con alias `'as' => 'plugin.slug.accion'`. Nunca `site_url()` en vistas de plugins |
-| §4 | `loggedin_sidebar.php` ya tiene el hook — los plugins usan `url_is()` en sus ítems de sidebar |
+| §4 | El sidebar de plugins se renderiza con `PluginManager::renderSidebar()` y sus ítems usan `url_is()` |
 | §5/§16 | `DataTableTrait` está disponible para cualquier Modelo de plugin via `use \App\Traits\DataTableTrait` |
 | §6 | Guard `isDataTable('#id')` obligatorio en JS de plugins |
-| §7 | **CRÍTICO:** Todo endpoint de plugin lleva `'filter' => 'permission:plugin.perm'`. Los permisos se registran en `sys_plugin_permissions` |
+| §7 | **CRÍTICO:** Todo endpoint de plugin lleva `'filter' => 'permission:plugin.perm'` (filtro nativo de Shield, sin alias propio). Los permisos se declaran en el manifiesto, se registran en `sys_plugin_permissions` y se integran al catálogo que consume la UI de usuarios (P0-1, §12) |
 | §8 | **CRÍTICO:** Todo plugin llama `logActivity('plugin_action', '...')`. El modelo `UserActivityLogsModel` está disponible globalmente |
 | §9 | Transacciones en Modelos del plugin, nunca en Controladores del plugin |
 | §10 | Select2 con `dropdownParent` en modales de plugins |
@@ -1517,8 +1626,8 @@ class PluginTestCase extends \CodeIgniter\Test\CIUnitTestCase
 | §18 | Uploads en `FCPATH . 'uploads/plugins/{slug}/'` (públicos) o `WRITEPATH . 'uploads/plugins/{slug}/'` (privados) |
 | §19 | Modelos de plugins: `$useSoftDeletes = true`, `$protectFields = true`, `$allowedFields` explícito |
 | §20 | Catálogos estáticos en constantes del modelo del plugin si son fijos |
-| §21 | Detectores de alertas siguen el formato `_buildAutoAlert()` y se registran via `PluginHookRegistry::addAction('alert.detect', ...)` |
+| §21 | Detectores de alertas siguen el formato `_buildAutoAlert()` y se registran via `PluginHookRegistry::addAction('alert.detect', ...)`. Es uno de los **dos hooks cableados en v1** (§6) |
 
 ---
 
-*Documento de arquitectura generado el 2026-09-18. Base para los archivos individuales de cada plugin (`plugin_001_*.md` – `plugin_006_*.md`).*
+*Documento de arquitectura v1.1 (2026-10-12), basado en la v1.0 del 2026-09-18. Especificación de implementación vigente del core: `agentic/plugin_000_plugin_system_core.md` (v1.1). Justificación de cada cambio: `agentic/AUDITORIA_PLUGIN_SYSTEM.md`. Base para los archivos individuales de cada plugin (`plugin_001_*.md` – `plugin_006_*.md`), que deberán ceñirse al contrato de hooks v1 (§6).*

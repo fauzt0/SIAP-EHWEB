@@ -2,7 +2,7 @@
 
 > **Fecha:** 2026-10-12 | **Rama:** `feat/plugin-system-architecture` | **Commit base:** `2233d17`
 > **Alcance de este informe:** 3 bloqueantes de arquitectura + 4 defectos de ciclo de vida del `Plugin System Core`.
-> **Estado:** propuesta. No se ha modificado `ARQUITECTURA_PLUGIN_SYSTEM.md` ni `plugin_000_plugin_system_core.md` (decisión explícita del responsable).
+> **Estado:** aplicada el 2026-10-12. Los 7 parches están incorporados en `ARQUITECTURA_PLUGIN_SYSTEM.md` (v1.1) y en `plugin_000_plugin_system_core.md` (v1.1, spec de implementación vigente). La codificación queda a cargo de otro agente; este documento conserva la evidencia y la justificación de cada cambio.
 > **Método:** contraste línea a línea del diseño contra el código real — `app/`, CI4 `4.5.3` y Shield `1.1` en `vendor/`, y la base de datos del entorno.
 
 ---
@@ -300,4 +300,4 @@ Además, varios destinos documentados **no existen**:
 
 ---
 
-*Informe preparado como insumo de decisión. Los parches descritos son propuestas y no se han aplicado al código ni a la documentación de arquitectura.*
+*Informe de auditoría aplicado. Los 7 parches descritos están incorporados en la documentación v1.1; el código PHP aún no existe y su implementación corresponde al agente codificador siguiendo `plugin_000_plugin_system_core.md` (v1.1).*

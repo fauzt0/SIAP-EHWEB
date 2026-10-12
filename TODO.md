@@ -2,7 +2,7 @@
 
 Seguimiento de pendientes y próximos hitos. Referencia técnica: [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md). Handoff del agente anterior: [ESTATUS_ENTREGA.md](ESTATUS_ENTREGA.md). Esquema organización: [SCHEMA_ORGANIZACION.md](SCHEMA_ORGANIZACION.md).
 
-**Última revisión:** 2026-09-18 (sprint de auditoría + 4 nuevos módulos).
+**Última revisión:** 2026-10-12 (parches de arquitectura del sistema de plugins aplicados; ver `agentic/AUDITORIA_PLUGIN_SYSTEM.md`).
 
 ---
 
@@ -124,16 +124,20 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 
 ---
 
-## 🔌 Sistema de Plugins — Arquitectura planificada (2026-09-18)
+## 🔌 Sistema de Plugins — Arquitectura corregida v1.1 (2026-10-12)
 
-> Arquitectura diseñada. Implementación pendiente. Ver archivos en `agentic/` para specs completas.
+> Arquitectura auditada contra el código real y parcheada. Implementación pendiente **por otro agente** (el orquestador no codifica).
+> Spec de implementación vigente: `agentic/plugin_000_plugin_system_core.md` (**v1.1**, autocontenida).
+> Marco conceptual: `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md` (v1.1; §4 y §5 quedaron como referencia histórica).
+> Auditoría y justificación de cada cambio: `agentic/AUDITORIA_PLUGIN_SYSTEM.md` (commit `7e1dbe5`).
 
 ### Plugin System Core (prerequisito — implementar PRIMERO)
-- [ ] **[PLUGIN-000]** Infraestructura del sistema de plugins: `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginHookRegistry`, `PluginMarket` — `app/Libraries/PluginSystem/`
-- [ ] **[PLUGIN-000]** 4 migraciones: `sys_plugins`, `sys_plugin_permissions`, `sys_plugin_settings`, `sys_plugin_backups`
-- [ ] **[PLUGIN-000]** 5 touch points al ERP base: `Events.php`, `Routes.php`, `loggedin_sidebar.php`, `user_loggedin_layout.php`, `AlertController.php`
-- [ ] **[PLUGIN-000]** `PluginMarketController` + vista `plugins_market.php` con flujo Desactivar → Desinstalar → Restaurar → Purgar
-- [ ] **[PLUGIN-000]** Sistema de respaldo de datos en desinstalación: `RENAME TABLE` a `_bak_plg_*` + dump SQL en `WRITEPATH/plugins/backups/`. Purga solo tras confirmación textual ELIMINAR. Plan: `agentic/plugin_000_plugin_system_core.md`
+- [ ] **[PLUGIN-000]** Infraestructura: `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginBackupService`, `PluginHookRegistry`, `PluginMarket` + `PluginBaseController` — `app/Libraries/PluginSystem/`.
+- [ ] **[PLUGIN-000]** 4 migraciones: `sys_plugins` (sin columna `config`), `sys_plugin_permissions`, `sys_plugin_settings` (fuente única de la configuración), `sys_plugin_backups` (con `class_dir`).
+- [ ] **[PLUGIN-000]** **7 touch points** al ERP base: `Config/Autoload.php`, `Events.php`, `Routes.php`, `loggedin_sidebar.php`, `user_loggedin_layout.php`, `AlertController.php`, `UserController.php` (catálogo de permisos).
+- [ ] **[PLUGIN-000]** `PluginMarketController` + vista `plugins_market.php` con flujo Desactivar → Desinstalar → Restaurar → Purgar.
+- [ ] **[PLUGIN-000]** Respaldo de datos en desinstalación: `RENAME TABLE` atómico a `_bak_plg_*` + dump SQL en `WRITEPATH/plugins/backups/`, registro **antes** de renombrar. Purga solo tras confirmación textual ELIMINAR y sin exigir los archivos del plugin.
+- [ ] **[PLUGIN-000]** Comando `php spark plugin:doctor` + criterios de aceptación CLI (el sandbox no permite verificar en navegador por el 401 Basic Auth, DT-5).
 
 ### Plugins individuales (implementar en paralelo tras Plugin-000)
 - [ ] **[PLUGIN-001]** Administrador de Servidores — DirectAdmin API, SSH web, monitor, KB+IA, daemon futuro. Plan: `agentic/plugin_001_server_admin.md`
@@ -144,9 +148,10 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 - [ ] **[PLUGIN-006]** Administrador de Proyectos — Kanban+Lista+Calendario (FullCalendar), subtareas, time tracking. Plan: `agentic/plugin_006_project_manager.md`
 
 ### Decisiones arquitectónicas clave (documentadas en `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md`)
-- Plugins en `plugins/{PascalCase}/` con namespace `Plugins\{PascalCase}\`
+- Plugins en `plugins/{Directory}/` (PascalCase) con namespace `Plugins\{Directory}\`; `directory` es obligatorio en el manifiesto y distinto del `slug`
 - Tablas con prefijo `plg_{slug}_` — nunca tocan tablas del ERP
-- Sistema de hooks: `PluginHookRegistry::addAction()` / `addFilter()` (patrón WordPress)
+- **Hooks v1 (contrato cerrado 2026-10-12):** solo `alert.detect` y `layout.footer` están cableados; el resto del catálogo queda reservado y sin punto de dispatch (ver §6)
 - Rutas en `/nat/plugins/{route_prefix}/`
-- Permisos en `sys_plugin_permissions` (no en `AuthGroups.php`)
+- Permisos: declarados en el manifiesto, registrados en `sys_plugin_permissions` e integrados al catálogo de Shield (sin filtro propio)
+- Autoload por `Config\Autoload::$psr4` (sin `composer dump-autoload`) y migraciones con namespace exacto registrado en runtime
 - Desinstalación en 3 etapas: Desactivar → Desinstalar (backup) → Purgar (irreversible)
