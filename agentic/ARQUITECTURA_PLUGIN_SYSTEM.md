@@ -935,6 +935,8 @@ Events::on('pre_system', function () {
 
 ### 7.3 `app/Views/Partials/loggedin_sidebar.php` — Sidebar dinámico
 
+**Punto de inserción (v1.1):** después del bloque de Proveedores (~línea 138) y antes del header de demo `Apps` (~línea 140); nunca al final del archivo, donde viven las secciones de demostración de AppStack.
+
 ```php
 <!-- Al final del sidebar, antes del cierre del <nav> -->
 <?= \App\Libraries\PluginSystem\PluginManager::renderSidebar(auth()->user()) ?>

@@ -136,7 +136,7 @@ if (class_exists(\App\Libraries\PluginSystem\PluginManager::class)) {
 
 ### 4.4 `app/Views/Partials/loggedin_sidebar.php` — sidebar de plugins
 
-Al final del sidebar, antes del cierre del contenedor:
+**Punto de inserción exacto:** después del cierre del bloque de Proveedores (`<?php endif; ?>` que sigue a `suppliers-nav`, línea ~138) y **antes** del header de demo `Apps` (línea ~140). No lo pongas al final del archivo: ahí viven las secciones de demostración de AppStack.
 
 ```php
 <?= \App\Libraries\PluginSystem\PluginManager::renderSidebar(auth()->user()) ?>
@@ -775,7 +775,7 @@ Métodos y reglas (implementar con el código de `§7.3` como referencia de esti
 
 ### 7.5 `PluginHookRegistry.php`
 
-Sin cambios de contrato respecto a la v1.0: `addAction`, `doAction`, `doActionCollect`, `addFilter`, `applyFilter` con prioridades (`ksort`).
+Contrato completo de la clase: `addAction`, `doAction`, `doActionCollect`, `addFilter`, `applyFilter`, todos con prioridad por defecto 10 y ordenadas con `ksort`.
 
 > **Pendiente A-6 (no implementar aquí):** envolver cada callback en `try/catch` + `log_message('error', ...)` para que un plugin defectuoso no rompa el bus. En v1 el aislamiento existe solo en el arranque y en los detectores de alertas.
 
@@ -826,10 +826,80 @@ Reglas de la vista (§2, §13, §14, §17): input CSRF al inicio del `<main>`, b
 
 ## 10. Vista parcial `sidebar_section.php`
 
-Igual que la v1.0, con dos correcciones:
+Contrato del partial (lo renderiza `PluginManager::renderSidebar()` una vez por plugin con ítems):
 
-- Comprobación de permiso con la API nativa: `auth()->user()->can($item['permission'])` (nunca consulta directa a `auth_permissions_users`).
-- `route_pattern` sigue siendo la fuente de `url_is()`.
+```php
+// $items = [ [
+//     'section'       => 'Herramientas',            // header opcional
+//     'slug'          => 'server-admin',            // id estable para el collapse
+//     'label'         => 'Servidores',
+//     'icon'          => 'fa-server',               // FontAwesome sin 'fas' (§12)
+//     'permission'    => 'servers.access',
+//     'route'         => 'servers.index',           // alias de route_to()
+//     'route_pattern' => 'nat/plugins/servers*',    // patrón para url_is()
+//     'children'      => [ ['label' => ..., 'route' => ..., 'permission' => ..., 'route_pattern' => ...] ],
+// ], ... ]
+```
+
+Reglas obligatorias:
+
+- Permiso con la API nativa (`$user->can(...)`); nunca consultas a `auth_permissions_users`.
+- Ítems e hijos sin permiso se omiten; si un padre se queda sin hijos visibles, se omite el padre completo.
+- `route_to()` para los href y `url_is()` con `route_pattern` para el estado activo (§3, §4).
+- Iconos FontAwesome (`<i class="fas fa-fw ...">`), norma §12; no Lucide.
+- Estructura Bootstrap idéntica al sidebar del ERP, con `data-bs-parent="#sidebar"`.
+
+```php
+<?php
+/** @var array $items */
+$user = auth()->user();
+if ($user === null) {
+    return;
+}
+?>
+<?php foreach ($items as $item): ?>
+    <?php if (!empty($item['section'])): ?>
+        <li class="sidebar-header"><?= esc($item['section']) ?></li>
+    <?php endif; ?>
+
+    <?php if (empty($item['permission']) || ! $user->can($item['permission'])): continue; endif; ?>
+
+    <?php $id = 'plg-nav-' . esc($item['slug'] ?? md5((string) $item['route']), 'attr'); ?>
+    <?php $isActive = !empty($item['route_pattern']) && url_is($item['route_pattern']); ?>
+
+    <?php if (!empty($item['children'])): ?>
+        <?php
+        $children = array_filter(
+            $item['children'],
+            static fn ($child) => ! empty($child['permission']) && auth()->user()->can($child['permission'])
+        );
+        ?>
+        <?php if ($children === []): continue; endif; ?>
+        <li class="sidebar-item <?= $isActive ? 'active' : '' ?>">
+            <a data-bs-target="#<?= $id ?>" data-bs-toggle="collapse"
+               class="sidebar-link <?= $isActive ? '' : 'collapsed' ?>">
+                <i class="fas fa-fw <?= esc($item['icon'] ?? 'fa-plug') ?> align-middle me-1"></i>
+                <span class="align-middle"><?= esc($item['label']) ?></span>
+            </a>
+            <ul id="<?= $id ?>" class="sidebar-dropdown list-unstyled collapse <?= $isActive ? 'show' : '' ?>"
+                data-bs-parent="#sidebar">
+                <?php foreach ($children as $child): ?>
+                    <li class="sidebar-item <?= (! empty($child['route_pattern']) && url_is($child['route_pattern'])) ? 'active' : '' ?>">
+                        <a class="sidebar-link" href="<?= route_to($child['route']) ?>"><?= esc($child['label']) ?></a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </li>
+    <?php else: ?>
+        <li class="sidebar-item <?= $isActive ? 'active' : '' ?>">
+            <a class="sidebar-link" href="<?= route_to($item['route']) ?>">
+                <i class="fas fa-fw <?= esc($item['icon'] ?? 'fa-plug') ?> align-middle me-1"></i>
+                <span class="align-middle"><?= esc($item['label']) ?></span>
+            </a>
+        </li>
+    <?php endif; ?>
+<?php endforeach; ?>
+```
 
 ---
 
