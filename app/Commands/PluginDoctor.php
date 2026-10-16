@@ -61,7 +61,13 @@ class PluginDoctor extends BaseCommand
         CLI::write('  [OK]    ' . count($installed) . ' plugins instalados', 'green');
 
         foreach ($installed as $row) {
-            $path = ROOTPATH . 'plugins/' . ($row['class_dir'] ?? '');
+            if (preg_match('/^[A-Z][A-Za-z0-9]+$/', (string) ($row['class_dir'] ?? '')) !== 1) {
+                $errors++;
+                CLI::write('  [FAIL]  ' . ($row['slug'] ?? '?') . ': class_dir no es una carpeta válida', 'red');
+                continue;
+            }
+
+            $path = ROOTPATH . 'plugins/' . $row['class_dir'];
             $file = $path . '/plugin.json';
             if (! is_file($file)) {
                 $errors++;
@@ -96,8 +102,8 @@ class PluginDoctor extends BaseCommand
             $directory = (string) ($entry['manifest']['directory'] ?? '');
             if ($directory !== basename($entry['path'])) {
                 $invalidDisk++;
-                $errors++;
-                CLI::write('  [FAIL]  directory no coincide con la carpeta ' . basename($entry['path']), 'red');
+                $warnings++;
+                CLI::write('  [WARN]  directory no coincide con la carpeta ' . basename($entry['path']), 'yellow');
                 continue;
             }
 
@@ -124,6 +130,10 @@ class PluginDoctor extends BaseCommand
         if ($db->tableExists('sys_plugin_permissions') && $db->tableExists('sys_plugins')) {
             $declared = [];
             foreach ($installed as $row) {
+                if (preg_match('/^[A-Z][A-Za-z0-9]+$/', (string) ($row['class_dir'] ?? '')) !== 1) {
+                    continue;
+                }
+
                 $file = ROOTPATH . 'plugins/' . $row['class_dir'] . '/plugin.json';
                 if (! is_file($file)) {
                     continue;
@@ -151,6 +161,10 @@ class PluginDoctor extends BaseCommand
         CLI::write('  [OK]    Hooks v1 disponibles: alert.detect, layout.footer', 'green');
 
         foreach ($installed as $row) {
+            if (preg_match('/^[A-Z][A-Za-z0-9]+$/', (string) ($row['class_dir'] ?? '')) !== 1) {
+                continue;
+            }
+
             $path = ROOTPATH . 'plugins/' . $row['class_dir'];
             $migrationsDir = $path . '/Database/Migrations';
             if (! is_dir($migrationsDir)) {

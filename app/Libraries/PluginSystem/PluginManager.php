@@ -47,9 +47,14 @@ class PluginManager
 
         foreach ($plugins as $row) {
             try {
+                $slug = (string) ($row['slug'] ?? '');
+                if (! self::isSlug($slug)) {
+                    throw new RuntimeException('Slug registrado no válido.');
+                }
+
                 $instance = self::instantiateRow($row);
                 $instance->registerHooks();
-                self::$loadedPlugins[(string) $row['slug']] = $instance;
+                self::$loadedPlugins[$slug] = $instance;
             } catch (Throwable $e) {
                 log_message('error', '[PluginSystem] no se cargó {slug}: {message}', [
                     'slug'    => $row['slug'] ?? '?',
@@ -114,11 +119,22 @@ class PluginManager
         foreach (self::$loadedPlugins as $slug => $plugin) {
             try {
                 $manifest = $plugin->getManifest();
+                if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', (string) $slug) !== 1) {
+                    continue;
+                }
+
                 $version  = preg_replace('/[^A-Za-z0-9._-]/', '', (string) ($manifest['version'] ?? '1')) ?: '1';
+                $assetDir = realpath(FCPATH . 'plugins' . DIRECTORY_SEPARATOR . $slug);
 
                 foreach (['css' => 'css/plugin.css', 'js' => 'js/plugin.js'] as $kind => $relative) {
                     $public = 'plugins/' . $slug . '/' . $relative;
-                    if (! is_file(FCPATH . $public)) {
+                    $file   = realpath(FCPATH . $public);
+                    if ($assetDir === false || $file === false || ! is_file($file)) {
+                        continue;
+                    }
+
+                    $assetPrefix = rtrim($assetDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+                    if (! str_starts_with($file, $assetPrefix)) {
                         continue;
                     }
 
@@ -410,6 +426,13 @@ class PluginManager
             $defs     = is_array($manifest['settings'] ?? null) ? $manifest['settings'] : [];
             $current  = $instance->getConfig();
             $clean    = [];
+
+            foreach ($input as $incoming => $unused) {
+                unset($unused);
+                if (! is_string($incoming) || ! array_key_exists($incoming, $defs)) {
+                    return ['success' => false, 'message' => "El ajuste '{$incoming}' no está declarado en el plugin."];
+                }
+            }
 
             foreach ($defs as $key => $definition) {
                 if (! is_string($key) || ! is_array($definition)) {

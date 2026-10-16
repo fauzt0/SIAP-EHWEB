@@ -19,11 +19,12 @@ class PluginBackupService
     {
         unset($pluginPath);
 
-        $slug   = (string) ($manifest['slug'] ?? '');
-        $prefix = (string) ($manifest['table_prefix'] ?? '');
+        $slug      = (string) ($manifest['slug'] ?? '');
+        $prefix    = (string) ($manifest['table_prefix'] ?? '');
+        $directory = (string) ($manifest['directory'] ?? '');
 
-        if (! self::isSafeSlug($slug) || ! self::isSafePrefix($prefix)) {
-            throw new RuntimeException('Manifiesto inseguro: slug o table_prefix rechazados.');
+        if (! self::isSafeSlug($slug) || ! self::isSafePrefix($prefix) || preg_match('/^[A-Z][A-Za-z0-9]+$/', $directory) !== 1) {
+            throw new RuntimeException('Manifiesto inseguro: slug, directory o table_prefix rechazados.');
         }
 
         $db     = db_connect();
@@ -48,7 +49,7 @@ class PluginBackupService
             'plugin_slug'     => $slug,
             'plugin_name'     => mb_substr((string) ($manifest['name'] ?? $slug), 0, 150),
             'plugin_version'  => mb_substr((string) ($manifest['version'] ?? '0.0.0'), 0, 20),
-            'class_dir'       => (string) $manifest['directory'],
+            'class_dir'       => $directory,
             'backup_file'     => $tables === [] ? null : $relative,
             'archived_tables' => json_encode($archived, JSON_UNESCAPED_UNICODE),
             'backup_size_kb'  => 0,
@@ -118,10 +119,13 @@ class PluginBackupService
             return ['success' => false, 'message' => 'class_dir del respaldo no es válido.'];
         }
 
-        $pluginPath   = self::pluginDirectory($classDir);
-        $manifestFile = $pluginPath . DIRECTORY_SEPARATOR . 'plugin.json';
+        $pluginPath = self::pluginDirectory($classDir);
+        if ($pluginPath === null) {
+            return ['success' => false, 'message' => 'Faltan los archivos del plugin. Súbelos antes de restaurar.'];
+        }
 
-        if ($pluginPath === null || ! is_file($manifestFile)) {
+        $manifestFile = $pluginPath . DIRECTORY_SEPARATOR . 'plugin.json';
+        if (! is_file($manifestFile)) {
             return ['success' => false, 'message' => 'Faltan los archivos del plugin. Súbelos antes de restaurar.'];
         }
 
@@ -189,8 +193,33 @@ class PluginBackupService
             return ['success' => false, 'message' => 'No se pudo registrar el plugin restaurado. Las tablas siguen archivadas.'];
         }
 
-        PluginManager::registerPermissions($manifest);
-        self::markMigrationsApplied('Plugins\\' . $manifest['directory'], $pluginPath);
+        try {
+            PluginManager::registerPermissions($manifest);
+            self::markMigrationsApplied('Plugins\\' . $manifest['directory'], $pluginPath);
+        } catch (\Throwable $e) {
+            $db->table('sys_plugins')->where('slug', $manifest['slug'])->delete();
+            try {
+                PluginManager::removePermissions((string) $manifest['slug']);
+            } catch (\Throwable) {
+            }
+
+            $namespace = 'Plugins\\' . (string) ($manifest['directory'] ?? '');
+            if (preg_match('/^Plugins\\\\[A-Z][A-Za-z0-9]+$/', $namespace) === 1) {
+                $db->table('migrations')->where('namespace', $namespace)->delete();
+            }
+
+            if ($back !== []) {
+                $revert = [];
+                foreach ($back as $original => $archiveName) {
+                    $revert[] = '`' . $original . '` TO `' . $archiveName . '`';
+                }
+                $db->query('RENAME TABLE ' . implode(', ', $revert));
+            }
+
+            log_message('error', '[PluginSystem] restore rollback: {message}', ['message' => $e->getMessage()]);
+
+            return ['success' => false, 'message' => 'No se pudo registrar el plugin restaurado. Las tablas siguen archivadas.'];
+        }
 
         $db->table('sys_plugin_backups')->where('id', $backupId)->update([
             'restored_at' => date('Y-m-d H:i:s'),
@@ -220,17 +249,22 @@ class PluginBackupService
             return ['success' => false, 'message' => 'No puedes purgar un plugin que está instalado.'];
         }
 
-        $prefix = self::prefixFromBackup($backup);
-        if ($prefix === null) {
-            return ['success' => false, 'message' => 'No se pudo confirmar el prefijo de tablas del respaldo.'];
-        }
-
-        foreach (json_decode((string) ($backup['archived_tables'] ?? '[]'), true) ?: [] as $table) {
-            if (! is_string($table) || ! self::isArchiveName($table, $prefix)) {
-                return ['success' => false, 'message' => 'El respaldo contiene un nombre de tabla no permitido.'];
+        $archived = json_decode((string) ($backup['archived_tables'] ?? '[]'), true) ?: [];
+        if ($archived !== []) {
+            $prefix = self::prefixFromBackup($backup);
+            if ($prefix === null) {
+                return ['success' => false, 'message' => 'No se pudo confirmar el prefijo de tablas del respaldo.'];
             }
 
-            $db->query('DROP TABLE IF EXISTS `' . $table . '`');
+            foreach ($archived as $table) {
+                if (! is_string($table) || ! self::isArchiveName($table, $prefix)) {
+                    return ['success' => false, 'message' => 'El respaldo contiene un nombre de tabla no permitido.'];
+                }
+            }
+
+            foreach ($archived as $table) {
+                $db->query('DROP TABLE IF EXISTS `' . $table . '`');
+            }
         }
 
         self::deleteBackupFile($backup['backup_file'] ?? null);
@@ -333,10 +367,6 @@ class PluginBackupService
             if (is_string($name) && preg_match('/^_bak_(plg_[a-z0-9]+_).+_\d{8}_\d{6}$/', $name, $matches) === 1) {
                 return $matches[1];
             }
-        }
-
-        if ($archived === []) {
-            return 'plg_none_';
         }
 
         return null;
@@ -502,15 +532,16 @@ class PluginBackupService
     {
         $dir = WRITEPATH . 'plugins/backups/';
 
-        do {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
             $stamp = date('Ymd_His');
-            $taken = is_file($dir . $slug . '_' . $stamp . '.sql');
-            if ($taken) {
-                sleep(1);
+            if (! is_file($dir . $slug . '_' . $stamp . '.sql')) {
+                return $stamp;
             }
-        } while ($taken);
 
-        return $stamp;
+            sleep(1);
+        }
+
+        throw new RuntimeException('No se pudo reservar un nombre de respaldo.');
     }
 
     private static function safeIcon(string $icon): string
