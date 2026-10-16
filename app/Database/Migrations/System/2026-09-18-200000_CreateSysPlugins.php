@@ -15,6 +15,7 @@ class CreateSysPlugins extends Migration
             'version'      => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => false],
             'main_class'   => ['type' => 'VARCHAR', 'constraint' => 255, 'null' => false],
             'class_dir'    => ['type' => 'VARCHAR', 'constraint' => 100, 'null' => false],
+            'table_prefix' => ['type' => 'VARCHAR', 'constraint' => 32, 'null' => true],
             'description'  => ['type' => 'TEXT', 'null' => true],
             'icon'         => ['type' => 'VARCHAR', 'constraint' => 50, 'null' => false, 'default' => 'fa-plug'],
             'status'       => ['type' => 'ENUM', 'constraint' => ['active', 'inactive', 'installing', 'error'], 'default' => 'inactive'],

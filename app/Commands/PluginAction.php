@@ -35,8 +35,8 @@ class PluginAction extends BaseCommand
 
         $result = match ($action) {
             'install'    => PluginManager::install($target),
-            'activate'   => $this->statusResult(PluginManager::activate($target), 'Plugin activado.', 'No se pudo activar.'),
-            'deactivate' => $this->statusResult(PluginManager::deactivate($target), 'Plugin desactivado.', 'No se pudo desactivar.'),
+            'activate'   => PluginManager::activate($target),
+            'deactivate' => PluginManager::deactivate($target),
             'uninstall'  => PluginManager::uninstall($target),
             'update'     => PluginManager::update($target),
             'restore'    => PluginManager::restore((int) $target),
@@ -73,13 +73,5 @@ class PluginAction extends BaseCommand
         }
 
         return $ok ? EXIT_SUCCESS : EXIT_ERROR;
-    }
-
-    /**
-     * @return array{success: bool, message: string}
-     */
-    private function statusResult(bool $ok, string $success, string $failure): array
-    {
-        return ['success' => $ok, 'message' => $ok ? $success : $failure];
     }
 }

@@ -17,7 +17,7 @@
 | Auditoría de seguridad del núcleo | Documentada en `agentic/AUDITORIA_PLUGIN_SYSTEM.md` §7 y `agentic/AUDITORIA_ARQUITECTURA.md` REPORTE-016 |
 | UI del mercado en navegador | No verificada (401 Basic Auth en sandbox, DT-5) |
 | Merge a `main` | Pendiente de PR; ramas divergentes (ver § Integración con `main`) |
-| Auditoría por otro modelo | Prompt listo al final de este archivo |
+| Auditoría por otro modelo | Sonnet 5.5: 0 bloqueantes, 5 defectos. Parches en esta pasada (v1.2.1) |
 | ¿Choca con `AUDITORIA_ARQUITECTURA.md`? | **No.** Ver sección «Compatibilidad con la auditoría de arquitectura del ERP» |
 
 ---
@@ -41,7 +41,7 @@ El sprint `8945ab0` (documentos legales, bitácora, nóminas, etc.) está en la 
 ## Checklist PLUGIN-000 (alineado con `TODO.md`)
 
 - [x] `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginBackupService`, `PluginHookRegistry`, `PluginMarket`, `PluginBaseController`
-- [x] Cuatro migraciones `sys_*` (sin columna `config`; `class_dir` en respaldos)
+- [x] Migraciones `sys_*` (sin columna `config`; `class_dir` en respaldos; `table_prefix` en `sys_plugins` desde v1.2.1)
 - [x] Siete touch points: `Autoload`, `Events`, `Routes`, `loggedin_sidebar`, `user_loggedin_layout`, `AlertController`, `UserController` (`getAllPermissions()` en lectura y guardado)
 - [x] `PluginMarketController` + `plugins_market.php` (Desactivar → Desinstalar → Restaurar → Purgar)
 - [x] Respaldo: `RENAME TABLE` atómico, SQL en `writable/plugins/backups/`, registro antes de renombrar; purga con `ELIMINAR`
@@ -99,6 +99,23 @@ Este clon puede no tener PHP ni base de datos. La verificación ejecutable del n
 | `renderAssets()` | `realpath` confinado a `public_html/plugins/{slug}/` |
 | `bootActivePlugins()` | Ignora slug de BD con formato inválido |
 | `plugin:doctor` | `class_dir` validado; manifiesto en disco no instalado con carpeta distinta = **WARN**, no error fatal |
+
+### Auditoría Sonnet 5.5 (0 bloqueantes → parches v1.2.1)
+
+Tras `php spark migrate` hace falta `2026-10-16-210000` (`sys_plugins.table_prefix`).
+
+| ID | Tema | Cambio |
+|----|------|--------|
+| D1 | Slug/prefijo duplicado | `manifestErrors` + `install()` rechazan dos carpetas con el mismo slug o `table_prefix` |
+| D2 | Cambio de prefijo | `update()` lo rechaza; uninstall usa el prefijo guardado; mensaje si no hay tablas |
+| D3 | Tablas > 43 chars | Constante `MAX_LIVE_TABLE_NAME`; archive/install/update/doctor |
+| D4 | Permiso compartido | Un permiso no puede pertenecer a otro `plugin_slug` |
+| D5 | `alert.detect` | Solo objetos (o array con `title`/`message`) llegan a `history_ajax` |
+| Nota | Purga restaurada | `purge()` se niega si `restored_at`; la UI no muestra Purgar |
+| Nota | Market remoto | `getAvailable()` usa `getCatalog()`; cuerpo remoto ≤ 512 KiB |
+| Nota | `requires` | deactivate/uninstall se niegan si otro plugin activo depende |
+| Nota | `activate()` | Instancia y `registerHooks()` antes de marcar activo |
+| Nota | Ajustes | `select` validado; `getConfig()` no castea texto a array |
 
 ---
 
@@ -231,7 +248,8 @@ Contrato de seguridad (muestra):
 - controladores del mercado sin db_connect()
 
 Ya corregido (no reabrir salvo regresión en código):
-restore null-path, rollback restore, purge validate-then-drop, plg_none_, archive directory, uniqueStamp cap, saveSettings claves inválidas/vacías, renderAssets traversal, boot slug inválido, doctor class_dir y WARN en manifiesto suelto.
+restore null-path, rollback restore, purge validate-then-drop, plg_none_, archive directory, uniqueStamp cap, saveSettings claves inválidas/vacías, renderAssets traversal, boot slug inválido, doctor class_dir y WARN en manifiesto suelto,
+D1 slug/prefijo duplicado, D2 table_prefix congelado, D3 tablas ≤43, D4 permiso único entre plugins, D5 alert.detect solo objetos, purge restored_at, getCatalog en getAvailable, requires en deactivate/uninstall, activate valida registerHooks.
 
 Verificación sin basura: php -l, php spark plugin:doctor; ciclo fixture temporal y limpieza de plugins/, writable/plugins/backups/*.sql, sys_*, migrations Plugins\%, users_activity_logs plugin_%.
 

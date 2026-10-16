@@ -54,9 +54,23 @@ $settings  = $settings ?? null;
                                 <?php elseif ($type === 'number'): ?>
                                     <input class="form-control" type="number" id="setting-<?= esc($key, 'attr') ?>"
                                            name="settings[<?= esc($key, 'attr') ?>]" value="<?= esc((string) $value, 'attr') ?>">
+                                <?php elseif ($type === 'select'): ?>
+                                    <?php $options = is_array($definition['options'] ?? null) ? $definition['options'] : []; ?>
+                                    <select class="form-select" id="setting-<?= esc($key, 'attr') ?>"
+                                            name="settings[<?= esc($key, 'attr') ?>]">
+                                        <?php foreach ($options as $optKey => $optLabel): ?>
+                                            <?php
+                                            $optValue = array_is_list($options) ? (string) $optLabel : (string) $optKey;
+                                            $optText  = array_is_list($options) ? (string) $optLabel : (string) $optLabel;
+                                            ?>
+                                            <option value="<?= esc($optValue, 'attr') ?>" <?= (string) $value === $optValue ? 'selected' : '' ?>>
+                                                <?= esc($optText) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 <?php else: ?>
                                     <input class="form-control" type="text" id="setting-<?= esc($key, 'attr') ?>"
-                                           name="settings[<?= esc($key, 'attr') ?>]" value="<?= esc((string) $value, 'attr') ?>">
+                                           name="settings[<?= esc($key, 'attr') ?>]" value="<?= esc(is_scalar($value) || $value === null ? (string) $value : '', 'attr') ?>">
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
@@ -169,9 +183,9 @@ $settings  = $settings ?? null;
                             <button type="button" class="btn btn-outline-primary btn-sm js-plugin-post"
                                     data-url="<?= esc(route_to('admin.plugins.restore'), 'attr') ?>"
                                     data-backup="<?= (int) $backup['id'] ?>">Restaurar</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalPurge"
+                                    data-backup="<?= (int) $backup['id'] ?>" data-name="<?= esc($backup['plugin_name'] ?? '', 'attr') ?>">Purgar</button>
                         <?php endif; ?>
-                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalPurge"
-                                data-backup="<?= (int) $backup['id'] ?>" data-name="<?= esc($backup['plugin_name'] ?? '', 'attr') ?>">Purgar</button>
                     </div>
                 </div>
             <?php endforeach; ?>

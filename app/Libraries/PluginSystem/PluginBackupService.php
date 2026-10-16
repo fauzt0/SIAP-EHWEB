@@ -13,6 +13,11 @@ use RuntimeException;
 class PluginBackupService
 {
     /**
+     * `_bak_` (5) + `_` + `Ymd_His` (15) = 21. MySQL admite 64 → la tabla viva no puede pasar de 43.
+     */
+    public const MAX_LIVE_TABLE_NAME = 43;
+
+    /**
      * @return array{backup_id: ?int, backup_file: ?string, archived_tables: array}
      */
     public static function archive(array $manifest, string $pluginPath): array
@@ -30,6 +35,12 @@ class PluginBackupService
         $db     = db_connect();
         $stamp  = self::uniqueStamp($slug);
         $tables = self::tablesForPrefix($prefix);
+        $tooLong = self::archiveNameOverflow($tables);
+        if ($tooLong !== []) {
+            throw new RuntimeException(
+                'Hay tablas demasiado largas para archivar (máximo ' . self::MAX_LIVE_TABLE_NAME . ' caracteres): ' . implode(', ', $tooLong)
+            );
+        }
 
         $backupDir = WRITEPATH . 'plugins/backups/';
         if (! is_dir($backupDir) && ! mkdir($backupDir, 0750, true) && ! is_dir($backupDir)) {
@@ -60,7 +71,10 @@ class PluginBackupService
 
         try {
             if ($tables !== []) {
-                file_put_contents($backupFile, self::dumpSql($db, $tables, $manifest));
+                $sqlDump = self::dumpSql($db, $tables, $manifest);
+                if (file_put_contents($backupFile, $sqlDump) === false) {
+                    throw new RuntimeException('No se pudo escribir el dump SQL del respaldo.');
+                }
                 chmod($backupFile, 0640);
                 $db->table('sys_plugin_backups')->where('id', $backupId)->update([
                     'backup_size_kb' => (int) max(1, (int) ceil(filesize($backupFile) / 1024)),
@@ -174,6 +188,7 @@ class PluginBackupService
                 'version'      => $manifest['version'],
                 'main_class'   => $manifest['class'],
                 'class_dir'    => $classDir,
+                'table_prefix' => $manifest['table_prefix'] ?? null,
                 'description'  => $manifest['description'] ?? '',
                 'icon'         => self::safeIcon((string) ($manifest['icon'] ?? '')),
                 'status'       => 'inactive',
@@ -245,6 +260,10 @@ class PluginBackupService
             return ['success' => false, 'message' => 'Este respaldo ya fue purgado.'];
         }
 
+        if (! empty($backup['restored_at'])) {
+            return ['success' => false, 'message' => 'Este respaldo ya fue restaurado. No se purga: las tablas ya no están archivadas.'];
+        }
+
         if ($db->table('sys_plugins')->where('slug', $backup['plugin_slug'])->countAllResults()) {
             return ['success' => false, 'message' => 'No puedes purgar un plugin que está instalado.'];
         }
@@ -289,6 +308,37 @@ class PluginBackupService
         ]);
 
         return ['success' => true, 'message' => "Datos del plugin '{$backup['plugin_name']}' eliminados definitivamente."];
+    }
+
+    /**
+     * Tablas vivas que un prefijo archivaría. Vacío si el prefijo no es seguro.
+     *
+     * @return list<string>
+     */
+    public static function liveTablesForPrefix(string $prefix): array
+    {
+        if (! self::isSafePrefix($prefix)) {
+            return [];
+        }
+
+        return self::tablesForPrefix($prefix);
+    }
+
+    /**
+     * @param list<string> $tables
+     *
+     * @return list<string>
+     */
+    public static function archiveNameOverflow(array $tables): array
+    {
+        $overflow = [];
+        foreach ($tables as $table) {
+            if (is_string($table) && strlen($table) > self::MAX_LIVE_TABLE_NAME) {
+                $overflow[] = $table;
+            }
+        }
+
+        return $overflow;
     }
 
     /**

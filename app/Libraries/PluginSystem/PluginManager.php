@@ -19,6 +19,9 @@ class PluginManager
 
     private static bool $booted = false;
 
+    /** @var list<array{path: string, manifest: array, raw: mixed, readable: bool}>|null */
+    private static ?array $onDiskCache = null;
+
     public static function bootActivePlugins(): void
     {
         if (self::$booted) {
@@ -160,7 +163,26 @@ class PluginManager
     {
         self::bootActivePlugins();
 
-        return PluginHookRegistry::doActionCollect('alert.detect', $user);
+        $collected = PluginHookRegistry::doActionCollect('alert.detect', $user);
+        $alerts    = [];
+
+        foreach ($collected as $item) {
+            if ($item instanceof \stdClass) {
+                $alerts[] = $item;
+                continue;
+            }
+
+            if (is_object($item) && ! $item instanceof \Throwable) {
+                $alerts[] = $item;
+                continue;
+            }
+
+            if (is_array($item) && (isset($item['title']) || isset($item['message']))) {
+                $alerts[] = (object) $item;
+            }
+        }
+
+        return $alerts;
     }
 
     /**
@@ -203,7 +225,17 @@ class PluginManager
      */
     public static function install(string $slug): array
     {
-        $found = self::findOnDisk($slug);
+        $matches = [];
+        foreach (self::onDiskManifests() as $entry) {
+            if (($entry['manifest']['slug'] ?? '') === $slug) {
+                $matches[] = $entry;
+            }
+        }
+        if (count($matches) > 1) {
+            return ['success' => false, 'message' => "Hay más de una carpeta con el slug '{$slug}'. Deja una sola."];
+        }
+
+        $found = $matches[0] ?? null;
         if ($found === null) {
             return ['success' => false, 'message' => 'No hay un plugin con ese slug en disco.'];
         }
@@ -254,18 +286,36 @@ class PluginManager
             }
 
             $manifest = $found['manifest'];
+            $overflow = PluginBackupService::archiveNameOverflow(
+                PluginBackupService::liveTablesForPrefix((string) ($manifest['table_prefix'] ?? ''))
+            );
+            if ($overflow !== []) {
+                self::removePermissions($slug);
+
+                return [
+                    'success' => false,
+                    'message' => 'Las tablas creadas superan ' . PluginBackupService::MAX_LIVE_TABLE_NAME . ' caracteres y no se podrían desinstalar: ' . implode(', ', $overflow),
+                ];
+            }
+
             $db->table('sys_plugins')->insert([
                 'slug'         => $manifest['slug'],
                 'name'         => $manifest['name'],
                 'version'      => $manifest['version'],
                 'main_class'   => $manifest['class'],
                 'class_dir'    => $manifest['directory'],
+                'table_prefix' => $manifest['table_prefix'] ?? null,
                 'description'  => $manifest['description'] ?? '',
                 'icon'         => self::safeIcon((string) ($manifest['icon'] ?? '')),
                 'status'       => 'active',
                 'installed_at' => date('Y-m-d H:i:s'),
             ]);
         } catch (Throwable $e) {
+            try {
+                self::removePermissions($slug);
+            } catch (Throwable) {
+            }
+
             log_message('error', '[PluginManager::install] {message}', ['message' => $e->getMessage()]);
 
             return ['success' => false, 'message' => 'Error al instalar el plugin. Revisa el log del sistema.'];
@@ -293,24 +343,51 @@ class PluginManager
             return ['success' => false, 'message' => 'Debes desactivar el plugin antes de desinstalarlo.'];
         }
 
+        $dependents = self::activeDependents($slug);
+        if ($dependents !== []) {
+            return ['success' => false, 'message' => 'Otros plugins activos lo requieren: ' . implode(', ', $dependents)];
+        }
+
         try {
             $instance = self::instantiateRow($row);
-            $backup   = $instance->uninstall();
-
-            if (empty($backup['success'])) {
-                return ['success' => false, 'message' => 'La desinstalación no completó el archivado.'];
+            $manifest = $instance->getManifest();
+            $storedPrefix = (string) ($row['table_prefix'] ?? '');
+            if ($storedPrefix !== '' && preg_match('/^plg_[a-z0-9]+_$/', $storedPrefix) === 1) {
+                $manifest['table_prefix'] = $storedPrefix;
             }
 
+            $backup = PluginBackupService::archive($manifest, $instance->getPluginPath());
+            $backup['success'] = true;
+
             $db->table('sys_plugins')->where('slug', $slug)->delete();
+
+            try {
+                self::removePermissions($slug);
+                $instance->forgetMigrationHistory();
+            } catch (Throwable $cleanup) {
+                log_message('error', '[PluginManager::uninstall] limpieza: {message}', [
+                    'message' => $cleanup->getMessage(),
+                ]);
+            }
         } catch (Throwable $e) {
             log_message('error', '[PluginManager::uninstall] {message}', ['message' => $e->getMessage()]);
+
+            $detail = $e->getMessage();
+            if (str_contains($detail, 'demasiado largas')) {
+                return ['success' => false, 'message' => $detail];
+            }
 
             return ['success' => false, 'message' => 'Error al desinstalar el plugin. Revisa el log del sistema.'];
         }
 
-        $message = "Plugin '{$row['name']}' desinstalado. Datos respaldados.";
-        if (! empty($backup['backup_file'])) {
-            $message .= ' Backup: ' . basename((string) $backup['backup_file']);
+        $archived = $backup['archived_tables'] ?? [];
+        if ($archived === []) {
+            $message = "Plugin '{$row['name']}' desinstalado. No había tablas que archivar.";
+        } else {
+            $message = "Plugin '{$row['name']}' desinstalado. Datos respaldados.";
+            if (! empty($backup['backup_file'])) {
+                $message .= ' Backup: ' . basename((string) $backup['backup_file']);
+            }
         }
 
         return ['success' => true, 'message' => $message, 'backup' => $backup];
@@ -344,14 +421,50 @@ class PluginManager
         }
     }
 
-    public static function activate(string $slug): bool
+    /**
+     * @return array{success: bool, message: string}
+     */
+    public static function activate(string $slug): array
     {
-        return self::setStatus($slug, 'active');
+        $row = self::installedRow($slug);
+        if ($row === null) {
+            return ['success' => false, 'message' => 'Plugin no instalado.'];
+        }
+
+        try {
+            $instance = self::instantiateRow($row);
+            $instance->registerHooks();
+        } catch (Throwable $e) {
+            log_message('error', '[PluginManager::activate] {slug}: {message}', [
+                'slug'    => $slug,
+                'message' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'message' => 'El plugin no se puede activar: el manifiesto o registerHooks() fallan.'];
+        }
+
+        if (! self::setStatus($slug, 'active')) {
+            return ['success' => false, 'message' => 'No se pudo activar el plugin.'];
+        }
+
+        return ['success' => true, 'message' => 'Plugin activado.'];
     }
 
-    public static function deactivate(string $slug): bool
+    /**
+     * @return array{success: bool, message: string}
+     */
+    public static function deactivate(string $slug): array
     {
-        return self::setStatus($slug, 'inactive');
+        $dependents = self::activeDependents($slug);
+        if ($dependents !== []) {
+            return ['success' => false, 'message' => 'Otros plugins activos lo requieren: ' . implode(', ', $dependents)];
+        }
+
+        if (! self::setStatus($slug, 'inactive')) {
+            return ['success' => false, 'message' => 'No se pudo desactivar el plugin.'];
+        }
+
+        return ['success' => true, 'message' => 'Plugin desactivado.'];
     }
 
     /**
@@ -371,14 +484,18 @@ class PluginManager
             return ['success' => false, 'message' => 'Plugin no instalado.'];
         }
 
-        $path         = self::directoryPath((string) $row['class_dir']);
+        $path = self::directoryPath((string) $row['class_dir']);
+        if ($path === null) {
+            return ['success' => false, 'message' => 'No están los archivos del plugin en disco.'];
+        }
+
         $manifestFile = $path . DIRECTORY_SEPARATOR . 'plugin.json';
-        if ($path === null || ! is_file($manifestFile)) {
+        if (! is_file($manifestFile)) {
             return ['success' => false, 'message' => 'No están los archivos del plugin en disco.'];
         }
 
         $manifest = json_decode((string) file_get_contents($manifestFile), true);
-        $errors   = self::manifestErrors(is_array($manifest) ? $manifest : [], (string) $path);
+        $errors   = self::manifestErrors(is_array($manifest) ? $manifest : [], $path);
         if ($errors !== [] || ! is_array($manifest)) {
             return ['success' => false, 'message' => $errors[0] ?? 'Manifiesto inválido.'];
         }
@@ -387,19 +504,37 @@ class PluginManager
             return ['success' => false, 'message' => 'El slug o la carpeta del manifiesto no coinciden con el plugin instalado.'];
         }
 
+        $storedPrefix = (string) ($row['table_prefix'] ?? '');
+        $newPrefix    = (string) ($manifest['table_prefix'] ?? '');
+        if ($storedPrefix !== '' && $storedPrefix !== $newPrefix) {
+            return ['success' => false, 'message' => 'No se puede cambiar table_prefix de un plugin instalado. Las tablas vivas quedarían sin respaldo.'];
+        }
+
         try {
             $instance = self::instantiateManifest($manifest, $path);
             if (! $instance->install()) {
                 return ['success' => false, 'message' => 'Las migraciones nuevas no se aplicaron.'];
             }
 
+            $prefixToCheck = $storedPrefix !== '' ? $storedPrefix : $newPrefix;
+            $overflow      = PluginBackupService::archiveNameOverflow(
+                PluginBackupService::liveTablesForPrefix($prefixToCheck)
+            );
+            if ($overflow !== []) {
+                return [
+                    'success' => false,
+                    'message' => 'Las tablas superan ' . PluginBackupService::MAX_LIVE_TABLE_NAME . ' caracteres y no se podrían desinstalar: ' . implode(', ', $overflow),
+                ];
+            }
+
             $db->table('sys_plugins')->where('slug', $slug)->update([
-                'name'        => $manifest['name'],
-                'version'     => $manifest['version'],
-                'main_class'  => $manifest['class'],
-                'description' => $manifest['description'] ?? '',
-                'icon'        => self::safeIcon((string) ($manifest['icon'] ?? '')),
-                'updated_at'  => date('Y-m-d H:i:s'),
+                'name'         => $manifest['name'],
+                'version'      => $manifest['version'],
+                'main_class'   => $manifest['class'],
+                'table_prefix' => $prefixToCheck !== '' ? $prefixToCheck : null,
+                'description'  => $manifest['description'] ?? '',
+                'icon'         => self::safeIcon((string) ($manifest['icon'] ?? '')),
+                'updated_at'   => date('Y-m-d H:i:s'),
             ]);
         } catch (Throwable $e) {
             log_message('error', '[PluginManager::update] {message}', ['message' => $e->getMessage()]);
@@ -464,6 +599,15 @@ class PluginManager
                     }
                     if (! is_numeric($value)) {
                         return ['success' => false, 'message' => "El ajuste '{$key}' debe ser numérico."];
+                    }
+                    $clean[$key] = (string) $value;
+                    continue;
+                }
+
+                if ($type === 'select') {
+                    $allowed = self::settingOptionValues($definition);
+                    if (! in_array((string) $value, $allowed, true)) {
+                        return ['success' => false, 'message' => "El ajuste '{$key}' no coincide con las opciones declaradas."];
                     }
                     $clean[$key] = (string) $value;
                     continue;
@@ -619,7 +763,7 @@ class PluginManager
     /**
      * @return list<string>
      */
-    public static function manifestErrors(array $manifest, string $pluginPath): array
+    public static function manifestErrors(array $manifest, string $pluginPath, bool $checkNeighbors = true): array
     {
         $errors = [];
 
@@ -664,12 +808,21 @@ class PluginManager
             $errors[] = 'table_prefix debe tener la forma plg_{identificador}_.';
         }
 
-        if ($prefix !== '') {
+        if ($checkNeighbors) {
+            $selfPath = realpath($pluginPath);
             foreach (self::onDiskManifests() as $other) {
-                if (($other['manifest']['slug'] ?? '') === $slug) {
+                $otherPath = realpath($other['path']);
+                if ($selfPath !== false && $otherPath === $selfPath) {
                     continue;
                 }
-                if (($other['manifest']['table_prefix'] ?? '') === $prefix) {
+
+                $otherSlug   = (string) ($other['manifest']['slug'] ?? '');
+                $otherPrefix = (string) ($other['manifest']['table_prefix'] ?? '');
+                if ($slug !== '' && $otherSlug === $slug) {
+                    $errors[] = "El slug '{$slug}' ya está declarado en otra carpeta (" . basename((string) $other['path']) . ').';
+                    break;
+                }
+                if ($prefix !== '' && $otherPrefix === $prefix) {
                     $errors[] = 'table_prefix ya lo usa otro plugin en disco.';
                     break;
                 }
@@ -681,7 +834,7 @@ class PluginManager
             $errors[] = 'route_prefix no es válido.';
         }
 
-        $errors = array_merge($errors, self::permissionErrors($manifest));
+        $errors = array_merge($errors, self::permissionErrors($manifest, $checkNeighbors));
 
         $settings = $manifest['settings'] ?? [];
         if ($settings !== [] && ! is_array($settings)) {
@@ -734,7 +887,7 @@ class PluginManager
     /**
      * @return list<string>
      */
-    public static function permissionErrors(array $manifest): array
+    public static function permissionErrors(array $manifest, bool $checkNeighbors = true): array
     {
         $permissions = $manifest['permissions'] ?? [];
         if (! is_array($permissions)) {
@@ -781,6 +934,12 @@ class PluginManager
                 continue;
             }
 
+            $owner = self::permissionOwner($permission, $slug, $checkNeighbors);
+            if ($owner !== null) {
+                $errors[] = "El permiso '{$permission}' ya lo declara el plugin '{$owner}'.";
+                continue;
+            }
+
             if (! is_string($description) || $description === '' || strlen($description) > 255) {
                 $errors[] = "La descripción de '{$permission}' es obligatoria y de máximo 255 caracteres.";
             }
@@ -812,6 +971,10 @@ class PluginManager
      */
     public static function onDiskManifests(): array
     {
+        if (self::$onDiskCache !== null) {
+            return self::$onDiskCache;
+        }
+
         $entries = [];
         $root    = rtrim(ROOTPATH, '/\\') . DIRECTORY_SEPARATOR . 'plugins';
 
@@ -830,7 +993,7 @@ class PluginManager
             ];
         }
 
-        return $entries;
+        return self::$onDiskCache = $entries;
     }
 
     /**
@@ -852,7 +1015,7 @@ class PluginManager
             throw new RuntimeException('main_class no coincide con el manifiesto.');
         }
 
-        $errors = self::manifestErrors($manifest, $path);
+        $errors = self::manifestErrors($manifest, $path, false);
         if ($errors !== []) {
             throw new RuntimeException($errors[0]);
         }
@@ -895,6 +1058,88 @@ class PluginManager
             'status'     => $status,
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function activeDependents(string $slug): array
+    {
+        $names = [];
+        foreach (self::installedRows() as $row) {
+            if ((string) ($row['slug'] ?? '') === $slug || ($row['status'] ?? '') !== 'active') {
+                continue;
+            }
+
+            $path = self::directoryPath((string) ($row['class_dir'] ?? ''));
+            if ($path === null || ! is_file($path . DIRECTORY_SEPARATOR . 'plugin.json')) {
+                continue;
+            }
+
+            $manifest = json_decode((string) file_get_contents($path . DIRECTORY_SEPARATOR . 'plugin.json'), true);
+            $requires = is_array($manifest) ? ($manifest['requires'] ?? []) : [];
+            if (is_array($requires) && in_array($slug, $requires, true)) {
+                $names[] = (string) ($row['name'] ?? $row['slug']);
+            }
+        }
+
+        return $names;
+    }
+
+    private static function permissionOwner(string $permission, string $exceptSlug, bool $checkDisk): ?string
+    {
+        if ($checkDisk) {
+            foreach (self::onDiskManifests() as $entry) {
+                $otherSlug = (string) ($entry['manifest']['slug'] ?? '');
+                if ($otherSlug === '' || $otherSlug === $exceptSlug || ! $entry['readable']) {
+                    continue;
+                }
+
+                $declared = $entry['manifest']['permissions'] ?? [];
+                if (is_array($declared) && array_key_exists($permission, $declared)) {
+                    return $otherSlug;
+                }
+            }
+        }
+
+        try {
+            $db = db_connect();
+            if (! $db->tableExists('sys_plugin_permissions')) {
+                return null;
+            }
+
+            $row = $db->table('sys_plugin_permissions')
+                ->where('permission', $permission)
+                ->where('plugin_slug !=', $exceptSlug)
+                ->get()
+                ->getRowArray();
+
+            if ($row) {
+                return (string) $row['plugin_slug'];
+            }
+        } catch (Throwable) {
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $definition
+     *
+     * @return list<string>
+     */
+    private static function settingOptionValues(array $definition): array
+    {
+        $options = $definition['options'] ?? [];
+        if (! is_array($options)) {
+            return [];
+        }
+
+        if (array_is_list($options)) {
+            return array_map('strval', array_values($options));
+        }
+
+        return array_map('strval', array_keys($options));
     }
 
     private static function directoryPath(string $directory): ?string

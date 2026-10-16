@@ -83,13 +83,20 @@ abstract class BasePlugin implements PluginInterface
                 ->getResultArray();
 
             foreach ($rows as $row) {
+                $key = (string) ($row['key'] ?? '');
                 if ($row['value'] === null) {
-                    $settings[$row['key']] = null;
+                    $settings[$key] = null;
+                    continue;
+                }
+
+                $type = (string) (($this->manifest['settings'][$key]['type'] ?? 'text'));
+                if (in_array($type, ['text', 'password', 'number', 'select'], true)) {
+                    $settings[$key] = $row['value'];
                     continue;
                 }
 
                 $decoded = json_decode((string) $row['value'], true);
-                $settings[$row['key']] = is_array($decoded) ? $decoded : $row['value'];
+                $settings[$key] = is_array($decoded) ? $decoded : $row['value'];
             }
         }
 
@@ -190,6 +197,11 @@ abstract class BasePlugin implements PluginInterface
 
     protected function removeMigrationHistory(): void
     {
+        $this->forgetMigrationHistory();
+    }
+
+    public function forgetMigrationHistory(): void
+    {
         $namespace = $this->getNamespace();
 
         if (! preg_match('/^Plugins\\\\[A-Z][A-Za-z0-9]+$/', $namespace)) {
@@ -215,9 +227,8 @@ abstract class BasePlugin implements PluginInterface
     public function uninstall(): array
     {
         $backup = PluginBackupService::archive($this->manifest, $this->pluginPath);
-
         PluginManager::removePermissions($this->getSlug());
-        $this->removeMigrationHistory();
+        $this->forgetMigrationHistory();
 
         return ['success' => true] + $backup;
     }

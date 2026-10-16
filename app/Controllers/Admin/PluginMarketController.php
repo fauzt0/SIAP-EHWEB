@@ -79,14 +79,10 @@ class PluginMarketController extends PluginBaseController
         $this->assertAjaxPost();
         $this->assertPermission('admin.manage-plugins');
 
-        $slug = trim((string) $this->request->getPost('slug'));
-        $ok   = PluginManager::activate($slug);
+        $slug   = trim((string) $this->request->getPost('slug'));
+        $result = PluginManager::activate($slug);
 
-        return $this->respond(
-            ['success' => $ok, 'message' => $ok ? 'Plugin activado.' : 'No se pudo activar el plugin.'],
-            'plugin_activate',
-            "Activó el plugin '{$slug}'."
-        );
+        return $this->respond($result, 'plugin_activate', "Activó el plugin '{$slug}'.");
     }
 
     public function deactivate()
@@ -94,14 +90,10 @@ class PluginMarketController extends PluginBaseController
         $this->assertAjaxPost();
         $this->assertPermission('admin.manage-plugins');
 
-        $slug = trim((string) $this->request->getPost('slug'));
-        $ok   = PluginManager::deactivate($slug);
+        $slug   = trim((string) $this->request->getPost('slug'));
+        $result = PluginManager::deactivate($slug);
 
-        return $this->respond(
-            ['success' => $ok, 'message' => $ok ? 'Plugin desactivado.' : 'No se pudo desactivar el plugin.'],
-            'plugin_deactivate',
-            "Desactivó el plugin '{$slug}'."
-        );
+        return $this->respond($result, 'plugin_deactivate', "Desactivó el plugin '{$slug}'.");
     }
 
     public function restore()

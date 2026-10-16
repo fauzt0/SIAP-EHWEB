@@ -57,7 +57,7 @@ class PluginMarket
         }
 
         $available = [];
-        foreach (self::scanLocalPlugins() as $plugin) {
+        foreach (self::getCatalog() as $plugin) {
             if (! isset($installed[(string) ($plugin['slug'] ?? '')])) {
                 $available[] = $plugin;
             }
@@ -119,7 +119,7 @@ class PluginMarket
         ]);
 
         $raw = @file_get_contents($url, false, $context);
-        if (! is_string($raw) || $raw === '') {
+        if (! is_string($raw) || $raw === '' || strlen($raw) > 524288) {
             return [];
         }
 

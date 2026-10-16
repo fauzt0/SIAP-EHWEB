@@ -361,3 +361,21 @@ Arranque también desde `loadRoutes()` porque `spark` no dispara `pre_system`. R
 | Datos de prueba | El fixture, sus tablas, sus dumps y las filas de bitácora del ensayo se eliminaron. `plugin:doctor` queda en 0 errores. |
 
 Riesgo aceptado: un plugin que ya está en disco, una vez instalado por un administrador, corre con el usuario de base de datos de la aplicación. El núcleo impide que el manifiesto apunte fuera de su carpeta; no es un sandbox. `min_erp_version` sigue sin compararse. La UI del Market no se recorrió en el navegador: `https://sandbox.especialistashosting.com/nat/admin/plugins` responde `401` con `WWW-Authenticate: Basic realm="Area de desarrollo"` antes de Shield.
+
+---
+
+## 8. Auditoría Sonnet 5.5 (2026-10-16) — hallazgos absorbidos
+
+**Veredicto del auditor:** 0 bloqueantes, 5 defectos, notas. CLI; UI no ejercida (401).
+
+| ID | Hallazgo | Resolución en código |
+|---|---|---|
+| D1 | Dos carpetas, mismo slug/prefijo, `doctor` en silencio | `manifestErrors($checkNeighbors)` + `install()` cuenta coincidencias |
+| D2 | `update()` aceptaba otro `table_prefix` y uninstall dejaba tablas vivas | Columna `sys_plugins.table_prefix`; `update()` rechaza el cambio; uninstall archiva con el prefijo guardado; mensaje honesto si 0 tablas |
+| D3 | Tabla > 43 caracteres no se puede `RENAME` a `_bak_*` | `MAX_LIVE_TABLE_NAME`; fallo en archive/install/update/doctor |
+| D4 | Mismo permiso en dos plugins | `permissionOwner()` disco + `sys_plugin_permissions` |
+| D5 | `alert.detect` mezclaba arrays asociativos → TypeError en `history_ajax` | `runAlertDetectors()` solo objetos / arrays con title\|message |
+
+Notas aplicadas: `purge()` se niega si `restored_at`; la UI oculta Purgar/Restaurar en ese caso; `file_put_contents` comprobado; `getConfig()` no convierte texto JSON-like en array; `select` validado y pintado; `PLUGIN_MARKET_URL` entra por `getAvailable()` → `getCatalog()`; `requires` en deactivate/uninstall; `activate()` instancia y llama `registerHooks()` antes de marcar activo; `plugin:doctor` captura fallo de BD; caché de `onDiskManifests()`; respuesta remota ≤ 512 KiB.
+
+Pendientes conscientes (no bloquean el núcleo): passwords en claro en `sys_plugin_settings`; `plugin:action settings` por argv; dump SQL entero en memoria; `class_exists` al abrir el Market carga PHP del plugin aún no instalado; huérfanos `auth_permissions_users`; `min_erp_version` / caché de listado / hooks reservados.

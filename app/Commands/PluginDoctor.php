@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Commands;
 
+use App\Libraries\PluginSystem\PluginBackupService;
 use App\Libraries\PluginSystem\PluginManager;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -27,9 +28,18 @@ class PluginDoctor extends BaseCommand
 
         CLI::write('Plugin System — doctor', 'yellow');
 
-        $db = db_connect();
+        try {
+            $db = db_connect();
+            $db->query('SELECT 1');
+        } catch (Throwable $e) {
+            CLI::write('  [FAIL]  Sin conexión a la base de datos.', 'red');
+            CLI::write('  1 errores, 0 advertencias');
+
+            return EXIT_ERROR;
+        }
+
         $tables = [
-            'sys_plugins'            => ['class_dir'],
+            'sys_plugins'            => ['class_dir', 'table_prefix'],
             'sys_plugin_permissions' => ['permission'],
             'sys_plugin_settings'    => ['key'],
             'sys_plugin_backups'     => ['class_dir'],
@@ -86,6 +96,15 @@ class PluginDoctor extends BaseCommand
             if ($manifestErrors !== []) {
                 $errors++;
                 CLI::write('  [FAIL]  ' . ($row['slug'] ?? '?') . ': ' . $manifestErrors[0], 'red');
+            }
+
+            $prefix = (string) (($row['table_prefix'] ?? '') ?: ($manifest['table_prefix'] ?? ''));
+            $overflow = PluginBackupService::archiveNameOverflow(
+                PluginBackupService::liveTablesForPrefix($prefix)
+            );
+            if ($overflow !== []) {
+                $errors++;
+                CLI::write('  [FAIL]  ' . ($row['slug'] ?? '?') . ': tablas demasiado largas para archivar (' . implode(', ', $overflow) . ')', 'red');
             }
         }
 
