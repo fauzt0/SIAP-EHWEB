@@ -124,12 +124,12 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 
 ---
 
-## 🔌 Sistema de Plugins — Arquitectura corregida v1.1 (2026-10-12)
+## 🔌 Sistema de Plugins — Arquitectura v1.2 (2026-10-16)
 
-> Arquitectura auditada contra el código real y parcheada. Implementación pendiente **por otro agente** (el orquestador no codifica).
-> Spec de implementación vigente: `agentic/plugin_000_plugin_system_core.md` (**v1.1**, autocontenida).
-> Marco conceptual: `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md` (v1.1; §4 y §5 quedaron como referencia histórica).
-> Auditoría y justificación de cada cambio: `agentic/AUDITORIA_PLUGIN_SYSTEM.md` (commit `7e1dbe5`).
+> Arquitectura auditada contra el código real. La spec vigente es v1.2 (`plugin_000` §0b): cierra gitignore, aislamiento del bus de hooks, validación del manifiesto y el arranque en CLI. Los plugins 001–006 no se codifican en PLUGIN-000.
+> Spec de implementación: `agentic/plugin_000_plugin_system_core.md` (**v1.2**).
+> Marco conceptual: `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md` (v1.2; §4 y §5 son referencia histórica).
+> Auditoría: `agentic/AUDITORIA_PLUGIN_SYSTEM.md`.
 
 ### Plugin System Core (prerequisito — implementar PRIMERO)
 - [ ] **[PLUGIN-000]** Infraestructura: `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginBackupService`, `PluginHookRegistry`, `PluginMarket` + `PluginBaseController` — `app/Libraries/PluginSystem/`.

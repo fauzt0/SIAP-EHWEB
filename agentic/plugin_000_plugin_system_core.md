@@ -1,6 +1,6 @@
-# Plugin 000 — Plugin System Core (Prerequisito) — v1.1
+# Plugin 000 — Plugin System Core (Prerequisito) — v1.2
 
-> **Tipo:** tarea del ERP base (no es un plugin) | **Versión:** 1.1.0 (2026-10-12)
+> **Tipo:** tarea del ERP base (no es un plugin) | **Versión:** 1.2.0 (2026-10-16; v1.1: 2026-10-12)
 > **Referencia conceptual:** `ARQUITECTURA_PLUGIN_SYSTEM.md` (v1.1)
 > **Origen de los cambios:** `AUDITORIA_PLUGIN_SYSTEM.md` (commit `7e1dbe5`)
 > **Debe completarse ANTES de implementar cualquier plugin (001–006)**
@@ -26,7 +26,29 @@
 
 **Corrección de coherencia A-5:** `sys_plugins.config` desaparece. La única fuente de verdad de la configuración es `sys_plugin_settings` (clave/valor), que es la que leen `getConfig()`/`setConfig()`.
 
-**Pendientes deliberados (fuera de este parche, no implementar aquí):** política de assets y `.gitignore` (A-4), caché del listado de plugins y `try/catch` dentro del bus de hooks (A-6), `version_compare()` de `min_erp_version` (anexo A), mecanismo de tabs en offcanvas y hooks reservados (anexo B).
+**Pendientes que siguen fuera de alcance:** caché del listado de plugins (parte de A-6), `version_compare()` de `min_erp_version` (el ERP no publica una constante de versión), subida ZIP, mecanismo de tabs en offcanvas y hooks reservados (anexo B). No implementar los plugins 001–006.
+
+## 0b. Correcciones v1.2 (obligatorias al codificar)
+
+Estas reglas pisan cualquier bloque anterior de este archivo que las contradiga. El marco está en `ARQUITECTURA_PLUGIN_SYSTEM.md` v1.2.
+
+1. **Arranque en CLI (V12-1).** `PluginManager::loadRoutes()` llama primero a `bootActivePlugins()`. El guard `$booted` hace la segunda llamada un no-op en la petición web, donde `pre_system` ya corrió. `php spark` no dispara `pre_system`.
+2. **Runner propio (V12-2).** `runMigrations()` usa `\Config\Services::migrations(null, null, false)`, registra el namespace exacto, comprueba `findNamespaceMigrations()` y llama `latest()` sin argumentos. Nunca `setGroup($slug)`.
+3. **Catálogo de permisos (V12-3).** `PluginManager::permissionCatalog(): array` fusiona `setting('AuthGroups.permissions')` con `sys_plugin_permissions` (con `tableExists`). `UserController::getAllPermissions()` solo delega ahí. El controlador no llama `db_connect()` (§9).
+4. **Manifiesto (V12-4).** Antes de `new $class`:
+   - `slug`: `^[a-z0-9]+(?:-[a-z0-9]+)*$`
+   - `directory`: `^[A-Z][A-Za-z0-9]+$` y `realpath` de `plugins/{directory}` dentro de `realpath(ROOTPATH.'plugins')`
+   - `class`: `Plugins\{directory}\{Nombre}` y el archivo de la clase, según `ReflectionClass`, dentro de esa carpeta
+   - `table_prefix`: `^plg_[a-z0-9]+_$`
+   - cada permiso: `^[a-z][a-z0-9]*(\.[a-z0-9][a-z0-9_-]*)+$`, ausente del catálogo del ERP, y sin prefijo `admin.` ni `superadmin.`
+5. **SQL (V12-5).** Solo identificadores `[A-Za-z0-9_]`. El `DROP` y el `RENAME` de vuelta exigen el patrón `_bak_{prefijo}…_{YYYYmmdd}_{His}`. `backup_file` debe ser `plugins/backups/{slug}_{stamp}.sql` y su `realpath` debe quedar bajo `WRITEPATH/plugins/backups/`. Si `RENAME TABLE` lanza, se elimina la fila recién insertada y el `.sql`: la sentencia es atómica, así que no hay tablas a medio renombrar.
+6. **Bus de hooks (V12-6).** `doAction`, `doActionCollect` y `applyFilter` envuelven cada callback en `try/catch` + `log_message('error')`. Un filtro que falla deja el valor anterior. No hay caché del listado.
+7. **Assets y gitignore (V12-7).** `renderAssets()` sigue leyendo `FCPATH.'plugins/{slug}/'`. En web `FCPATH` es `public_html/`. Ignorar `public_html/plugins/*` y `writable/plugins/backups/*` (conservar `index.html`).
+8. **Footer (V12-8).** El `doAction('layout.footer')` va después de `pageFooterScripts` y `scripts`, antes de `</html>`.
+9. **Market en el sidebar (V12-9).** Ítem «Plugins» visible con `admin.manage-plugins`.
+10. **CLI (V12-10).** `plugin:doctor` y `plugin:action {install|activate|deactivate|uninstall|restore|purge|update}`. `purge` y la desinstalación destructiva exigen el argumento `ELIMINAR` donde corresponda. `uninstall` sigue exigiendo status `inactive`.
+11. **Sin ZIP y sin versión de ERP (V12-11).**
+12. **Restore/purge (V12-12).** No restaurar si `restored_at` ya tiene valor o si el slug sigue en `sys_plugins`. `purge()` además borra las filas de `sys_plugin_settings` de ese slug. El header de sección del sidebar solo se imprime si el ítem es visible para el usuario.
 
 ---
 
@@ -759,7 +781,7 @@ Métodos y reglas (implementar con el código de `§7.3` como referencia de esti
 | Método | Regla |
 |---|---|
 | `bootActivePlugins(): void` | Guarda `self::$booted`. `tableExists('sys_plugins')` antes de consultar (P0-2b). Por cada fila: `try/catch` → log y `continue` si el plugin no es cargable. Instancia `new $row['main_class'](ROOTPATH . 'plugins/' . $row['class_dir'])` y llama `registerHooks()`. Nunca propaga una excepción al ERP. Sin caché en v1 (pendiente A-6). |
-| `loadRoutes($routes): void` | Itera `self::$loadedPlugins` y llama `$plugin->loadRoutes($routes)`. |
+| `loadRoutes($routes): void` | Llama `bootActivePlugins()` y luego itera `self::$loadedPlugins`. Cada `loadRoutes()` del plugin va en `try/catch` (V12-1). |
 | `renderSidebar(?User $user): string` | `null` safe. Itera plugins, `getSidebarItems($user)` y renderiza `PluginSystem/sidebar_section`. |
 | `renderAssets(): string` | Por cada plugin activo: `FCPATH . "plugins/{$slug}/css/plugin.css"` y `js/plugin.js` con `?v={version}` del manifiesto. |
 | `runAlertDetectors(User $user): array` | `PluginHookRegistry::doActionCollect('alert.detect', $user)`. |
@@ -777,7 +799,7 @@ Métodos y reglas (implementar con el código de `§7.3` como referencia de esti
 
 Contrato completo de la clase: `addAction`, `doAction`, `doActionCollect`, `addFilter`, `applyFilter`, todos con prioridad por defecto 10 y ordenadas con `ksort`.
 
-> **Pendiente A-6 (no implementar aquí):** envolver cada callback en `try/catch` + `log_message('error', ...)` para que un plugin defectuoso no rompa el bus. En v1 el aislamiento existe solo en el arranque y en los detectores de alertas.
+> **v1.2 (V12-6):** cada callback va en `try/catch`. La caché del listado sigue fuera de alcance.
 
 ### 7.6 `PluginMarket.php`
 
@@ -1049,7 +1071,8 @@ Plugin System — doctor
 
 ```
 Actúa como desarrollador experto en CodeIgniter 4. Implementa EXACTAMENTE la
-infraestructura descrita en @agentic/plugin_000_plugin_system_core.md (v1.1).
+infraestructura descrita en @agentic/plugin_000_plugin_system_core.md (v1.2).
+Si un bloque de §7 contradice §0b, prevalece §0b.
 
 Contexto obligatorio (leer antes de escribir código):
 - @agentic/plugin_000_plugin_system_core.md  ← spec vigente, autocontenida
@@ -1062,7 +1085,8 @@ Alcance:
 - ES INFRAESTRUCTURA PURA. No implementes ninguno de los plugins 001–006.
 - No toques composer.json ni ejecutes composer.
 - No añadas hooks fuera del contrato v1 (alert.detect, layout.footer).
-- Respeta los pendientes marcados (A-4, A-6 y siguientes): no los implementes.
+- Implementa §0b (gitignore, try/catch del bus, validación del manifiesto, CLI).
+- No implementes la caché del listado, la subida ZIP, min_erp_version ni los hooks reservados.
 
 Definición de terminado:
 1. Las 4 tablas sys_* existen y el arranque es tolerante (checkout sin plugins).

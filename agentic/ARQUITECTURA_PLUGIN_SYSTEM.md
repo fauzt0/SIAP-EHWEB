@@ -1,6 +1,6 @@
 # Arquitectura del Sistema de Plugins — ERP CI4
 
-> **Versión:** 1.1.0 | **Fecha:** 2026-10-12 (v1.0: 2026-09-18) | **Autor:** Arquitecto ERP
+> **Versión:** 1.2.0 | **Fecha:** 2026-10-16 (v1.1: 2026-10-12, v1.0: 2026-09-18) | **Autor:** Arquitecto ERP
 > **Analogía de referencia:** Similar al sistema de plugins de WordPress (actions/filters), pero construido sobre CodeIgniter 4, Shield CI4 y los estándares del proyecto (§1–§21 de `DOCUMENTACION_TECNICA.md`).
 
 > ### Nota de versión 1.1 — parches aplicados
@@ -17,7 +17,26 @@
 > | C-3 | §3, §8 y §9: campo `directory` obligatorio en el manifiesto; `class_dir` guarda la carpeta y se guarda también en `sys_plugin_backups`. |
 > | C-4 | §9: limpieza del historial de migraciones al desinstalar. |
 >
-> **El código de referencia vigente de las clases del core vive en `agentic/plugin_000_plugin_system_core.md` (v1.1), no en §4/§5 de este documento.** Los bloques de código de §4 y §5 se conservan solo como contexto histórico: están marcados como obsoletos y no deben implementarse.
+> **El código de referencia vigente de las clases del core vive en `agentic/plugin_000_plugin_system_core.md` (v1.2), no en §4/§5 de este documento.** Los bloques de código de §4 y §5 se conservan solo como contexto histórico: están marcados como obsoletos y no deben implementarse. En particular, el segundo `uninstall(): bool` de §4 es código muerto: copiarlo junto al `uninstall(): array` es un error fatal de PHP.
+
+> ### Nota de versión 1.2 — cierre previo a la codificación (2026-10-16)
+>
+> Revisión final contra `DOCUMENTACION_TECNICA.md` §1–§21, CI4 4.5.3 y el docroot real (`public_html/index.php`). No cambia el contrato de hooks v1 ni el ciclo de vida. Detalle en `plugin_000` §0b.
+>
+> | ID | Corrección |
+> |----|------------|
+> | V12-1 | `php spark` no dispara `pre_system`. `loadRoutes()` llama a `bootActivePlugins()` (idempotente) para que las rutas de plugins existan también en CLI. |
+> | V12-2 | El runner de migraciones se instancia con `Services::migrations(null, null, false)`. El servicio compartido no debe quedar con el namespace del plugin. |
+> | V12-3 | `UserController` no abre la base de datos (§9). El catálogo de permisos lo arma `PluginManager::permissionCatalog()`. |
+> | V12-4 | Validación de manifiesto antes de instanciar: `slug`, `directory` (sin `..`), `class` dentro de la carpeta del plugin, `table_prefix` `plg_[a-z0-9]+_`. Los permisos no pueden pisar el catálogo del ERP ni usar el prefijo `admin.` / `superadmin.` (el comodín del grupo los concedería a todos los administradores). |
+> | V12-5 | Identificadores SQL solo `[A-Za-z0-9_]`. `DROP`/`RENAME` solo sobre `_bak_` + prefijo del plugin. `backup_file` confinado a `writable/plugins/backups/`. Si el `RENAME` falla, se borra la fila de respaldo (la sentencia es atómica; no quedan tablas huérfanas). |
+> | V12-6 | A-6: cada callback del bus va en `try/catch`. La caché del listado sigue fuera de v1. |
+> | V12-7 | A-4/A-8: `.gitignore` de `public_html/plugins/*` y `writable/plugins/backups/*`. El docroot web es `public_html` (`FCPATH` de `public_html/index.php`). `spark` define `FCPATH` como `public/`, que no sirve el sitio. |
+> | V12-8 | `layout.footer` se despacha después de los scripts del layout. Ese archivo cierra `</body>` antes de `app.js`; un hook pegado a `</body>` correría sin las librerías del ERP. |
+> | V12-9 | Enlace de sidebar del Market (`admin.manage-plugins`, `url_is('nat/admin/plugins*')`). No es un hook de plugin. |
+> | V12-10 | Comandos `plugin:doctor` y `plugin:action` (install, activate, deactivate, uninstall, restore, purge, update). El sandbox responde 401 antes de Shield. |
+> | V12-11 | No hay subida ZIP en v1. Un ZIP ejecutaría PHP arbitrario. `min_erp_version` no se compara: el ERP no define una constante de versión. |
+> | V12-12 | `restore()` rechaza un respaldo ya restaurado. `purge()` borra también `sys_plugin_settings` de ese slug. |
 
 ---
 
@@ -529,19 +548,8 @@ abstract class BasePlugin implements PluginInterface
         return ['success' => true] + $backup;   // C-4: sin esto, reinstalar no recrea tablas
     }
 
-    /**
-     * Desinstala el plugin de forma SEGURA:
-     * 1. Archiva datos (SQL export + RENAME tables a _bak_*)
-     * 2. Elimina permisos de sys_plugin_permissions
-     * Los datos son recuperables hasta que se llame purge().
-     * NUNCA hace DROP TABLE directamente.
-     */
-    public function uninstall(): bool
-    {
-        $this->backupPluginData(); // archiva + renombra tablas → sys_plugin_backups
-        $this->removePermissions();
-        return true;
-    }
+    // v1.2: NO existe un segundo uninstall(): bool. Esa firma contradice C-1
+    // y, pegada junto a uninstall(): array, el archivo PHP no compila.
 
     public function activate(): void   { $this->registerHooks(); }
     public function deactivate(): void { /* hooks se liberan automáticamente al no cargarse */ }
@@ -1632,4 +1640,4 @@ class PluginTestCase extends \CodeIgniter\Test\CIUnitTestCase
 
 ---
 
-*Documento de arquitectura v1.1 (2026-10-12), basado en la v1.0 del 2026-09-18. Especificación de implementación vigente del core: `agentic/plugin_000_plugin_system_core.md` (v1.1). Justificación de cada cambio: `agentic/AUDITORIA_PLUGIN_SYSTEM.md`. Base para los archivos individuales de cada plugin (`plugin_001_*.md` – `plugin_006_*.md`), que deberán ceñirse al contrato de hooks v1 (§6).*
+*Documento de arquitectura v1.2 (2026-10-16). Especificación de implementación vigente del core: `agentic/plugin_000_plugin_system_core.md` (v1.2, §0b pisa los bloques anteriores). Justificación: `agentic/AUDITORIA_PLUGIN_SYSTEM.md`. Los plugins `plugin_001`–`plugin_006` siguen sin codificar y deben ceñirse al contrato de hooks v1 (§6).*

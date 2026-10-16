@@ -300,4 +300,23 @@ Además, varios destinos documentados **no existen**:
 
 ---
 
-*Informe de auditoría aplicado. Los 7 parches descritos están incorporados en la documentación v1.1; el código PHP aún no existe y su implementación corresponde al agente codificador siguiendo `plugin_000_plugin_system_core.md` (v1.1).*
+*Informe de auditoría aplicado. Los 7 parches descritos están incorporados en la documentación v1.1. La revisión final v1.2 (2026-10-16) cierra los hallazgos que seguían abiertos y que afectaban al núcleo: A-4/A-8 (`.gitignore` y docroot `public_html`), A-6 en su parte de aislamiento del bus (la caché no), y los huecos de seguridad del manifiesto y del SQL descritos en `plugin_000` §0b. Siguen fuera del núcleo: hooks reservados y tabs de offcanvas (anexo B, PLUGIN-000b), caché del listado y `min_erp_version`.*
+
+---
+
+## 6. Cierre v1.2 — hallazgos que la codificación del núcleo debe absorber
+
+| Hallazgo | Decisión v1.2 |
+|---|---|
+| A-1 `LIKE` con `_` | Ya resuelto en v1.1 (`str_starts_with`). Se añade whitelist `[A-Za-z0-9_]`. |
+| A-2 `RENAME` no atómico | Ya resuelto en v1.1. Si la sentencia falla, se retira la fila de respaldo. |
+| A-3 purga exige `plugin.json` | Ya resuelto con `PluginBackupService`. |
+| A-4 assets / gitignore | `.gitignore` entra en el núcleo. El destino público es `public_html/plugins/{slug}/` porque ese `index.php` define `FCPATH`. |
+| A-5 dos fuentes de configuración | Ya resuelto: solo `sys_plugin_settings`. |
+| A-6 arranque frágil | `tableExists` + `try/catch` por plugin (v1.1) y por callback del bus (v1.2). Sin caché. |
+| A-7 `plugin_can` / `admin.*` | No existe `plugin_can`. Un plugin no puede declarar permisos `admin.*` ni `superadmin.*`. |
+| A-8 dumps en git | `writable/plugins/backups/*` ignorado. |
+| Anexo B | Sin cambios. El núcleo no cablea hooks reservados. |
+| §9 vs `db_connect()` en `UserController` | El merge del catálogo vive en `PluginManager::permissionCatalog()`. |
+| `spark` sin `pre_system` | `loadRoutes()` arranca los plugins activos. |
+| Runner compartido | Instancia no compartida de `MigrationRunner`. |
