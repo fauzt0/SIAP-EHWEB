@@ -2,7 +2,7 @@
 
 **Última actualización:** 2026-10-16  
 **Rama de trabajo:** `feat/plugin-system-architecture` (publicada en `origin`)  
-**HEAD:** `79c8b15` (`docs(plugins): cerrar avance.md y endurecer saveSettings vacío`)  
+**HEAD:** último commit en `origin/feat/plugin-system-architecture` (tabla siguiente; puede incluir ajustes menores de este `.md`)  
 **Estado general:** **[PLUGIN-000] cerrado** en código y documentación v1.2. Pendientes de producto: **PLUGIN-000b** y plugins **001–006** (solo specs en `agentic/`).
 
 ---
@@ -31,6 +31,7 @@
 | `30f4e9a` | Cierre spec v1.2 del núcleo antes de codificar |
 | `ec844b6` | Implementación del núcleo (~34 archivos) |
 | `ea37139` | Correcciones tras verificación (restore, purge, assets, doctor, `avance.md` inicial) |
+| `79c8b15` | `avance.md` cerrado, `PLUGIN_000_PROMPT` marcado obsoleto, `saveSettings` sin éxito vacío |
 
 El sprint `8945ab0` (documentos legales, bitácora, nóminas, etc.) está en la historia de esta rama **después** de `13839da` (`main` actual) y **antes** de los commits de plugins.
 
