@@ -18,6 +18,7 @@
 | UI del mercado en navegador | No verificada (401 Basic Auth en sandbox, DT-5) |
 | Merge a `main` | Pendiente de PR; ramas divergentes (ver § Integración con `main`) |
 | Auditoría por otro modelo | Prompt listo al final de este archivo |
+| ¿Choca con `AUDITORIA_ARQUITECTURA.md`? | **No.** Ver sección «Compatibilidad con la auditoría de arquitectura del ERP» |
 
 ---
 
@@ -136,6 +137,43 @@ origin/feat/plugin-system-architecture ───────┼──► 8945ab0
 
 ---
 
+## Compatibilidad con la auditoría de arquitectura del ERP
+
+**Veredicto: no se empalman ni se invalidan.** Puedes correr la auditoría del sistema de plugins con Sonnet.
+
+`agentic/AUDITORIA_ARQUITECTURA.md` es el **control de calidad del ERP** (`DOCUMENTACION_TECNICA.md` §1–§21): pilares Shield (§7) y bitácora (§8), más reportes de módulos (sucursales, proveedores, RRHH, nóminas, alertas). El núcleo de plugins **aplicó** esos estándares; no los sustituye.
+
+Capas distintas:
+
+| Documento | Qué cubre | Qué no debe hacer el auditor de plugins |
+|-----------|-----------|----------------------------------------|
+| `AUDITORIA_ARQUITECTURA.md` | Convenios del ERP y deuda de módulos 001–011 | Reabrir FIX-A…D, CRM 004b, legal 001, granularidad de turnos HR, ISR SAT |
+| `plugin_000` v1.2 §0b + código `PluginSystem/` | Contrato del núcleo (manifiesto, respaldos, hooks, Market) | Reescribir el ERP para “parecerse” a un módulo HR/catálogo |
+| `AUDITORIA_PLUGIN_SYSTEM.md` | Diseño del plugin system (P0, ciclo de vida) | Tratar §4/§5 de `ARQUITECTURA_PLUGIN_SYSTEM.md` como código a implementar |
+
+**REPORTE-016** (al final de `AUDITORIA_ARQUITECTURA.md`) ya mapeó PLUGIN-000 contra §1–§21. La auditoría de plugins **confirma o corrige el código**; no vuelve a auditar nóminas ni proveedores.
+
+Los touch points del núcleo **respetan** los hallazgos de arquitectura; no los deshacen:
+
+- §7/§8: rutas `permission:admin.manage-plugins`, `can()` en sidebar, `logActivity` en cada mutación.
+- §9: `PluginMarketController` y `UserController::getAllPermissions()` **no** llaman `db_connect()`. La persistencia vive en librerías (`PluginManager`, `PluginBackupService`). `DOCUMENTACION_TECNICA.md` §9 permite **Modelo o Service Pattern**; esas clases son el servicio.
+- §21: `_detectAll()` sigue agrupando detectores del ERP por permiso; al final fusiona `PluginManager::runAlertDetectors()` en `try/catch`. No reemplaza `_safeDetect()` ni los `_detect*` existentes.
+- P0-1 de plugins: el catálogo de usuarios llama `permissionCatalog()`. Quitar ese merge **rompería** permisos de plugin y reabriría el hallazgo de arquitectura §7 al guardar usuarios (`syncPermissions`).
+
+Los `db_connect()` que siguen en `AlertController` (detectores `_detectWorkers*` etc.) **son anteriores al núcleo**. No forman parte de PLUGIN-000. Un auditor de plugins no debe “arreglarlos” en esa auditoría.
+
+### Excepciones deliberadas (no son interferencia)
+
+Un auditor que lea solo la tarjeta §1–§21 de `AUDITORIA_ARQUITECTURA.md` podría marcar estos tres puntos. **No son incumplimientos del núcleo**; están escritos en `plugin_000` §14 y en REPORTE-016:
+
+1. **§9 “solo Modelos”** — el núcleo no crea `SysPluginModel`. Usa librerías de servicio. Correcto según DT §9 (Service Pattern).
+2. **§19 soft-delete** — tablas `sys_*` son de registro (instalar/archivar/purgar), sin `$useSoftDeletes`.
+3. **§21 “nuevo detector = método `_detect*` en AlertController”** — v1 cablea el hook `alert.detect` para que cada plugin aporte detectores **sin** tocar el controlador otra vez.
+
+Nada de lo abierto en arquitectura (legal 001, CRM 004b, turnos HR solo con `hr.access`, ISR SAT) exige cambiar el núcleo de plugins.
+
+---
+
 ## Próximos pasos sugeridos
 
 1. **PR** `feat/plugin-system-architecture` → `main` con descripción que enlace este avance y AUDITORIA §7.
@@ -153,12 +191,20 @@ Copia el bloque. **No** implementes plugins 001–006 ni PLUGIN-000b como parte 
 ```text
 Audita el núcleo del sistema de plugins de este ERP (CodeIgniter 4.5.3 + Shield 1.1). Rama: feat/plugin-system-architecture, commit de referencia ea37139 o posterior. Objetivo: hallar fallos reales en el código existente, no reescribir la arquitectura ni codificar agentic/plugin_001_*.md … plugin_006_*.md.
 
+Relación con agentic/AUDITORIA_ARQUITECTURA.md (leída, no es trabajo de esta auditoría):
+- Es el control de calidad ERP (DT §1–§21). El núcleo YA se mapeó ahí en REPORTE-016.
+- NO reabras módulos 001–011, FIX-A…D, CRM, documentos legales, nóminas ni turnos HR.
+- NO muevas PluginManager/PluginBackupService a Models “por §9”: DT §9 permite Service Pattern; el núcleo usa Libraries.
+- NO exijas soft-delete en sys_* (§19) ni conviertas alert.detect en métodos _detect* nuevos de AlertController (§21).
+- NO toques los db_connect() preexistentes de AlertController (detectores HR/catálogo). El núcleo solo añade runAlertDetectors() al final de _detectAll().
+- NO reviertas UserController::getAllPermissions() → permissionCatalog(): eso cumple §9 y evita que syncPermissions borre permisos de plugin (§7).
+
 Lectura obligatoria (orden):
 1. DOCUMENTACION_TECNICA.md §1–§21
 2. agentic/plugin_000_plugin_system_core.md v1.2 — §0b prevalece sobre el resto del archivo
 3. agentic/ARQUITECTURA_PLUGIN_SYSTEM.md v1.2 — §4 y §5 son historial, no contrato
-4. agentic/AUDITORIA_PLUGIN_SYSTEM.md §6–§7 y agentic/AUDITORIA_ARQUITECTURA.md REPORTE-016
-5. agentic/avance.md — estado, verificación y lista “Ya corregido”
+4. agentic/AUDITORIA_PLUGIN_SYSTEM.md §6–§7 y agentic/AUDITORIA_ARQUITECTURA.md SOLO REPORTE-016 + sección «Compatibilidad» de agentic/avance.md
+5. agentic/avance.md — estado, verificación, lista “Ya corregido” y compatibilidad con la auditoría de arquitectura
 
 Código principal:
 - app/Libraries/PluginSystem/*

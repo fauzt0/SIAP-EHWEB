@@ -88,6 +88,7 @@ Esta tarjeta resume los **21 estándares** de `DOCUMENTACION_TECNICA.md`. Úsala
 | 007 | `007_fix_po_recurring_audit.md` | Fixes de Auditoría OC/Recurrentes | ✅ Definido | ✅ REPORTE-009 (refreshCsrf dual, column_order OK) | ✅ Verificado en disco |
 | 010 | `010_supplier_categories_crud.md` | Proveedores — Categorías CRUD | ✅ Definido | ✅ REPORTE-014 | ❌ Pendiente de auditoría |
 | 011 | `011_hr_payroll_nominas.md` | RRHH — Nóminas (Payroll) | ✅ Definido | ✅ REPORTE-015 | ❌ Pendiente de auditoría |
+| PLUGIN-000 | `plugin_000_plugin_system_core.md` | Núcleo del sistema de plugins | ✅ v1.2 implementado | ✅ REPORTE-016 | ⬜ Auditoría plugin (otro modelo) — no reabre módulos 001–011 |
 | HR-v | `2026-08-18_ALTER_hr_contracts_versioning.md` | RRHH — Versionado Contratos (Esquema) | ✅ Definido | ✅ REPORTE-010 | ✅ FIX-B y FIX-C aplicados (2026-09-18) |
 | HR-f | `2026-08-18_ALTER_hr_contracts_versioning_fix.md` | RRHH — Fix Versionado Contratos | ✅ Definido | ✅ REPORTE-010 | ✅ Re-audit Go (2026-09-18) |
 | DB-po | `2026-08-18_tables_po_documents_email_recurring.md` | OC/Docs/Email/Recurrentes (Esquema) | ✅ Definido | ✅ 6 migraciones en disco (batch 24–27) | ✅ Verificado en disco |
