@@ -1,8 +1,11 @@
 # Prompt de lanzamiento — PLUGIN-000 (Plugin System Core)
 
-> **Uso:** copiar todo el bloque de §Prompt en un chat nuevo de Cursor, con el modelo elegido.
+> **Estado:** PLUGIN-000 **ya está implementado** (`ec844b6`, parches `ea37139`). Este archivo es **histórico** (redactado antes del código, spec v1.1).
+> **Para auditar el núcleo hoy:** usa el prompt en `agentic/avance.md` (sección «Prompt de auditoría»).
+> **Spec vigente:** `agentic/plugin_000_plugin_system_core.md` **v1.2**, sección **0b**.
+
+> **Uso original (archivado):** copiar el bloque de §Prompt en un chat nuevo — solo si se reinicia el núcleo desde cero.
 > **Alcance:** infraestructura del sistema de plugins. No implementa los plugins 001–006.
-> **Spec vigente:** `agentic/plugin_000_plugin_system_core.md` (v1.1, autocontenida).
 
 ---
 

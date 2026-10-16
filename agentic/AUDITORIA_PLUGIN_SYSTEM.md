@@ -357,7 +357,7 @@ Arranque también desde `loadRoutes()` porque `spark` no dispara `pre_system`. R
 | Permisos | No se pisan los del ERP y no se acepta un prefijo que la matriz ya concede por comodín. Probado con `hr.spy`. |
 | SQL | Identificadores `[A-Za-z0-9_]`. `DROP`/`RENAME` solo de `_bak_` + prefijo `plg_`. `backup_file` confinado a `writable/plugins/backups/` y modo `0640`. |
 | Aislamiento | `try/catch` por plugin en el arranque y por callback en el bus. Probado. |
-| Secretos | Un ajuste `password` no se reimprime en el formulario. El catálogo remoto solo acepta `https`, sin redirecciones, y no es instalable. |
+| Secretos | Un ajuste `password` no se reimprime en el formulario. El catálogo remoto solo acepta `https`, sin redirecciones, y no es instalable. `saveSettings()` rechaza claves no declaradas, clave vacía y peticiones sin claves. |
 | Datos de prueba | El fixture, sus tablas, sus dumps y las filas de bitácora del ensayo se eliminaron. `plugin:doctor` queda en 0 errores. |
 
 Riesgo aceptado: un plugin que ya está en disco, una vez instalado por un administrador, corre con el usuario de base de datos de la aplicación. El núcleo impide que el manifiesto apunte fuera de su carpeta; no es un sandbox. `min_erp_version` sigue sin compararse. La UI del Market no se recorrió en el navegador: `https://sandbox.especialistashosting.com/nat/admin/plugins` responde `401` con `WWW-Authenticate: Basic realm="Area de desarrollo"` antes de Shield.

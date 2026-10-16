@@ -427,9 +427,16 @@ class PluginManager
             $current  = $instance->getConfig();
             $clean    = [];
 
+            if ($input === []) {
+                return ['success' => false, 'message' => 'No se envió ningún ajuste.'];
+            }
+
             foreach ($input as $incoming => $unused) {
                 unset($unused);
-                if (! is_string($incoming) || ! array_key_exists($incoming, $defs)) {
+                if (! is_string($incoming) || $incoming === '') {
+                    return ['success' => false, 'message' => 'Clave de ajuste vacía o no válida.'];
+                }
+                if (! array_key_exists($incoming, $defs)) {
                     return ['success' => false, 'message' => "El ajuste '{$incoming}' no está declarado en el plugin."];
                 }
             }

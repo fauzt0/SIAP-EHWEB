@@ -43,7 +43,9 @@ class PluginAction extends BaseCommand
             'purge'      => $extra === 'ELIMINAR'
                 ? PluginManager::purge((int) $target)
                 : ['success' => false, 'message' => 'La purga exige el argumento ELIMINAR.'],
-            'settings'   => PluginManager::saveSettings($target, [$extra => ($params[3] ?? '')]),
+            'settings'   => $extra === ''
+                ? ['success' => false, 'message' => 'settings exige: plugin:action settings <slug> <clave> <valor>']
+                : PluginManager::saveSettings($target, [$extra => ($params[3] ?? '')]),
             default      => ['success' => false, 'message' => 'Acción no reconocida. Usa install, activate, deactivate, uninstall, restore, purge, update o settings.'],
         };
 
