@@ -132,12 +132,12 @@ Integrar con menú Notifications del topbar cuando existan Inventario + Ventas o
 > Auditoría: `agentic/AUDITORIA_PLUGIN_SYSTEM.md`.
 
 ### Plugin System Core (prerequisito — implementar PRIMERO)
-- [ ] **[PLUGIN-000]** Infraestructura: `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginBackupService`, `PluginHookRegistry`, `PluginMarket` + `PluginBaseController` — `app/Libraries/PluginSystem/`.
-- [ ] **[PLUGIN-000]** 4 migraciones: `sys_plugins` (sin columna `config`), `sys_plugin_permissions`, `sys_plugin_settings` (fuente única de la configuración), `sys_plugin_backups` (con `class_dir`).
-- [ ] **[PLUGIN-000]** **7 touch points** al ERP base: `Config/Autoload.php`, `Events.php`, `Routes.php`, `loggedin_sidebar.php`, `user_loggedin_layout.php`, `AlertController.php`, `UserController.php` (catálogo de permisos).
-- [ ] **[PLUGIN-000]** `PluginMarketController` + vista `plugins_market.php` con flujo Desactivar → Desinstalar → Restaurar → Purgar.
-- [ ] **[PLUGIN-000]** Respaldo de datos en desinstalación: `RENAME TABLE` atómico a `_bak_plg_*` + dump SQL en `WRITEPATH/plugins/backups/`, registro **antes** de renombrar. Purga solo tras confirmación textual ELIMINAR y sin exigir los archivos del plugin.
-- [ ] **[PLUGIN-000]** Comando `php spark plugin:doctor` + criterios de aceptación CLI (el sandbox no permite verificar en navegador por el 401 Basic Auth, DT-5).
+- [x] **[PLUGIN-000]** Infraestructura: `PluginManager`, `PluginInterface`, `BasePlugin`, `PluginBackupService`, `PluginHookRegistry`, `PluginMarket` + `PluginBaseController` — `app/Libraries/PluginSystem/`.
+- [x] **[PLUGIN-000]** 4 migraciones: `sys_plugins` (sin columna `config`), `sys_plugin_permissions`, `sys_plugin_settings` (fuente única de la configuración), `sys_plugin_backups` (con `class_dir`).
+- [x] **[PLUGIN-000]** **7 touch points** al ERP base: `Config/Autoload.php`, `Events.php`, `Routes.php`, `loggedin_sidebar.php`, `user_loggedin_layout.php`, `AlertController.php`, `UserController.php` (catálogo de permisos).
+- [x] **[PLUGIN-000]** `PluginMarketController` + vista `plugins_market.php` con flujo Desactivar → Desinstalar → Restaurar → Purgar.
+- [x] **[PLUGIN-000]** Respaldo de datos en desinstalación: `RENAME TABLE` atómico a `_bak_plg_*` + dump SQL en `WRITEPATH/plugins/backups/`, registro **antes** de renombrar. Purga solo tras confirmación textual ELIMINAR y sin exigir los archivos del plugin.
+- [x] **[PLUGIN-000]** Comando `php spark plugin:doctor` + `plugin:action` y criterios de aceptación CLI (el sandbox no permite verificar en navegador por el 401 Basic Auth, DT-5).
 
 ### Plugins individuales (orden corregido 2026-10-12)
 

@@ -63,6 +63,19 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
     $routes->group('admin', function ($routes) {
       $routes->get('audit-log', 'Users\UserController::auditLog', ['as' => 'admin.audit_log', 'filter' => 'permission:admin.audit-log']);
       $routes->post('audit-log/ajax', 'Users\UserController::auditLog_ajax', ['as' => 'admin.audit_log_ajax', 'filter' => 'permission:admin.audit-log']);
+
+      $routes->group('plugins', ['namespace' => 'App\Controllers\Admin'], static function ($routes) {
+        $routes->get('/', 'PluginMarketController::index', ['as' => 'admin.plugins.index', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('install', 'PluginMarketController::install', ['as' => 'admin.plugins.install', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('uninstall', 'PluginMarketController::uninstall', ['as' => 'admin.plugins.uninstall', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('activate', 'PluginMarketController::activate', ['as' => 'admin.plugins.activate', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('deactivate', 'PluginMarketController::deactivate', ['as' => 'admin.plugins.deactivate', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('restore', 'PluginMarketController::restore', ['as' => 'admin.plugins.restore', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('purge', 'PluginMarketController::purge', ['as' => 'admin.plugins.purge', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('update', 'PluginMarketController::update', ['as' => 'admin.plugins.update', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->get('settings/(:segment)', 'PluginMarketController::settings/$1', ['as' => 'admin.plugins.settings', 'filter' => 'permission:admin.manage-plugins']);
+        $routes->post('settings/(:segment)/save', 'PluginMarketController::settings_save/$1', ['as' => 'admin.plugins.settings.save', 'filter' => 'permission:admin.manage-plugins']);
+      });
     });
 
     // -----------------------------------------------------------------------
@@ -388,3 +401,8 @@ $routes->group('user', function($routes)
 //$routes->presenter('home');// para consumir desde el navegador
 
 //$routes->resource('home');// para api rest ('api/photo');
+
+// Plugin System: rutas de plugins activos. Fuera del grupo nat; cada plugin declara session y permission.
+if (class_exists(\App\Libraries\PluginSystem\PluginManager::class)) {
+    \App\Libraries\PluginSystem\PluginManager::loadRoutes($routes);
+}

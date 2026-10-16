@@ -40,7 +40,7 @@ Estas reglas pisan cualquier bloque anterior de este archivo que las contradiga.
    - `directory`: `^[A-Z][A-Za-z0-9]+$` y `realpath` de `plugins/{directory}` dentro de `realpath(ROOTPATH.'plugins')`
    - `class`: `Plugins\{directory}\{Nombre}` y el archivo de la clase, según `ReflectionClass`, dentro de esa carpeta
    - `table_prefix`: `^plg_[a-z0-9]+_$`
-   - cada permiso: `^[a-z][a-z0-9]*(\.[a-z0-9][a-z0-9_-]*)+$`, ausente del catálogo del ERP, y sin prefijo `admin.` ni `superadmin.`
+   - cada permiso: `^[a-z][a-z0-9]*(\.[a-z0-9][a-z0-9_-]*)+$`, ausente del catálogo del ERP, y sin un prefijo que `AuthGroups.matrix` ya conceda por comodín (`admin.*`, `hr.*`, `users.*`, etc.). Si no, el grupo recibiría el permiso del plugin sin asignarlo.
 5. **SQL (V12-5).** Solo identificadores `[A-Za-z0-9_]`. El `DROP` y el `RENAME` de vuelta exigen el patrón `_bak_{prefijo}…_{YYYYmmdd}_{His}`. `backup_file` debe ser `plugins/backups/{slug}_{stamp}.sql` y su `realpath` debe quedar bajo `WRITEPATH/plugins/backups/`. Si `RENAME TABLE` lanza, se elimina la fila recién insertada y el `.sql`: la sentencia es atómica, así que no hay tablas a medio renombrar.
 6. **Bus de hooks (V12-6).** `doAction`, `doActionCollect` y `applyFilter` envuelven cada callback en `try/catch` + `log_message('error')`. Un filtro que falla deja el valor anterior. No hay caché del listado.
 7. **Assets y gitignore (V12-7).** `renderAssets()` sigue leyendo `FCPATH.'plugins/{slug}/'`. En web `FCPATH` es `public_html/`. Ignorar `public_html/plugins/*` y `writable/plugins/backups/*` (conservar `index.html`).
@@ -48,7 +48,7 @@ Estas reglas pisan cualquier bloque anterior de este archivo que las contradiga.
 9. **Market en el sidebar (V12-9).** Ítem «Plugins» visible con `admin.manage-plugins`.
 10. **CLI (V12-10).** `plugin:doctor` y `plugin:action {install|activate|deactivate|uninstall|restore|purge|update}`. `purge` y la desinstalación destructiva exigen el argumento `ELIMINAR` donde corresponda. `uninstall` sigue exigiendo status `inactive`.
 11. **Sin ZIP y sin versión de ERP (V12-11).**
-12. **Restore/purge (V12-12).** No restaurar si `restored_at` ya tiene valor o si el slug sigue en `sys_plugins`. `purge()` además borra las filas de `sys_plugin_settings` de ese slug. El header de sección del sidebar solo se imprime si el ítem es visible para el usuario.
+12. **Restore/purge (V12-12).** No restaurar si `restored_at` ya tiene valor o si el slug sigue en `sys_plugins`. Tras restaurar las tablas, se reponen en `migrations` las migraciones ya existentes del plugin: si no, la siguiente actualización intentaría crearlas otra vez. `purge()` borra `sys_plugin_settings` solo cuando no queda otro respaldo sin purgar de ese slug. El header de sección del sidebar solo se imprime si el ítem es visible para el usuario. El dump SQL se guarda con modo `0640`. Si el nombre del archivo ya existe en ese segundo, se espera al siguiente.
 
 ---
 

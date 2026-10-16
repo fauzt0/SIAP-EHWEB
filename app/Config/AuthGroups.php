@@ -137,6 +137,7 @@ class AuthGroups extends ShieldAuthGroups
         'admin.settings'      => 'Can access the main ERP settings',
         'admin.manage-users'  => 'Can manage users',
         'admin.audit-log'     => 'Ver bitácora global del sistema',
+        'admin.manage-plugins' => 'Instalar, desinstalar y configurar plugins del sistema',
         
         // User management
         'users.create'        => 'Can create new users',

@@ -128,12 +128,18 @@ class UserActivityLogsModel extends Model
             $userId = user_id();
         }
 
+        $userAgent = 'CLI';
+        if (method_exists($request, 'getUserAgent')) {
+            $agent     = $request->getUserAgent();
+            $userAgent = $agent ? $agent->getAgentString() : 'Unknown';
+        }
+
         $data = [
             'users_id'    => $userId,
             'type'        => $type,
             'description' => $description,
             'ip_address'  => $request->getIPAddress(),
-            'user_agent'  => $request->getUserAgent() ? $request->getUserAgent()->getAgentString() : 'Unknown',
+            'user_agent'  => $userAgent,
         ];
 
         return $this->insert($data);

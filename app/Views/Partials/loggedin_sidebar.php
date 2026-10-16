@@ -47,6 +47,13 @@
           </a>
         </li>
       <?php endif; ?>
+      <?php if (auth()->user()->can('admin.manage-plugins')): ?>
+        <li class="sidebar-item <?= url_is('nat/admin/plugins*') ? 'active' : '' ?>">
+          <a class="sidebar-link" href="<?= route_to('admin.plugins.index') ?>">
+            <i class="fas fa-fw fa-plug me-1"></i> <span class="align-middle">Plugins</span>
+          </a>
+        </li>
+      <?php endif; ?>
       
       <?php if (auth()->user()->can('hr.access')): ?>
         <li class="sidebar-item <?= url_is('nat/hr*') ? 'active' : '' ?>">
@@ -136,6 +143,8 @@
           </ul>
         </li>
       <?php endif; ?>
+
+      <?= \App\Libraries\PluginSystem\PluginManager::renderSidebar(auth()->user()) ?>
 
       <li class="sidebar-header">
         Apps

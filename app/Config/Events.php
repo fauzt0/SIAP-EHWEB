@@ -99,3 +99,11 @@ Events::on('failedLogin', static function ($credentials) {
         $userId
     );
 });
+
+// Plugin System: carga de plugins activos en cada request web.
+// php spark no dispara pre_system; loadRoutes() arranca los plugins en CLI.
+Events::on('pre_system', static function () {
+    if (class_exists(\App\Libraries\PluginSystem\PluginManager::class)) {
+        \App\Libraries\PluginSystem\PluginManager::bootActivePlugins();
+    }
+});

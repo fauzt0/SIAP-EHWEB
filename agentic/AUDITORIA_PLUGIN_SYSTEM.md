@@ -320,3 +320,44 @@ Además, varios destinos documentados **no existen**:
 | §9 vs `db_connect()` en `UserController` | El merge del catálogo vive en `PluginManager::permissionCatalog()`. |
 | `spark` sin `pre_system` | `loadRoutes()` arranca los plugins activos. |
 | Runner compartido | Instancia no compartida de `MigrationRunner`. |
+
+---
+
+## 7. Reporte de implementación PLUGIN-000
+
+**Fecha:** 2026-10-16. Núcleo codificado. Los plugins 001–006 no se implementaron.
+
+### Archivos creados
+
+`app/Libraries/PluginSystem/` (`PluginInterface`, `BasePlugin`, `PluginManager`, `PluginBackupService`, `PluginHookRegistry`, `PluginMarket`), `app/Controllers/PluginSystem/PluginBaseController.php`, `app/Controllers/Admin/PluginMarketController.php`, `app/Views/Admin/plugins_market.php`, `app/Views/PluginSystem/sidebar_section.php`, cuatro migraciones en `app/Database/Migrations/System/`, `app/Commands/PluginDoctor.php`, `app/Commands/PluginAction.php`, `plugins/.gitkeep`.
+
+### Archivos modificados
+
+Los 7 touch points (`Autoload`, `Events`, `Routes`, `loggedin_sidebar`, `user_loggedin_layout`, `AlertController`, `UserController`), `AuthGroups` (`admin.manage-plugins`), `.gitignore`, y `UserActivityLogsModel` para que la bitácora no reviente en CLI (no existe `getUserAgent()`).
+
+### Verificación CLI
+
+`php spark migrate` creó las cuatro tablas `sys_*`. `php spark plugin:doctor` termina con 0 errores y 0 advertencias, sin plugins instalados. `php spark routes` lista `/nat/admin/plugins` con filtro `permission`.
+
+Ciclo con un plugin fixture (carpeta eliminada al terminar, tablas purgadas): instalar crea `plg_fix_items` y `class_dir = Fixture`; desactivar → desinstalar deja `_bak_plg_fix_*`, fila en `sys_plugin_backups` y cero filas de `Plugins\Fixture` en `migrations`; reinstalar se niega y pide restaurar; restaurar devuelve la tabla y deja el plugin `inactive`; `update` posterior no intenta recrearla; purgar sin la palabra `ELIMINAR` se niega; purgar con esa palabra hace `DROP` y borra el `.sql`.
+
+Un plugin cuyo `registerHooks()` lanza no impide `php spark routes`. Un callback que lanza dentro del bus se registra en el log y el filtro conserva el valor anterior. Un manifiesto con `directory: ../Etc` y un permiso `hr.spy` se rechazan.
+
+### Desvíos respecto de la spec v1.1, incorporados en v1.2
+
+Arranque también desde `loadRoutes()` porque `spark` no dispara `pre_system`. Runner de migraciones no compartido. Catálogo de permisos en `PluginManager::permissionCatalog()` (§9). `layout.footer` después de los scripts del layout. Enlace de sidebar del Market. Comando `plugin:action`. Al restaurar se reponen las filas de `migrations` del plugin. Los permisos no pueden usar un prefijo ya cubierto por un comodín de `AuthGroups.matrix`.
+
+### Auditoría de seguridad del núcleo
+
+| Control | Resultado |
+|---|---|
+| Rutas del Market | Dentro del grupo con `session`, cada una con `permission:admin.manage-plugins` y el CSRF global. Los POST exigen AJAX. |
+| Bitácora | install, uninstall, activate, deactivate, restore, purge, update y settings. La descripción de settings no incluye el valor. |
+| Manifiesto | `slug`, `directory` y `class` validados. `realpath` de la clase tiene que quedar dentro de `plugins/{Directory}`. No hay subida ZIP. |
+| Permisos | No se pisan los del ERP y no se acepta un prefijo que la matriz ya concede por comodín. Probado con `hr.spy`. |
+| SQL | Identificadores `[A-Za-z0-9_]`. `DROP`/`RENAME` solo de `_bak_` + prefijo `plg_`. `backup_file` confinado a `writable/plugins/backups/` y modo `0640`. |
+| Aislamiento | `try/catch` por plugin en el arranque y por callback en el bus. Probado. |
+| Secretos | Un ajuste `password` no se reimprime en el formulario. El catálogo remoto solo acepta `https`, sin redirecciones, y no es instalable. |
+| Datos de prueba | El fixture, sus tablas, sus dumps y las filas de bitácora del ensayo se eliminaron. `plugin:doctor` queda en 0 errores. |
+
+Riesgo aceptado: un plugin que ya está en disco, una vez instalado por un administrador, corre con el usuario de base de datos de la aplicación. El núcleo impide que el manifiesto apunte fuera de su carpeta; no es un sandbox. `min_erp_version` sigue sin compararse. La UI del Market no se recorrió en el navegador: `https://sandbox.especialistashosting.com/nat/admin/plugins` responde `401` con `WWW-Authenticate: Basic realm="Area de desarrollo"` antes de Shield.

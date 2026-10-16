@@ -23,7 +23,8 @@
   <!--External css -->
   <?= $this->renderSection('pageStyles') ?>
   <!-- Render initial scripts (header required scripts) -->
-  <?= $this->renderSection('pageHeaderScripts') ?>  
+  <?= $this->renderSection('pageHeaderScripts') ?>
+  <?= \App\Libraries\PluginSystem\PluginManager::renderAssets() ?>
 </head>
 
 <body >
@@ -57,5 +58,6 @@
   $this->renderSection('pageFooterScripts');
   $this->renderSection('scripts');
 ?>
+<?php \App\Libraries\PluginSystem\PluginHookRegistry::doAction('layout.footer'); ?>
 
 </html>

@@ -28,7 +28,7 @@
 > | V12-1 | `php spark` no dispara `pre_system`. `loadRoutes()` llama a `bootActivePlugins()` (idempotente) para que las rutas de plugins existan también en CLI. |
 > | V12-2 | El runner de migraciones se instancia con `Services::migrations(null, null, false)`. El servicio compartido no debe quedar con el namespace del plugin. |
 > | V12-3 | `UserController` no abre la base de datos (§9). El catálogo de permisos lo arma `PluginManager::permissionCatalog()`. |
-> | V12-4 | Validación de manifiesto antes de instanciar: `slug`, `directory` (sin `..`), `class` dentro de la carpeta del plugin, `table_prefix` `plg_[a-z0-9]+_`. Los permisos no pueden pisar el catálogo del ERP ni usar el prefijo `admin.` / `superadmin.` (el comodín del grupo los concedería a todos los administradores). |
+> | V12-4 | Validación de manifiesto antes de instanciar: `slug`, `directory` (sin `..`), `class` dentro de la carpeta del plugin, `table_prefix` `plg_[a-z0-9]+_`. Los permisos no pueden pisar el catálogo del ERP ni usar un prefijo que la matriz ya conceda por comodín (`admin.*`, `hr.*`, `users.*`, …). |
 > | V12-5 | Identificadores SQL solo `[A-Za-z0-9_]`. `DROP`/`RENAME` solo sobre `_bak_` + prefijo del plugin. `backup_file` confinado a `writable/plugins/backups/`. Si el `RENAME` falla, se borra la fila de respaldo (la sentencia es atómica; no quedan tablas huérfanas). |
 > | V12-6 | A-6: cada callback del bus va en `try/catch`. La caché del listado sigue fuera de v1. |
 > | V12-7 | A-4/A-8: `.gitignore` de `public_html/plugins/*` y `writable/plugins/backups/*`. El docroot web es `public_html` (`FCPATH` de `public_html/index.php`). `spark` define `FCPATH` como `public/`, que no sirve el sitio. |

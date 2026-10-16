@@ -822,6 +822,15 @@ class UserController extends RoleController
   }
 
   /**
+   * Permisos del ERP más los declarados por plugins instalados.
+   * La consulta vive en PluginManager para no abrir la base desde el controlador.
+   */
+  private function getAllPermissions(): array
+  {
+    return \App\Libraries\PluginSystem\PluginManager::permissionCatalog();
+  }
+
+  /**
    * Muestra el formulario para editar los permisos adicionales de un usuario
    */
   public function permissions(int $userId)
@@ -847,8 +856,8 @@ class UserController extends RoleController
       'Permisos' => current_url(),
     ]);
 
-    // Extraer todos los permisos disponibles en el sistema (AuthGroups config)
-    $allPermissions = setting('AuthGroups.permissions');
+    // ERP + permisos declarados por los plugins instalados (sin abrir la BD aquí).
+    $allPermissions = $this->getAllPermissions();
     
     // Calcular permisos otorgados por sus roles bases
     $userGroups = $user->getGroups();
@@ -923,7 +932,7 @@ class UserController extends RoleController
     
     $userGroups = $user->getGroups();
     $matrix = setting('AuthGroups.matrix');
-    $allPermissions = setting('AuthGroups.permissions');
+    $allPermissions = $this->getAllPermissions();
     
     $groupPermissions = [];
     foreach ($userGroups as $group) {

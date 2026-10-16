@@ -279,6 +279,14 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectDueSoonRecurringExpenses'));
         }
 
+        try {
+            $alerts = array_merge($alerts, \App\Libraries\PluginSystem\PluginManager::runAlertDetectors($user));
+        } catch (\Throwable $e) {
+            log_message('error', 'AlertController plugin detectors — {message}', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
         return $alerts;
     }
 

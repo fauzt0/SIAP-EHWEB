@@ -1368,4 +1368,99 @@ Orden respetado: periods → entries → schedules. Las tres usan `disableForeig
 - Detector de alertas: entradas `pending` cuyo `hr_payroll_periods.end_date` es anterior a hoy − 5 días.
 - Registry §2: fila **011** corresponde a este REPORTE-015.
 
+---
+
+### REPORTE-016: Núcleo del sistema de plugins
+
+**Tarea ID:** PLUGIN-000
+**Archivo de plan:** `agentic/plugin_000_plugin_system_core.md` (v1.2)
+**Agente / Modelo:** Cursor Grok 4.7
+**Fecha de ejecución:** 2026-10-16
+**Sesión de chat:** Núcleo de plugins, sin los plugins 001–006
+
+#### Archivos creados
+
+| Archivo | Tipo | Descripción |
+|---------|------|-------------|
+| `app/Libraries/PluginSystem/*.php` | Nuevo | Contrato, manager, respaldos, hooks y market |
+| `app/Controllers/PluginSystem/PluginBaseController.php` | Nuevo | Base AJAX, CSRF y bitácora para plugins |
+| `app/Controllers/Admin/PluginMarketController.php` | Nuevo | Market |
+| `app/Views/Admin/plugins_market.php` | Nuevo | UI del market |
+| `app/Views/PluginSystem/sidebar_section.php` | Nuevo | Ítems de sidebar de plugins |
+| `app/Database/Migrations/System/2026-09-18-20000{0..3}_*.php` | Nuevo | Cuatro tablas `sys_*` |
+| `app/Commands/PluginDoctor.php` | Nuevo | `plugin:doctor` |
+| `app/Commands/PluginAction.php` | Nuevo | Ciclo de vida por CLI |
+
+#### Migraciones ejecutadas
+
+| Archivo de Migración | Acción | Tablas Afectadas | ¿Corrió OK? |
+|----------------------|--------|------------------|-------------|
+| `2026-09-18-200000_CreateSysPlugins.php` | CREATE | `sys_plugins` | Sí |
+| `2026-09-18-200001_CreateSysPluginPermissions.php` | CREATE | `sys_plugin_permissions` | Sí |
+| `2026-09-18-200002_CreateSysPluginSettings.php` | CREATE | `sys_plugin_settings` | Sí |
+| `2026-09-18-200003_CreateSysPluginBackups.php` | CREATE | `sys_plugin_backups` | Sí |
+
+#### 🔒 Sección Obligatoria — Permisos (§7) y Bitácora (§8)
+
+**§7 — Mapa de permisos implementados:**
+
+| Ruta / Acción | Tipo | Filtro en Routes.php | Guard can() en Vista |
+|---------------|------|----------------------|----------------------|
+| `admin.plugins.index` | GET | `permission:admin.manage-plugins` (grupo `nat` con `session`) | Sidebar: `can('admin.manage-plugins')` |
+| `admin.plugins.settings` | GET | `permission:admin.manage-plugins` | N/A — la pantalla ya exige el permiso |
+| `admin.plugins.install` | POST | `permission:admin.manage-plugins` | Botón Instalar solo si el manifiesto es instalable |
+| `admin.plugins.uninstall` | POST | `permission:admin.manage-plugins` | Botón solo con el plugin inactive |
+| `admin.plugins.activate` | POST | `permission:admin.manage-plugins` | Botón Activar |
+| `admin.plugins.deactivate` | POST | `permission:admin.manage-plugins` | Botón Desactivar |
+| `admin.plugins.restore` | POST | `permission:admin.manage-plugins` | Botón Restaurar |
+| `admin.plugins.purge` | POST | `permission:admin.manage-plugins` | Botón Purgar, deshabilitado hasta escribir ELIMINAR |
+| `admin.plugins.update` | POST | `permission:admin.manage-plugins` | Botón Actualizar |
+| `admin.plugins.settings.save` | POST | `permission:admin.manage-plugins` | Formulario de ajustes |
+
+**§8 — Mapa de entradas en bitácora:**
+
+| Acción de negocio | Tipo logActivity | Descripción registrada |
+|-------------------|-----------------|------------------------|
+| Instalar | `plugin_install` | `Instaló el plugin '{slug}'.` |
+| Desinstalar | `plugin_uninstall` | `Desinstaló el plugin '{slug}'. Datos archivados.` |
+| Activar | `plugin_activate` | `Activó el plugin '{slug}'.` |
+| Desactivar | `plugin_deactivate` | `Desactivó el plugin '{slug}'.` |
+| Restaurar | `plugin_restore` | `Restauró el respaldo de plugin #{id}.` |
+| Purgar | `plugin_purge` | `Purgó definitivamente el respaldo de plugin #{id}.` |
+| Actualizar | `plugin_update` | `Actualizó el plugin '{slug}'.` |
+| Guardar ajustes | `plugin_settings` | `Actualizó la configuración del plugin '{slug}'.` Sin valores. |
+
+#### Cumplimiento de Estándares Técnicos
+
+| § | Estándar | ¿Cumplido? | Evidencia / Notas |
+|---|----------|------------|-------------------|
+| §1 | Guard AJAX en endpoints | ✅ | `assertAjaxPost()` en todos los POST del Market |
+| §2 | CSRF en header Fetch | ✅ | Cabecera `csrf_header()` y renovación desde la respuesta. No hay DataTables |
+| §3 | Rutas con alias | ✅ | `admin.plugins.*`. La vista usa `route_to()` |
+| §4 | Sidebar activo | ✅ | `url_is('nat/admin/plugins*')` |
+| §5/§6 | DataTables | ✅ | No aplica |
+| **§7** | **Filtros de permiso Shield** | **✅** | **`admin.manage-plugins` en cada ruta. Los grupos `admin` y `superadmin` lo cubren con `admin.*`** |
+| **§8** | **Bitácora de actividad** | **✅** | **Tabla de arriba. CLI incluido** |
+| §9 | Transacciones en Modelo | ✅ | El controlador no llama `db_connect()`. El catálogo de permisos vive en `PluginManager` |
+| §12 | Solo FontAwesome | ✅ | `fas` en el market y en el partial |
+| §13 | Breadcrumb | ✅ | Inicio > Administrador > Plugins |
+| §14 | Extend layout maestro | ✅ | `plugins_market.php` extiende `$layout` |
+| §15 | viewData / outputData | ✅ | `renderLayout()` y `jsonWithCsrf()` |
+| §17 | notifyShow() | ✅ | Sin `alert()` ni `confirm()` |
+| §19 | Soft deletes | ✅ | Tablas de registro, sin soft-delete, como indica la spec |
+| §21 | Alertas | ✅ | El core solo agrega los detectores de plugins al final de `_detectAll()` |
+
+#### Deuda Técnica y Pendientes
+
+- [ ] La UI no se recorrió en el navegador: el host responde 401 Basic Auth antes de Shield.
+- [ ] No hay subida ZIP ni comparación de `min_erp_version`.
+- [ ] Los hooks reservados y los tabs de offcanvas siguen en PLUGIN-000b. Los plugins 001–006 no se codificaron.
+- [ ] Las asignaciones huérfanas en `auth_permissions_users` tras desinstalar siguen siendo inertes.
+
+#### Notas para el Siguiente Agente
+
+- La spec que manda es `plugin_000` v1.2, sección 0b. §4 y §5 de la arquitectura son historia.
+- Un plugin nuevo declara permisos con un prefijo propio (`servers.access`). Un prefijo que ya tenga comodín en `AuthGroups.matrix` se rechaza al instalar.
+- `php spark plugin:doctor` y `php spark plugin:action install <slug>` son la vía de prueba mientras el 401 siga delante del login.
+
 
