@@ -2,7 +2,7 @@
 
 **Última actualización:** 2026-10-16  
 **Rama de trabajo:** `feat/plugin-system-architecture` (publicada en `origin`)  
-**HEAD:** ver `git log -1` en `feat/plugin-system-architecture` (último commit de avance + ajustes de `saveSettings`)  
+**HEAD:** `79c8b15` (`docs(plugins): cerrar avance.md y endurecer saveSettings vacío`)  
 **Estado general:** **[PLUGIN-000] cerrado** en código y documentación v1.2. Pendientes de producto: **PLUGIN-000b** y plugins **001–006** (solo specs en `agentic/`).
 
 ---
