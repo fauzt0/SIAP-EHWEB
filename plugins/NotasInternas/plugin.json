@@ -1,0 +1,24 @@
+{
+    "slug": "notas-internas",
+    "directory": "NotasInternas",
+    "class": "Plugins\\NotasInternas\\NotasInternasPlugin",
+    "name": "Notas internas",
+    "version": "1.0.0",
+    "description": "Prueba de plugins para crear notas internas",
+    "author": "Desarrollo team",
+    "author_email": "soporte2@especialistasweb.com.mx",
+    "icon": "fa-plug",
+    "website": "https://especialistasweb.com.mx",
+    "color": "#0d6efd",
+    "table_prefix": "plg_notasinternas_",
+    "permissions": {
+        "notasinternas.access": "Usar Notas internas"
+    },
+    "settings": {
+        "note": {
+            "type": "text",
+            "label": "Nota",
+            "default": ""
+        }
+    }
+}

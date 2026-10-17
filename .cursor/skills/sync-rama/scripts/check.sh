@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compara HEAD con origin de la rama actual. No hace pull ni modifica el árbol.
+# Compara HEAD con origin de la rama actual. Hace fetch; no modifica el árbol de trabajo.
 set -u
 
 branch="$(git branch --show-current 2>/dev/null || true)"
@@ -23,12 +23,22 @@ echo "RAMA: $branch"
 echo "STATUS: $(git status -sb)"
 echo "LOCAL:  $(git log -1 --oneline HEAD)"
 echo "REMOTO: $(git log -1 --oneline "$remote")"
-echo "FALTAN EN ESTE CLON:"
+
 missing="$(git log --oneline HEAD.."$remote")"
+ahead="$(git log --oneline "$remote"..HEAD)"
+
+echo "FALTAN EN ESTE CLON:"
 if [ -z "$missing" ]; then
   echo "(ninguno)"
 else
   echo "$missing"
+fi
+
+echo "SOLO EN ESTE CLON (no en origin):"
+if [ -z "$ahead" ]; then
+  echo "(ninguno)"
+else
+  echo "$ahead"
 fi
 
 dirty=0
@@ -36,24 +46,24 @@ if [ -n "$(git status --porcelain)" ]; then
   dirty=1
 fi
 
-if [ "$dirty" -eq 1 ] && [ -n "$missing" ]; then
-  echo "RESULTADO: hay cambios locales sin commit y además faltan commits de origin. No hagas pull hasta guardarlos. Luego: git pull --ff-only origin $branch"
+if [ "$dirty" -eq 1 ]; then
+  echo "RESULTADO: hay cambios locales sin commit. Guarda o descarta antes de sincronizar (commit, stash o restore)."
   exit 0
 fi
 
-if [ "$dirty" -eq 1 ]; then
-  echo "RESULTADO: hay cambios locales sin commit. El clon no se compara para pull hasta guardarlos."
+if [ -n "$missing" ] && [ -n "$ahead" ]; then
+  echo "RESULTADO: ramas divergidas (cada lado tiene commits que el otro no). Elige integración: merge, rebase o descartar commits locales; no uses pull --ff-only."
   exit 0
 fi
 
 if [ -n "$missing" ]; then
-  echo "RESULTADO: este clon va detrás de origin. Para traerlos: git pull --ff-only origin $branch"
+  echo "RESULTADO: detrás de origin; listo para pull --ff-only."
+  echo "COMANDO: git pull --ff-only origin $branch"
   exit 0
 fi
 
-ahead="$(git log --oneline "$remote"..HEAD)"
 if [ -n "$ahead" ]; then
-  echo "RESULTADO: este clon tiene commits que origin no tiene. No hagas pull --ff-only hasta resolverlo."
+  echo "RESULTADO: este clon tiene commits que origin no tiene. Haz push o rebase/reset según convenga; no hagas pull --ff-only."
   exit 0
 fi
 

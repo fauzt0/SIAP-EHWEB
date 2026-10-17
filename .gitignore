@@ -145,10 +145,9 @@ history/
 #private pointer
 private_html/
 
-#cursor rules
-.cursor/rules/
-.cursor/rules/
-.cursor/
+# Cursor: ignorar config local; versionar skills del proyecto
+.cursor/*
+!.cursor/skills/
 .cursorignore
 
 
