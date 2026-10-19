@@ -889,6 +889,8 @@ class PluginManager
      */
     public static function permissionErrors(array $manifest, bool $checkNeighbors = true): array
     {
+        $slug = (string) ($manifest['slug'] ?? '');
+
         $permissions = $manifest['permissions'] ?? [];
         if (! is_array($permissions)) {
             return ['permissions debe ser un objeto permiso => descripción.'];
