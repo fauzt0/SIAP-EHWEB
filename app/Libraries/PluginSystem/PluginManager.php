@@ -27,6 +27,15 @@ class PluginManager
 
     private static bool $retriedFailures = false;
 
+    /**
+     * Catálogo de AuthGroups.php antes de fusionar permisos de plugins.
+     * Si se lee después de la fusión, el permiso del propio plugin parece del ERP
+     * y el boot lo rechaza: la ruta existe en spark y da 404 en la web.
+     *
+     * @var array<string, mixed>|null
+     */
+    private static ?array $basePermissions = null;
+
     /** @var list<array{path: string, manifest: array, raw: mixed, readable: bool}>|null */
     private static ?array $onDiskCache = null;
 
@@ -930,6 +939,32 @@ class PluginManager
         return $errors;
     }
 
+    public static function captureBasePermissions(): void
+    {
+        if (self::$basePermissions !== null) {
+            return;
+        }
+
+        $config = config('AuthGroups');
+        $perms  = (is_object($config) && isset($config->permissions) && is_array($config->permissions))
+            ? $config->permissions
+            : [];
+
+        self::$basePermissions = $perms;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function basePermissions(): array
+    {
+        if (self::$basePermissions === null) {
+            self::captureBasePermissions();
+        }
+
+        return self::$basePermissions ?? [];
+    }
+
     /**
      * @return list<string>
      */
@@ -942,10 +977,7 @@ class PluginManager
             return ['permissions debe ser un objeto permiso => descripción.'];
         }
 
-        $catalog = setting('AuthGroups.permissions');
-        if (! is_array($catalog)) {
-            $catalog = [];
-        }
+        $catalog = self::basePermissions();
 
         $reserved = [];
         $matrix   = setting('AuthGroups.matrix');

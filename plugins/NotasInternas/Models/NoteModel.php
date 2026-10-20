@@ -29,7 +29,7 @@ class NoteModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
-    protected $casts = [
+    protected array $casts = [
         'id'        => 'integer',
         'user_id'   => 'integer',
         'is_pinned' => 'int-bool',

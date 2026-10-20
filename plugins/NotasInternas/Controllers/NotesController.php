@@ -34,7 +34,11 @@ class NotesController extends PluginBaseController
         ];
         $this->viewData['noteColors'] = NoteContent::COLORS;
 
-        return view(ROOTPATH . 'plugins/NotasInternas/Views/notes_index', $this->viewData);
+        $views = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Views';
+
+        return service('renderer', $views, null, false)
+            ->setData($this->viewData, 'raw')
+            ->render('notes_index');
     }
 
     public function list_ajax()
@@ -68,7 +72,7 @@ class NotesController extends PluginBaseController
         $body   = NoteContent::sanitizeBody($this->postString('body'));
         $title  = NoteContent::resolveTitle($this->postString('title'), $body);
         $color  = NoteContent::normalizeColor($this->postString('color'));
-        $pinned = $this->postFlag('is_pinned') ? 1 : 0;
+        $pinned = $this->postFlag('is_pinned');
 
         if ($title === null) {
             return $this->jsonWithCsrf($this->setOutputError('Escribe un título o el contenido de la nota.'));

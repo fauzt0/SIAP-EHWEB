@@ -19,11 +19,19 @@ php spark routes | grep notasinternas
 
 Luego abre `/nat/plugins/notas-internas` con el permiso `notasinternas.access` asignado.
 
-### 404 web (corregido en este corte)
+### 404 web (causa real, corregida)
 
-La ruta ya estaba bien declarada: por eso `php spark routes` la veía y el navegador respondía *Can't find a route*. En la web, `pre_system` arranca los plugins antes de cargar `Routes.php`. Si ese arranque fallaba (la BD todavía no respondía, o la clase del plugin lanzaba), el núcleo marcaba el arranque como hecho y `loadRoutes()` no volvía a intentarlo. CLI no dispara `pre_system`, así que ahí la ruta sí existía.
+`php spark routes` listaba las cuatro rutas y el navegador respondía *Can't find a route for 'GET: nat/plugins/notas-internas'*. CLI no dispara `pre_system`. En la web, `Events.php` fusionaba `permissionCatalog()` dentro de `AuthGroups.permissions` y después `bootActivePlugins()` comparaba el permiso del plugin contra ese catálogo ya fusionado. `notasinternas.access` parecía un permiso del ERP, `instantiateRow()` lanzaba, el plugin no entraba en `$loadedPlugins` y la ruta no se registraba. El log dice: `no se cargó notas-internas: El permiso 'notasinternas.access' ya existe en el ERP.` El reintento de arranque lo repetía; no lo resolvía.
 
-Ahora un fallo de BD no deja el arranque marcado, y un plugin que no pudo instanciarse se reintenta una vez al registrar rutas, sidebar y assets. Si el 404 continúa después del pull, recarga PHP-FPM: OPcache puede estar sirviendo el `NotasInternasPlugin.php` anterior, el que no registraba rutas. En el log, busca `PluginSystem`.
+La foto del catálogo se toma ahora con `captureBasePermissions()` **antes** de la fusión. `permissionErrors()` compara solo contra esa foto. La fusión sigue después, para que Shield acepte el permiso en la UI.
+
+El reintento (`bootAttempts` / `ensureBooted`) se queda: un fallo de BD no debe marcar el arranque como listo. Si tras el pull el 404 sigue, recarga PHP-FPM (OPcache puede servir la clase anterior).
+
+### Vista y guardado (vistos al validar por HTTP)
+
+- `view()` no acepta una ruta absoluta. El índice usa un renderer no compartido con raíz en `plugins/NotasInternas/Views` y `render('notes_index')`. El layout sigue resolviéndose desde `app/Views`.
+- En PHP 8.3, `$casts` del modelo tiene que declararse `array` (el padre ya lo tipa). Sin eso, el listado es un fatal.
+- El cast `int-bool` de CI 4.5 solo acepta `bool` al escribir. `save()` manda `true`/`false`, no `1`/`0`.
 
 ---
 
@@ -46,13 +54,13 @@ Ahora un fallo de BD no deja el arranque marcado, y un plugin que no pudo instan
 | Ítem | Detalle |
 |------|---------|
 | **A** | Migración `2026-10-19-185422_AddFieldsToNotasInternasItems.php` — `user_id`, `body`, `color`, `is_pinned`, `updated_at`, índice `idx_plg_notasinternas_user_list` |
-| **B** | `plugins/NotasInternas/Models/NoteModel.php` — `forUser()`, `ownedBy()`, timestamps |
+| **B** | `plugins/NotasInternas/Models/NoteModel.php` — `forUser()`, `ownedBy()`, timestamps, `protected array $casts` |
 | Manifiesto | `plugin.json` v1.2.0, icon `fa-sticky-note` |
-| Fix permisos | `app/Config/Events.php` — Shield acepta permisos de plugin al guardar en UI |
+| Fix permisos | `captureBasePermissions()` antes de fusionar el catálogo; la fusión sigue para que Shield acepte el permiso en la UI |
 | **C–D** | Rutas + `getSidebarItems()` |
 | **E–F** | `NotesController` índice, `list_ajax`, `save`, `delete`. Vista con editor (negrita, cursiva, subrayado), colores, fijar y borrado. Cada usuario solo ve sus notas. |
 | **G** | CSS y JS van en la vista. `public_html/plugins/*` está en `.gitignore`, así que no se versionan assets sueltos. |
-| 404 | `PluginManager` no marca el arranque como listo si la BD falla, y reintenta una vez el plugin que no pudo instanciarse antes de registrar rutas. |
+| 404 | La colisión de permisos se evalúa contra el catálogo de antes de la fusión. Un fallo de BD no marca el arranque como listo. |
 
 **No tocar:** migración inicial `2026-10-16-231040_CreateNotasInternasItems.php` (ya aplicada en install).
 
@@ -93,10 +101,15 @@ php spark plugin:doctor
 php spark routes | grep notasinternas
 ```
 
-Navegador: sidebar → crear / editar / fijar / borrar notas (solo las del usuario logueado).
+Validado por HTTP el 2026-10-20, con el plugin instalado y activo en 1.2.0:
+
+- Invitado: GET `/nat/plugins/notas-internas` → 302 a `/nat/login` (la ruta existe).
+- Con `notasinternas.access`: 200, compositor y enlace del sidebar.
+- Crear, fijar, listar (fijadas primero), borrar. El cuerpo sale sin `<script>` ni atributos. Color ajeno vuelve a `#fff9c4`. Nota vacía → 400. Id ajeno o inexistente → 404 y no aparece en el listado.
+- Bitácora `users_activity_logs`, type `notasinternas`.
 
 ---
 
 ## Handoff
 
-CRUD de la demo cerrado. El núcleo solo cambió en el reintento de arranque (`bootAttempts` / `ensureBooted`), que era el 404 web vs CLI.
+La demo queda comprobada de punta a punta. El núcleo cambió en dos puntos: el reintento si la BD falla al arrancar, y la foto de permisos antes de fusionar el catálogo. Sin esa foto el navegador seguía en 404 aunque `php spark routes` mostrara la ruta.

@@ -107,6 +107,10 @@ Events::on('pre_system', static function () {
         return;
     }
 
+    // La foto del catálogo tiene que tomarse ANTES de fusionar: si no, boot
+    // cree que notasinternas.access ya es un permiso del ERP y no carga el plugin.
+    \App\Libraries\PluginSystem\PluginManager::captureBasePermissions();
+
     // Shield syncPermissions()/addPermission() solo aceptan claves de setting('AuthGroups.permissions').
     // La UI usa permissionCatalog() (ERP + sys_plugin_permissions); hay que alinear la config en runtime.
     try {
