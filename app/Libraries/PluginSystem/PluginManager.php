@@ -19,20 +19,30 @@ class PluginManager
 
     private static bool $booted = false;
 
+    /** Intentos de leer sys_plugins en esta petición. Un fallo temprano no se queda pegado. */
+    private static int $bootAttempts = 0;
+
+    /** @var array<string, array<string, mixed>> */
+    private static array $failedRows = [];
+
+    private static bool $retriedFailures = false;
+
     /** @var list<array{path: string, manifest: array, raw: mixed, readable: bool}>|null */
     private static ?array $onDiskCache = null;
 
     public static function bootActivePlugins(): void
     {
-        if (self::$booted) {
+        if (self::$booted || self::$bootAttempts >= 2) {
             return;
         }
 
-        self::$booted = true;
+        self::$bootAttempts++;
 
         try {
             $db = db_connect();
             if (! $db->tableExists('sys_plugins')) {
+                self::$booted = true;
+
                 return;
             }
 
@@ -48,9 +58,40 @@ class PluginManager
             return;
         }
 
+        self::$booted = true;
+        self::bootRows($plugins);
+    }
+
+    /**
+     * pre_system puede correr antes de que la BD responda. loadRoutes() reintenta
+     * una vez; si no, el plugin queda activo en CLI (spark routes) y 404 en la web.
+     */
+    private static function ensureBooted(): void
+    {
+        self::bootActivePlugins();
+        if (! self::$booted) {
+            self::bootActivePlugins();
+        }
+
+        if (self::$retriedFailures || self::$failedRows === []) {
+            return;
+        }
+
+        self::$retriedFailures = true;
+        $rows = self::$failedRows;
+        self::$failedRows = [];
+        self::bootRows($rows);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $plugins
+     */
+    private static function bootRows(array $plugins): void
+    {
         foreach ($plugins as $row) {
+            $slug = (string) ($row['slug'] ?? '');
+
             try {
-                $slug = (string) ($row['slug'] ?? '');
                 if (! self::isSlug($slug)) {
                     throw new RuntimeException('Slug registrado no válido.');
                 }
@@ -58,9 +99,14 @@ class PluginManager
                 $instance = self::instantiateRow($row);
                 $instance->registerHooks();
                 self::$loadedPlugins[$slug] = $instance;
+                unset(self::$failedRows[$slug]);
             } catch (Throwable $e) {
+                if ($slug !== '') {
+                    self::$failedRows[$slug] = $row;
+                }
+
                 log_message('error', '[PluginSystem] no se cargó {slug}: {message}', [
-                    'slug'    => $row['slug'] ?? '?',
+                    'slug'    => $slug !== '' ? $slug : '?',
                     'message' => $e->getMessage(),
                 ]);
             }
@@ -72,7 +118,7 @@ class PluginManager
      */
     public static function loadRoutes($routes): void
     {
-        self::bootActivePlugins();
+        self::ensureBooted();
 
         foreach (self::$loadedPlugins as $slug => $plugin) {
             try {
@@ -92,7 +138,7 @@ class PluginManager
             return '';
         }
 
-        self::bootActivePlugins();
+        self::ensureBooted();
 
         $html = '';
         foreach (self::$loadedPlugins as $slug => $plugin) {
@@ -116,7 +162,7 @@ class PluginManager
 
     public static function renderAssets(): string
     {
-        self::bootActivePlugins();
+        self::ensureBooted();
 
         $html = '';
         foreach (self::$loadedPlugins as $slug => $plugin) {
@@ -161,7 +207,7 @@ class PluginManager
 
     public static function runAlertDetectors(User $user): array
     {
-        self::bootActivePlugins();
+        self::ensureBooted();
 
         $collected = PluginHookRegistry::doActionCollect('alert.detect', $user);
         $alerts    = [];

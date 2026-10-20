@@ -3,7 +3,7 @@
     "directory": "NotasInternas",
     "class": "Plugins\\NotasInternas\\NotasInternasPlugin",
     "name": "Notas internas",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Prueba de plugins para crear notas internas",
     "author": "Equipo de desarrollo 01",
     "author_email": "soporte2@especialistasweb.com.mx",

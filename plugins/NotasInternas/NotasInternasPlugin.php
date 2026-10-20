@@ -34,7 +34,20 @@ class NotasInternasPlugin extends BasePlugin
 
     public function loadRoutes($routes): void
     {
-        $callback = require $this->pluginPath . 'Config/Routes.php';
-        $callback($routes);
+        $file = $this->pluginPath . 'Config' . DIRECTORY_SEPARATOR . 'Routes.php';
+        if (! is_file($file)) {
+            return;
+        }
+
+        $callback = require $file;
+        if (is_callable($callback)) {
+            $callback($routes);
+
+            return;
+        }
+
+        if (function_exists('notas_internas_declare_routes')) {
+            notas_internas_declare_routes($routes);
+        }
     }
 }

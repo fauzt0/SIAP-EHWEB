@@ -8,26 +8,22 @@
 
 ## Pendiente inmediato
 
-### 1. Revisión (agente / modelo más robusto)
-
-Commits a revisar en `feat/plugin-system-architecture` (no reescribir PLUGIN-000 ni vendor CI4):
-
-- `d6ce358` — migración Note fields, `NoteModel`, `plugin.json` 1.1.0, **único toque ERP:** `app/Config/Events.php` (fusionar `permissionCatalog()` en `AuthGroups` para que Shield acepte `notasinternas.access` al guardar).
-- (este commit) — pasos C–E del plugin: rutas, sidebar, `NotesController::index` + vista estática.
-
-Hallazgo abierto: en navegador `GET nat/plugins/notas-internas` devolvió *Can't find a route*; en CLI `php spark routes` y `php spark filter:check GET nat/plugins/notas-internas` sí resuelven. No se cambió `PluginSystem/` ni el router de CI4 para “arreglarlo”.
-
-### 2. Permiso Shield
-
-- Asignar `notasinternas.access` al usuario en `/nat/user/permissions`.
-- Requiere el fix en `app/Config/Events.php` (fusionar `permissionCatalog()` en `AuthGroups` al `pre_system`); incluido en `d6ce358`.
-
-### 3. Migración en sandbox (si otro clon no la aplicó)
+Nada de código. En el VPS, después de `git pull`:
 
 ```bash
+sudo systemctl reload php-fpm
 php spark plugin:action update notas-internas
 php spark plugin:doctor
+php spark routes | grep notasinternas
 ```
+
+Luego abre `/nat/plugins/notas-internas` con el permiso `notasinternas.access` asignado.
+
+### 404 web (corregido en este corte)
+
+La ruta ya estaba bien declarada: por eso `php spark routes` la veía y el navegador respondía *Can't find a route*. En la web, `pre_system` arranca los plugins antes de cargar `Routes.php`. Si ese arranque fallaba (la BD todavía no respondía, o la clase del plugin lanzaba), el núcleo marcaba el arranque como hecho y `loadRoutes()` no volvía a intentarlo. CLI no dispara `pre_system`, así que ahí la ruta sí existía.
+
+Ahora un fallo de BD no deja el arranque marcado, y un plugin que no pudo instanciarse se reintenta una vez al registrar rutas, sidebar y assets. Si el 404 continúa después del pull, recarga PHP-FPM: OPcache puede estar sirviendo el `NotasInternasPlugin.php` anterior, el que no registraba rutas. En el log, busca `PluginSystem`.
 
 ---
 
@@ -40,37 +36,29 @@ php spark plugin:doctor
 | Clase | `Plugins\NotasInternas\NotasInternasPlugin` |
 | Tabla | `plg_notasinternas_items` |
 | Permiso | `notasinternas.access` |
-| Versión manifiesto | `1.1.0` |
-| Estado esperado | Instalado y **activo** |
+| Versión manifiesto | `1.2.0` |
+| Estado esperado | Instalado y **activo**. Tras este corte: `php spark plugin:action update notas-internas` |
 
 ---
 
-## Hecho (pasos A–E + fix ERP)
+## Hecho (pasos A–G)
 
 | Ítem | Detalle |
 |------|---------|
 | **A** | Migración `2026-10-19-185422_AddFieldsToNotasInternasItems.php` — `user_id`, `body`, `color`, `is_pinned`, `updated_at`, índice `idx_plg_notasinternas_user_list` |
 | **B** | `plugins/NotasInternas/Models/NoteModel.php` — `forUser()`, `ownedBy()`, timestamps |
-| Manifiesto | `plugin.json` v1.1.0, icon `fa-sticky-note` |
+| Manifiesto | `plugin.json` v1.2.0, icon `fa-sticky-note` |
 | Fix permisos | `app/Config/Events.php` — Shield acepta permisos de plugin al guardar en UI |
-| Skill sync | `.cursor/skills/sync-rama/` (traer cambios de agentes cloud) |
-| **C** | `plugins/NotasInternas/Config/Routes.php` + `loadRoutes()` |
-| **D** | `getSidebarItems()` en `NotasInternasPlugin.php` |
-| **E** | `Controllers/NotesController.php` (`index` solamente) + `Views/notes_index.php` |
+| **C–D** | Rutas + `getSidebarItems()` |
+| **E–F** | `NotesController` índice, `list_ajax`, `save`, `delete`. Vista con editor (negrita, cursiva, subrayado), colores, fijar y borrado. Cada usuario solo ve sus notas. |
+| **G** | CSS y JS van en la vista. `public_html/plugins/*` está en `.gitignore`, así que no se versionan assets sueltos. |
+| 404 | `PluginManager` no marca el arranque como listo si la BD falla, y reintenta una vez el plugin que no pudo instanciarse antes de registrar rutas. |
 
 **No tocar:** migración inicial `2026-10-16-231040_CreateNotasInternasItems.php` (ya aplicada en install).
 
 ---
 
-## Por hacer (F → G)
-
-| Paso | Qué | Comprobación |
-|------|-----|----------------|
-| **404 web** | Confirmar si `GET /nat/plugins/notas-internas` carga tras recarga; si no, diagnosticar sin tocar `PluginSystem/` ni vendor | Navegador vs `php spark filter:check` |
-| **F** | `list_ajax`, `save`, `delete` + JS (CSRF, `strip_tags` en body) | CRUD por usuario |
-| **G** | `public_html/plugins/notas-internas/js|css` (opcional) | Assets en layout |
-
-### Rutas sugeridas
+## Rutas
 
 Grupo: `nat/plugins/notas-internas` — namespace `Plugins\NotasInternas\Controllers` — filter `session`.
 
@@ -82,8 +70,6 @@ Grupo: `nat/plugins/notas-internas` — namespace `Plugins\NotasInternas\Control
 | POST | `delete/(:num)` | `delete/$1` | `notasinternas.delete` |
 
 Cada ruta: `filter` => `permission:notasinternas.access`.
-
-Controlador: extiende `App\Controllers\PluginSystem\PluginBaseController`.
 
 ---
 
@@ -99,17 +85,18 @@ Controlador: extiende `App\Controllers\PluginSystem\PluginBaseController`.
 
 ---
 
-## Verificación final (cuando C–F estén listos)
+## Verificación
 
 ```bash
+php tests/smoke_notas_internas.php
 php spark plugin:doctor
 php spark routes | grep notasinternas
 ```
 
-Navegador: sidebar → crear / editar / borrar notas (solo las del usuario logueado).
+Navegador: sidebar → crear / editar / fijar / borrar notas (solo las del usuario logueado).
 
 ---
 
-## Handoff para agente cloud
+## Handoff
 
-Continuar F–G y el 404 web. No modificar `app/Libraries/PluginSystem/` ni `vendor/`. El único archivo ERP ya tocado es `app/Config/Events.php` (permisos Shield).
+CRUD de la demo cerrado. El núcleo solo cambió en el reintento de arranque (`bootAttempts` / `ensureBooted`), que era el 404 web vs CLI.
