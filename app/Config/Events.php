@@ -103,7 +103,22 @@ Events::on('failedLogin', static function ($credentials) {
 // Plugin System: carga de plugins activos en cada request web.
 // php spark no dispara pre_system; loadRoutes() arranca los plugins en CLI.
 Events::on('pre_system', static function () {
-    if (class_exists(\App\Libraries\PluginSystem\PluginManager::class)) {
-        \App\Libraries\PluginSystem\PluginManager::bootActivePlugins();
+    if (! class_exists(\App\Libraries\PluginSystem\PluginManager::class)) {
+        return;
     }
+
+    // Shield syncPermissions()/addPermission() solo aceptan claves de setting('AuthGroups.permissions').
+    // La UI usa permissionCatalog() (ERP + sys_plugin_permissions); hay que alinear la config en runtime.
+    try {
+        $authGroups = config('AuthGroups');
+        if ($authGroups !== null) {
+            $authGroups->permissions = \App\Libraries\PluginSystem\PluginManager::permissionCatalog();
+        }
+    } catch (\Throwable $e) {
+        log_message('error', '[PluginSystem] No se fusionaron permisos de plugins en AuthGroups: {message}', [
+            'message' => $e->getMessage(),
+        ]);
+    }
+
+    \App\Libraries\PluginSystem\PluginManager::bootActivePlugins();
 });
