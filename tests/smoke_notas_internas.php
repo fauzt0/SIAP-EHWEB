@@ -82,6 +82,13 @@ ni_ok(is_string($plugin) && str_contains($plugin, 'is_callable($callback)'), 'lo
 
 $manager = file_get_contents(dirname(__DIR__) . '/app/Libraries/PluginSystem/PluginManager.php');
 ni_ok(is_string($manager) && str_contains($manager, 'bootAttempts'), 'un boot fallido de BD no se queda marcado como listo');
+ni_ok(is_string($manager) && str_contains($manager, 'description es obligatoria'), 'el manifiesto exige la descripción del funcionamiento');
+
+$manifest = json_decode((string) file_get_contents(dirname(__DIR__) . '/plugins/NotasInternas/plugin.json'), true);
+$description = is_array($manifest) ? trim((string) ($manifest['description'] ?? '')) : '';
+ni_ok(mb_strlen($description) >= 40 && str_contains($description, '/nat/'), 'Notas internas describe el fijado en el inicio');
+ni_ok(is_string($plugin) && str_contains($plugin, 'layout.footer'), 'el acceso rápido entra por layout.footer');
+ni_ok(is_file(dirname(__DIR__) . '/plugins/NotasInternas/Views/quick_access.php'), 'existe la vista del listado rápido');
 
 if ($failed > 0) {
     fwrite(STDERR, "{$failed} comprobaciones fallaron\n");

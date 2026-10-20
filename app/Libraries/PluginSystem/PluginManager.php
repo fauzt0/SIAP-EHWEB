@@ -853,6 +853,12 @@ class PluginManager
             $errors[] = 'El nombre del plugin es obligatorio y de máximo 150 caracteres.';
         }
 
+        $description = $manifest['description'] ?? '';
+        $description = is_string($description) ? trim($description) : '';
+        if ($description === '' || mb_strlen($description) < 40 || mb_strlen($description) > 1000) {
+            $errors[] = 'description es obligatoria: explica cómo funciona el plugin, entre 40 y 1000 caracteres.';
+        }
+
         $version = (string) ($manifest['version'] ?? '');
         if (preg_match('/^\d+\.\d+\.\d+$/', $version) !== 1 || strlen($version) > 20) {
             $errors[] = 'La versión debe ser SemVer (MAJOR.MINOR.PATCH).';

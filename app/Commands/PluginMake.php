@@ -24,7 +24,7 @@ class PluginMake extends BaseCommand
 
     protected $arguments = [
         'nombre'      => 'Nombre visible. Ejemplo: Notas internas',
-        'descripcion' => 'Una frase de qué hace el plugin',
+        'descripcion' => 'Cómo funciona el plugin: qué hace el usuario y dónde lo ve',
     ];
 
     public function run(array $params)
@@ -36,7 +36,7 @@ class PluginMake extends BaseCommand
 
         $description = trim((string) ($params[1] ?? ''));
         if ($description === '') {
-            $description = trim((string) CLI::prompt('Descripción breve', null, 'required'));
+            $description = trim((string) CLI::prompt('Descripción del funcionamiento', null, 'required'));
         }
 
         $slug = self::slugFromName($name);
@@ -181,8 +181,9 @@ class PluginMake extends BaseCommand
         if (strlen($name) > 150) {
             return 'El nombre no puede pasar de 150 caracteres.';
         }
-        if ($description === '' || strlen($description) > 1000) {
-            return 'La descripción es obligatoria y de máximo 1000 caracteres.';
+        $descriptionLength = mb_strlen(trim($description));
+        if ($descriptionLength < 40 || $descriptionLength > 1000) {
+            return 'La descripción del funcionamiento es obligatoria: entre 40 y 1000 caracteres.';
         }
         if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug) !== 1 || strlen($slug) > 100) {
             return 'Con ese nombre no sale un slug válido (solo letras y números).';

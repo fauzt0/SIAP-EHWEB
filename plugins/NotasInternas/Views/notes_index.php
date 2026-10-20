@@ -75,7 +75,7 @@ $noteColors = $noteColors ?? ['#fff9c4'];
                     <?php endforeach; ?>
                     <div class="form-check mb-0 ms-2">
                         <input class="form-check-input" type="checkbox" id="ni-pin">
-                        <label class="form-check-label small" for="ni-pin">Fijar</label>
+                        <label class="form-check-label small" for="ni-pin">Fijar en el inicio</label>
                     </div>
                 </div>
                 <div class="d-flex gap-2">
@@ -144,6 +144,16 @@ $noteColors = $noteColors ?? ['#fff9c4'];
     }
 
     function post(url, fields) {
+        window.niPostQueue = window.niPostQueue || Promise.resolve();
+        const run = function () {
+            return postNow(url, fields);
+        };
+        const queued = window.niPostQueue.then(run, run);
+        window.niPostQueue = queued.then(function () {}, function () {});
+        return queued;
+    }
+
+    function postNow(url, fields) {
         const el = tokenEl();
         const body = new URLSearchParams(fields);
         if (el) {
@@ -156,7 +166,7 @@ $noteColors = $noteColors ?? ['#fff9c4'];
         if (el) {
             headers[headerName] = el.value;
         }
-        return fetch(url, { method: 'POST', headers: headers, body: body }).then(async function (response) {
+        return fetch(url, { method: 'POST', credentials: 'same-origin', headers: headers, body: body }).then(async function (response) {
             const next = response.headers.get(headerName);
             if (next && el) {
                 el.value = next;
@@ -194,7 +204,7 @@ $noteColors = $noteColors ?? ['#fff9c4'];
             const pin = document.createElement('button');
             pin.type = 'button';
             pin.className = 'btn btn-sm btn-link p-0';
-            pin.title = note.is_pinned ? 'Quitar fijada' : 'Fijar';
+            pin.title = note.is_pinned ? 'Quitar del inicio' : 'Fijar en el inicio';
             pin.innerHTML = note.is_pinned ? '<i class="fas fa-thumbtack"></i>' : '<i class="fas fa-thumbtack text-muted"></i>';
             pin.addEventListener('click', function (event) {
                 event.stopPropagation();
@@ -230,7 +240,7 @@ $noteColors = $noteColors ?? ['#fff9c4'];
                     if (String(idEl.value) === String(note.id)) {
                         clearForm();
                     }
-                    load();
+                    document.dispatchEvent(new CustomEvent('ni-notes-changed'));
                 }).catch(function () {
                     showError('No se pudo eliminar.');
                 });
@@ -277,11 +287,13 @@ $noteColors = $noteColors ?? ['#fff9c4'];
             if (!source.id && data.response) {
                 fillForm(data.response);
             }
-            load();
+            document.dispatchEvent(new CustomEvent('ni-notes-changed'));
         }).catch(function () {
             showError('No se pudo guardar.');
         });
     }
+
+    document.addEventListener('ni-notes-changed', load);
 
     document.querySelectorAll('[data-cmd]').forEach(function (btn) {
         btn.addEventListener('mousedown', function (event) {

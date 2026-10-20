@@ -17,7 +17,9 @@ php spark plugin:doctor
 php spark routes | grep notasinternas
 ```
 
-Luego abre `/nat/plugins/notas-internas` con el permiso `notasinternas.access` asignado.
+Luego abre `/nat/` con el permiso `notasinternas.access`. El icono de nota del menú superior lista las notas y las abre en un modal. Fijar deja la nota en el inicio; quitar el fijado la saca de ahí.
+
+`description` del manifiesto es obligatoria (40 a 1000 caracteres) y cuenta cómo funciona el plugin. `plugin:action update notas-internas` copia ese texto al mercado.
 
 ### 404 web (causa real, corregida)
 
@@ -44,7 +46,7 @@ El reintento (`bootAttempts` / `ensureBooted`) se queda: un fallo de BD no debe 
 | Clase | `Plugins\NotasInternas\NotasInternasPlugin` |
 | Tabla | `plg_notasinternas_items` |
 | Permiso | `notasinternas.access` |
-| Versión manifiesto | `1.2.0` |
+| Versión manifiesto | `1.3.0` |
 | Estado esperado | Instalado y **activo**. Tras este corte: `php spark plugin:action update notas-internas` |
 
 ---
@@ -55,7 +57,7 @@ El reintento (`bootAttempts` / `ensureBooted`) se queda: un fallo de BD no debe 
 |------|---------|
 | **A** | Migración `2026-10-19-185422_AddFieldsToNotasInternasItems.php` — `user_id`, `body`, `color`, `is_pinned`, `updated_at`, índice `idx_plg_notasinternas_user_list` |
 | **B** | `plugins/NotasInternas/Models/NoteModel.php` — `forUser()`, `ownedBy()`, timestamps, `protected array $casts` |
-| Manifiesto | `plugin.json` v1.2.0, icon `fa-sticky-note` |
+| Manifiesto | `plugin.json` v1.3.0, icon `fa-sticky-note`. `description` explica el listado del menú, el modal y el fijado en `/nat/` |
 | Fix permisos | `captureBasePermissions()` antes de fusionar el catálogo; la fusión sigue para que Shield acepte el permiso en la UI |
 | **C–D** | Rutas + `getSidebarItems()` |
 | **E–F** | `NotesController` índice, `list_ajax`, `save`, `delete`. Vista con editor (negrita, cursiva, subrayado), colores, fijar y borrado. Cada usuario solo ve sus notas. |
@@ -108,8 +110,10 @@ Validado por HTTP el 2026-10-20, con el plugin instalado y activo en 1.2.0:
 - Crear, fijar, listar (fijadas primero), borrar. El cuerpo sale sin `<script>` ni atributos. Color ajeno vuelve a `#fff9c4`. Nota vacía → 400. Id ajeno o inexistente → 404 y no aparece en el listado.
 - Bitácora `users_activity_logs`, type `notasinternas`.
 
+En 1.3.0, con la misma sesión: `/nat/` muestra la nota fijada, el icono del menú lista esa nota, el clic abre el modal y «Quitar del inicio» la saca del dashboard. Volver a fijar la regresa. La página de Notas internas sigue en 200 con el compositor y el mismo icono.
+
 ---
 
 ## Handoff
 
-La demo queda comprobada de punta a punta. El núcleo cambió en dos puntos: el reintento si la BD falla al arrancar, y la foto de permisos antes de fusionar el catálogo. Sin esa foto el navegador seguía en 404 aunque `php spark routes` mostrara la ruta.
+La demo queda comprobada de punta a punta. El acceso rápido usa el hook v1 `layout.footer`: icono en el menú superior, modal y notas fijadas en `/nat/`. `description` del manifiesto es obligatoria. El núcleo, además, fotografía los permisos antes de fusionar el catálogo y reintenta el arranque si la BD falla.
