@@ -235,21 +235,49 @@ class FinExpenseModel extends Model
         $dueSoon = $this->_aggregateDueSoon();
 
         return [
-            'pending_this_month'        => $pendingThisMonth['count'],
-            'pending_this_month_amount' => $pendingThisMonth['outstanding'],
-            'overdue'                   => $overdue['count'],
-            'overdue_amount'            => $overdue['outstanding'],
-            'paid_this_month'           => $paidThisMonth['count'],
-            'paid_this_month_amount'    => $paidThisMonth['sum'],
-            'due_soon'                  => $dueSoon['count'],
-            'due_soon_amount'           => $dueSoon['outstanding'],
-            'currency'                  => 'MXN',
+            'pending_this_month'                => $pendingThisMonth['count'],
+            'pending_this_month_amount'         => $pendingThisMonth['single'],
+            'pending_this_month_by_currency'    => $pendingThisMonth['by_currency'],
+            'overdue'                           => $overdue['count'],
+            'overdue_amount'                    => $overdue['single'],
+            'overdue_by_currency'               => $overdue['by_currency'],
+            'paid_this_month'                   => $paidThisMonth['count'],
+            'paid_this_month_amount'            => $paidThisMonth['single'],
+            'paid_this_month_by_currency'       => $paidThisMonth['by_currency'],
+            'due_soon'                          => $dueSoon['count'],
+            'due_soon_amount'                   => $dueSoon['single'],
+            'due_soon_by_currency'              => $dueSoon['by_currency'],
+            'currency'                          => $this->_singleCurrencyCode([
+                $pendingThisMonth['by_currency'],
+                $overdue['by_currency'],
+                $paidThisMonth['by_currency'],
+                $dueSoon['by_currency'],
+            ]),
         ];
     }
 
     /**
+     * @param list<array<string, float>> $maps
+     */
+    private function _singleCurrencyCode(array $maps): string
+    {
+        $codes = [];
+        foreach ($maps as $map) {
+            foreach (array_keys($map) as $code) {
+                $codes[$code] = true;
+            }
+        }
+
+        if (count($codes) === 1) {
+            return (string) array_key_first($codes);
+        }
+
+        return count($codes) === 0 ? 'MXN' : '';
+    }
+
+    /**
      * @param list<string> $statuses
-     * @return array{count:int,sum:float,outstanding:float}
+     * @return array{count:int,single:?float,by_currency:array<string,float>}
      */
     private function _aggregateRecurring(
         array $statuses,
@@ -258,13 +286,16 @@ class FinExpenseModel extends Model
         bool $overdueOnly,
         string $sumField = 'total_amount'
     ): array {
-        $builder = $this->db->table($this->table);
+        $amountField = $sumField === 'paid_amount' ? 'amt' : 'outstanding';
+        $builder     = $this->db->table($this->table);
         $builder->select(
-            'COUNT(*) AS cnt, COALESCE(SUM(' . $sumField . '), 0) AS amt, COALESCE(SUM(total_amount - paid_amount), 0) AS outstanding'
+            "COALESCE(NULLIF(currency, ''), 'MXN') AS currency, COUNT(*) AS cnt, COALESCE(SUM(" . $sumField . '), 0) AS amt, COALESCE(SUM(total_amount - paid_amount), 0) AS outstanding',
+            false
         )
             ->where('deleted_at IS NULL')
             ->where('recurring_expense_id IS NOT NULL', null, false)
-            ->whereIn('status', $statuses);
+            ->whereIn('status', $statuses)
+            ->groupBy("COALESCE(NULLIF(currency, ''), 'MXN')", false);
 
         if ($from !== null) {
             $builder->where('due_date >=', $from);
@@ -277,23 +308,20 @@ class FinExpenseModel extends Model
             }
         }
 
-        $row = $builder->get()->getRow();
-
-        return [
-            'count'       => (int) ($row->cnt ?? 0),
-            'sum'         => (float) ($row->amt ?? 0),
-            'outstanding' => (float) ($row->outstanding ?? 0),
-        ];
+        return $this->_foldMoneyRows($builder->get()->getResult(), $amountField);
     }
 
     /**
-     * @return array{count:int,outstanding:float}
+     * @return array{count:int,single:?float,by_currency:array<string,float>}
      */
     private function _aggregateDueSoon(): array
     {
         $today = date('Y-m-d');
-        $row   = $this->db->table('fin_expenses fe')
-            ->select('COUNT(*) AS cnt, COALESCE(SUM(fe.total_amount - fe.paid_amount), 0) AS outstanding')
+        $rows  = $this->db->table('fin_expenses fe')
+            ->select(
+                "COALESCE(NULLIF(fe.currency, ''), 'MXN') AS currency, COUNT(*) AS cnt, COALESCE(SUM(fe.total_amount - fe.paid_amount), 0) AS outstanding",
+                false
+            )
             ->join('fin_recurring_expenses re', 're.id = fe.recurring_expense_id')
             ->where('fe.deleted_at IS NULL')
             ->where('re.deleted_at IS NULL')
@@ -301,12 +329,41 @@ class FinExpenseModel extends Model
             ->where('fe.due_date >=', $today)
             ->where('re.notify_days_before >', 0)
             ->where('fe.due_date <= DATE_ADD(' . $this->db->escape($today) . ', INTERVAL re.notify_days_before DAY)', null, false)
+            ->groupBy("COALESCE(NULLIF(fe.currency, ''), 'MXN')", false)
             ->get()
-            ->getRow();
+            ->getResult();
+
+        return $this->_foldMoneyRows($rows, 'outstanding');
+    }
+
+    /**
+     * @param list<object> $rows
+     * @return array{count:int,single:?float,by_currency:array<string,float>}
+     */
+    private function _foldMoneyRows(array $rows, string $field): array
+    {
+        $by    = [];
+        $count = 0;
+
+        foreach ($rows as $row) {
+            $currency       = (string) ($row->currency ?? 'MXN');
+            $by[$currency]  = round(($by[$currency] ?? 0) + (float) ($row->{$field} ?? 0), 2);
+            $count         += (int) ($row->cnt ?? 0);
+        }
+
+        ksort($by);
+
+        $single = null;
+        if (count($by) === 1) {
+            $single = (float) reset($by);
+        } elseif ($by === []) {
+            $single = 0.0;
+        }
 
         return [
-            'count'       => (int) ($row->cnt ?? 0),
-            'outstanding' => (float) ($row->outstanding ?? 0),
+            'count'       => $count,
+            'single'      => $single,
+            'by_currency' => $by,
         ];
     }
 

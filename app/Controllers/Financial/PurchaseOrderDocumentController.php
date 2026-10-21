@@ -2,7 +2,9 @@
 
 namespace App\Controllers\Financial;
 
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 use App\Models\Financial\FinPurchaseOrderDocumentModel;
 use App\Models\Financial\FinPurchaseOrderEmailLogModel;
 use App\Models\Financial\FinSupplierContactModel;
@@ -17,7 +19,7 @@ class PurchaseOrderDocumentController extends BaseFinancialController
     private FinPurchaseOrderDocumentModel $documentModel;
     private FinPurchaseOrderEmailLogModel $emailLogModel;
 
-    public function initController($request, $response, $logger)
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         $this->documentModel = new FinPurchaseOrderDocumentModel();

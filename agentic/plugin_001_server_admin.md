@@ -87,12 +87,9 @@ plugins/ServerAdmin/
 │   ├── knowledge_base.php       (listado + búsqueda de soluciones)
 │   ├── knowledge_entry.php      (detalle de solución)
 │   └── Partials/
-│       ├── supplier_tab.php     (tab inyectado en vista de proveedor)
-│       └── sidebar_section.php
+│       └── sidebar_section.php  (no se usa: el menú sale de getSidebarItems)
 ├── Hooks/
-│   ├── SidebarHook.php
-│   ├── AlertHook.php
-│   └── SupplierHook.php        (inyecta tab de servidores en vista de proveedor)
+│   └── AlertHook.php            (solo alert.detect; sin tab de proveedor)
 ├── Services/
 │   ├── DirectAdminClient.php    (cliente HTTP hacia DirectAdmin API)
 │   ├── InterServerClient.php    (cliente HTTP hacia InterServer API)
@@ -135,8 +132,10 @@ ssh_user         VARCHAR(100) NULL
 ssh_key_path     VARCHAR(255) NULL   -- Ruta relativa a clave privada en WRITEPATH
 status           ENUM('active','down','maintenance','retired') DEFAULT 'active'
 monthly_cost     DECIMAL(10,2) NULL  -- Costo de renovación
+currency         VARCHAR(3) NOT NULL DEFAULT 'USD'  -- Moneda del cargo (InterServer suele ser USD)
 renewal_date     DATE NULL           -- Próxima renovación
 supplier_id      INT NULL FK fin_suppliers.id  -- Proveedor del servidor
+recurring_expense_id INT UNSIGNED NULL  -- Plantilla fin_recurring_expenses.id; no es un segundo libro contable
 notes            TEXT NULL
 interserver_id   VARCHAR(100) NULL   -- ID en InterServer (si aplica)
 created_by       INT FK users.id
@@ -321,24 +320,11 @@ created_at, updated_at, deleted_at
 
 ### 8.1 Integración con Proveedores (`fin_suppliers`)
 
-El plugin añade un **tab "Servidores"** en la ficha de proveedor (`SupplierController::show()`).
+Cada servidor con costo recurrente apunta a un proveedor (`supplier_id`) y a **una** plantilla de `fin_recurring_expenses` (`recurring_expense_id`). El listado de servidores de un proveedor vive en la pantalla del plugin, filtrada por `supplier_id`. No hace falta un tab dentro de `SupplierController::show()`.
 
-```php
-// plugins/ServerAdmin/Hooks/SupplierHook.php
-PluginHookRegistry::addAction('supplier.show.tabs', [self::class, 'renderTab'], 10);
+`supplier.show.tabs` y `catalog.product.show.tabs` **no están cableados** en el núcleo v1. `registerHooks()` no debe registrarlos: el núcleo solo ejecuta `alert.detect` y `layout.footer`. El ítem de menú sale de `getSidebarItems()`, no del hook `sidebar.render`.
 
-public static function renderTab(array $supplier): void
-{
-    $serverModel = new \Plugins\ServerAdmin\Models\ServerModel();
-    $servers = $serverModel->getForSupplierTab($supplier['id']);
-    echo view('Plugins\ServerAdmin\Views\Partials\supplier_tab', compact('servers', 'supplier'));
-}
-```
-
-El tab muestra:
-- Lista de servidores de ese proveedor (con IP, tipo, estado, próxima renovación)
-- Botón "Nuevo servidor en este proveedor" → abre modal pre-llenado con `supplier_id`
-- Total de costo mensual de servidores del proveedor
+Hasta que el núcleo publique un hook de ficha, el plugin no inyecta HTML en la vista de proveedor. El dinero, los recordatorios y el porcentaje pagado se ven en Proveedores → Reportes y en Servicios recurrentes.
 
 ### 8.2 Integración con Catálogo de Productos (`catalog_products`)
 
@@ -375,6 +361,21 @@ if ($request->getPost('create_as_product') === '1') {
     logActivity('server_linked_product', "Servidor ID $savedId vinculado al producto ID $productId");
 }
 ```
+
+### 8.5 Servicios recurrentes de servidores y recordatorios de pago
+
+Un VPS de InterServer (u otro proveedor del ENUM) es un servicio recurrente del módulo de proveedores, igual que telefonía o internet. El plugin **no** crea tablas de cuentas por pagar, **no** escribe `fin_ledger_entries` y **no** calcula un porcentaje pagado propio.
+
+Al guardar un servidor con `supplier_id`, `monthly_cost > 0` y `renewal_date`:
+
+1. Crear o actualizar la fila `fin_recurring_expenses` guardada en `recurring_expense_id`.
+2. Campos de esa plantilla: `supplier_id` del servidor, `service_type = hosting`, `description` con nombre y proveedor (`interserver`, etc.), `amount = monthly_cost`, `currency` del servidor, `frequency = monthly`, `next_due_date = renewal_date`, `notify_days_before` (15 días es el mismo horizonte que el aviso operativo de renovación), `is_active = 1` mientras el servidor no esté `retired`.
+3. Los vencimientos los genera el programador que ya existe (`RecurringExpenseScheduler` / el comando de gastos recurrentes). Cada ocurrencia es un `fin_expenses` con `paid_amount`, `status` (`pending|partial|paid|cancelled`) y `due_date`.
+4. Esos `fin_expenses` alimentan las alertas del ERP (`_detectOverdueRecurringExpenses`, `_detectDueSoonRecurringExpenses`), el calendario de servicios recurrentes y el reporte de proveedores (pendiente, pagado, porcentaje y recordatorios).
+5. Si cambia el costo, la moneda, el proveedor o la fecha de renovación, se actualiza la misma plantilla. No se inserta otra. Si el servidor se retira, la plantilla pasa a `is_active = 0`; no se borran los gastos ya contabilizados.
+6. `InterServerClient::getInvoices()` solo concilia: puede proponer el monto y la fecha de la plantilla. La factura no se guarda como deuda dentro del plugin.
+
+El aviso `_detectRenewalsSoon` del plugin sigue siendo operativo (el servidor vence). El aviso de **pago** es el del módulo de proveedores. Los dos pueden coexistir; la cifra a pagar es la de `fin_expenses`.
 
 ---
 
@@ -471,7 +472,7 @@ class InterServerClient
 }
 ```
 
-**Activación:** Al instalar el plugin, si el usuario marca "Usar InterServer API", el wizard solicita el API Key y lo guarda en `sys_plugin_settings(plugin_slug='server-admin', key='interserver_api_key', value=encrypt($key))`.
+**Activación:** Al instalar el plugin, si el usuario marca "Usar InterServer API", el wizard solicita el API Key y lo guarda como ajuste `type=password` (`interserver_api_key`). El núcleo lo sella con prefijo `enc1:` mediante `encryption.key`. Sin esa clave el secreto no se almacena. No se guarda por `plugin:action settings`.
 
 ---
 
@@ -666,20 +667,20 @@ Servidor → (POST cada 30s) → /nat/plugins/servers/metrics/push → ERP guard
 // plugins/ServerAdmin/ServerAdmin.php
 public function registerHooks(): void
 {
-    \App\Libraries\PluginSystem\PluginHookRegistry::addAction(
-        'sidebar.render', [\Plugins\ServerAdmin\Hooks\SidebarHook::class, 'render'], 10
-    );
+    // Único hook v1 que este plugin puede registrar.
     \App\Libraries\PluginSystem\PluginHookRegistry::addAction(
         'alert.detect', [\Plugins\ServerAdmin\Hooks\AlertHook::class, 'detect'], 20
     );
-    \App\Libraries\PluginSystem\PluginHookRegistry::addAction(
-        'supplier.show.tabs', [\Plugins\ServerAdmin\Hooks\SupplierHook::class, 'renderTab'], 10
-    );
-    \App\Libraries\PluginSystem\PluginHookRegistry::addAction(
-        'catalog.product.show.tabs', [\Plugins\ServerAdmin\Hooks\SupplierHook::class, 'renderProductTab'], 10
-    );
+}
+
+public function getSidebarItems(): array
+{
+    // El menú no usa sidebar.render: ese hook no se ejecuta.
+    return [/* ítem Servidores, permiso servers.access */];
 }
 ```
+
+`supplier.show.tabs`, `catalog.product.show.tabs` y `sidebar.render` quedan fuera hasta que el núcleo los publique en `PluginHookRegistry::wiredHooks()`.
 
 ---
 
@@ -708,7 +709,7 @@ Grupos sugeridos al instalar:
 | Detector | Condición | Tipo | Permiso |
 |----------|-----------|------|---------|
 | `_detectServersDown` | Servidores con `is_up=0` en último log | `danger` | `servers.access` |
-| `_detectRenewalsSoon` | `renewal_date` en los próximos 15 días | `warning` | `servers.manage` |
+| `_detectRenewalsSoon` | `renewal_date` en los próximos 15 días. Aviso operativo. El cobro y el recordatorio de pago salen de `fin_recurring_expenses` / `fin_expenses` en Proveedores | `warning` | `servers.manage` |
 | `_detectMissingMonitorLog` | Servidor sin log en las últimas 2 horas | `warning` | `servers.access` |
 
 ---
@@ -757,7 +758,7 @@ Este es el plugin más complejo. Implementa en este orden:
 1. Migraciones (5 tablas en orden)
 2. Modelos (ServerModel, KnowledgeBaseModel con DataTableTrait)
 3. Services (DirectAdminClient, InterServerClient, SshProxyService con phpseclib)
-4. Hooks (SidebarHook, AlertHook, SupplierHook)
+4. Hooks: solo `alert.detect`. Menú con `getSidebarItems()`. No registrar `sidebar.render` ni `supplier.show.tabs`
 5. Controladores (ServerController 18 métodos, KnowledgeBaseController 8 métodos)
 6. Vistas (servers_index, server_show con 5 tabs, server_monitor, server_ssh, knowledge_base)
 7. Rutas en Config/Routes.php del plugin
@@ -767,7 +768,7 @@ Importante:
 - Las claves SSH se guardan cifradas en WRITEPATH (nunca en DB directamente ni en public_html)
 - La terminal SSH usa phpseclib/phpseclib (composer require phpseclib/phpseclib en el plugin)
 - El monitor de servidores tiene un Command CI4 (spark servers:monitor) para cron
-- SupplierHook inyecta un tab en la vista de proveedor del ERP base — usa PluginHookRegistry
+- Al guardar un servidor con costo, crear o actualizar una plantilla `fin_recurring_expenses` (`service_type=hosting`) y guardar su id en `recurring_expense_id`. Los pagos y recordatorios los resuelve el módulo de proveedores. No escribir `fin_ledger_entries` ni un libro de pagos propio.
 
 Cumple TODOS los §1–§21 de la sección "Cumplimiento §1–§21" al final del plan.
 Al terminar, añade tu reporte al final de @agentic/AUDITORIA_ARQUITECTURA.md.

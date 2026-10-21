@@ -2,7 +2,9 @@
 
 namespace App\Controllers\Financial;
 
+use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 use App\Models\Financial\FinRecurringExpenseModel;
 use App\Models\Financial\FinExpenseModel;
 use App\Models\Financial\FinExpenseDocumentModel;
@@ -15,7 +17,7 @@ class RecurringExpenseController extends BaseFinancialController
     private FinExpenseModel $expenseModel;
     private FinExpenseDocumentModel $expenseDocModel;
 
-    public function initController($request, $response, $logger)
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void
     {
         parent::initController($request, $response, $logger);
         $this->recurringModel  = new FinRecurringExpenseModel();

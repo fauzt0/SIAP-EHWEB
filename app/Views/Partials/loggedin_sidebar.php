@@ -128,7 +128,7 @@
           </a>
           <ul id="suppliers-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/suppliers*') ? 'show' : '' ?>"
             data-bs-parent="#sidebar">
-            <li class="sidebar-item <?= (url_is('nat/suppliers') && !url_is('nat/suppliers/purchase-orders*') && !url_is('nat/suppliers/categories*') && !url_is('nat/suppliers/recurring*')) ? 'active' : '' ?>">
+            <li class="sidebar-item <?= (url_is('nat/suppliers') && !url_is('nat/suppliers/purchase-orders*') && !url_is('nat/suppliers/categories*') && !url_is('nat/suppliers/recurring*') && !url_is('nat/suppliers/reports*')) ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('suppliers.index') ?>">Proveedores</a>
             </li>
             <li class="sidebar-item <?= url_is('nat/suppliers/categories*') ? 'active' : '' ?>">
@@ -139,6 +139,9 @@
             </li>
             <li class="sidebar-item <?= url_is('nat/suppliers/recurring*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('suppliers.recurring.index') ?>">Servicios recurrentes</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/suppliers/reports*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('suppliers.reports.index') ?>">Reportes</a>
             </li>
           </ul>
         </li>

@@ -241,6 +241,10 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
             $routes->post('contacts/delete/(:num)', 'Financial\SupplierContactController::delete/$1', ['as' => 'suppliers.contacts.delete', 'filter' => 'permission:catalog.manage-suppliers']);
             $routes->post('contacts/set_primary/(:num)', 'Financial\SupplierContactController::set_primary/$1', ['as' => 'suppliers.contacts.set_primary', 'filter' => 'permission:catalog.manage-suppliers']);
 
+            // ── Reportes (solo lectura) ───────────────────────────────
+            $routes->get('reports', 'Financial\SupplierReportController::index', ['as' => 'suppliers.reports.index']);
+            $routes->get('reports/export', 'Financial\SupplierReportController::export', ['as' => 'suppliers.reports.export']);
+
             // ── Órdenes de Compra (PurchaseOrderController) ────────────
             $routes->get('purchase-orders', 'Financial\PurchaseOrderController::index', ['as' => 'suppliers.po.index']);
             $routes->post('purchase-orders/list_ajax', 'Financial\PurchaseOrderController::list_ajax', ['as' => 'suppliers.po.list_ajax']);

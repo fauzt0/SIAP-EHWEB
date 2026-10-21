@@ -18,11 +18,28 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
             <div class="col-auto ms-auto text-end mt-n1"><nav><?= $breadcrumb ?? '' ?></nav></div>
         </div>
 
+        <?php
+        if (! function_exists('recurring_stat_money')) {
+            function recurring_stat_money(array $stats, string $amountKey, string $mapKey): string
+            {
+                $map = $stats[$mapKey] ?? [];
+                if (! is_array($map) || $map === []) {
+                    return '$' . number_format((float) ($stats[$amountKey] ?? 0), 2);
+                }
+                $parts = [];
+                foreach ($map as $currency => $amount) {
+                    $parts[] = $currency . ' ' . number_format((float) $amount, 2);
+                }
+
+                return implode(' · ', $parts);
+            }
+        }
+        ?>
         <div class="row mb-3">
-            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pendientes este mes</div><div class="h4 mb-0 text-warning" id="stat-pending"><?= '$' . number_format((float) ($stats['pending_this_month_amount'] ?? 0), 2) ?></div><div class="small text-muted" id="stat-pending-count"><?= (int) ($stats['pending_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
-            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Vencidos</div><div class="h4 mb-0 text-danger" id="stat-overdue"><?= '$' . number_format((float) ($stats['overdue_amount'] ?? 0), 2) ?></div><div class="small text-muted" id="stat-overdue-count"><?= (int) ($stats['overdue'] ?? 0) ?> vencimiento(s)</div></div></div></div>
-            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pagados este mes</div><div class="h4 mb-0 text-success" id="stat-paid"><?= '$' . number_format((float) ($stats['paid_this_month_amount'] ?? 0), 2) ?></div><div class="small text-muted" id="stat-paid-count"><?= (int) ($stats['paid_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
-            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Por vencer (aviso)</div><div class="h4 mb-0 text-info" id="stat-due-soon"><?= '$' . number_format((float) ($stats['due_soon_amount'] ?? 0), 2) ?></div><div class="small text-muted" id="stat-due-soon-count"><?= (int) ($stats['due_soon'] ?? 0) ?> vencimiento(s)</div></div></div></div>
+            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pendientes este mes</div><div class="h4 mb-0 text-warning" id="stat-pending"><?= esc(recurring_stat_money($stats, 'pending_this_month_amount', 'pending_this_month_by_currency')) ?></div><div class="small text-muted" id="stat-pending-count"><?= (int) ($stats['pending_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
+            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Vencidos</div><div class="h4 mb-0 text-danger" id="stat-overdue"><?= esc(recurring_stat_money($stats, 'overdue_amount', 'overdue_by_currency')) ?></div><div class="small text-muted" id="stat-overdue-count"><?= (int) ($stats['overdue'] ?? 0) ?> vencimiento(s)</div></div></div></div>
+            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pagados este mes</div><div class="h4 mb-0 text-success" id="stat-paid"><?= esc(recurring_stat_money($stats, 'paid_this_month_amount', 'paid_this_month_by_currency')) ?></div><div class="small text-muted" id="stat-paid-count"><?= (int) ($stats['paid_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
+            <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Por vencer (aviso)</div><div class="h4 mb-0 text-info" id="stat-due-soon"><?= esc(recurring_stat_money($stats, 'due_soon_amount', 'due_soon_by_currency')) ?></div><div class="small text-muted" id="stat-due-soon-count"><?= (int) ($stats['due_soon'] ?? 0) ?> vencimiento(s)</div></div></div></div>
         </div>
 
         <div class="card">
@@ -32,11 +49,16 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-expenses" id="btn-tab-expenses">Vencimientos</button></li>
                     <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-templates" id="btn-tab-templates">Plantillas</button></li>
                 </ul>
+                <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary btn-sm" href="<?= route_to('suppliers.reports.index') ?>">
+                    <i class="fas fa-chart-bar me-1"></i>Reportes
+                </a>
                 <?php if ($canManage): ?>
                 <button type="button" class="btn btn-warning btn-sm" id="btn-generate-recurring">
                     <i class="fas fa-sync-alt me-1"></i>Generar vencimientos
                 </button>
                 <?php endif; ?>
+                </div>
             </div>
             <div class="card-body tab-content">
                 <div class="tab-pane fade show active" id="tab-calendar">
@@ -646,14 +668,21 @@ function confirmReschedule() {
 
 function applyStats(stats) {
     if (!stats) return;
-    function money(n) { return '$' + (parseFloat(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
-    document.getElementById('stat-pending').textContent = money(stats.pending_this_month_amount);
+    function moneyMap(map, single) {
+        var keys = map && typeof map === 'object' ? Object.keys(map) : [];
+        function amount(n) { return (parseFloat(n) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+        if (keys.length > 0) {
+            return keys.map(function(code) { return code + ' ' + amount(map[code]); }).join(' · ');
+        }
+        return '$' + amount(single);
+    }
+    document.getElementById('stat-pending').textContent = moneyMap(stats.pending_this_month_by_currency, stats.pending_this_month_amount);
     document.getElementById('stat-pending-count').textContent = (stats.pending_this_month || 0) + ' vencimiento(s)';
-    document.getElementById('stat-overdue').textContent = money(stats.overdue_amount);
+    document.getElementById('stat-overdue').textContent = moneyMap(stats.overdue_by_currency, stats.overdue_amount);
     document.getElementById('stat-overdue-count').textContent = (stats.overdue || 0) + ' vencimiento(s)';
-    document.getElementById('stat-paid').textContent = money(stats.paid_this_month_amount);
+    document.getElementById('stat-paid').textContent = moneyMap(stats.paid_this_month_by_currency, stats.paid_this_month_amount);
     document.getElementById('stat-paid-count').textContent = (stats.paid_this_month || 0) + ' vencimiento(s)';
-    document.getElementById('stat-due-soon').textContent = money(stats.due_soon_amount);
+    document.getElementById('stat-due-soon').textContent = moneyMap(stats.due_soon_by_currency, stats.due_soon_amount);
     document.getElementById('stat-due-soon-count').textContent = (stats.due_soon || 0) + ' vencimiento(s)';
 }
 
