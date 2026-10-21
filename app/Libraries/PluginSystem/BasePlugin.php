@@ -90,7 +90,11 @@ abstract class BasePlugin implements PluginInterface
                 }
 
                 $type = (string) (($this->manifest['settings'][$key]['type'] ?? 'text'));
-                if (in_array($type, ['text', 'password', 'number', 'select'], true)) {
+                if ($type === 'password') {
+                    $settings[$key] = PluginSecret::open((string) $row['value']);
+                    continue;
+                }
+                if (in_array($type, ['text', 'number', 'select'], true)) {
                     $settings[$key] = $row['value'];
                     continue;
                 }
@@ -120,7 +124,20 @@ abstract class BasePlugin implements PluginInterface
         $now = date('Y-m-d H:i:s');
 
         foreach ($config as $key => $value) {
-            if (is_array($value)) {
+            $type = (string) (($allowed[$key]['type'] ?? 'text'));
+            if ($type === 'password') {
+                if (! is_scalar($value)) {
+                    return false;
+                }
+                $stored = PluginSecret::seal((string) $value);
+                if ($stored === null) {
+                    log_message('error', '[PluginSystem] {slug}: ajuste password rechazado, falta encryption.key.', [
+                        'slug' => $this->getSlug(),
+                    ]);
+
+                    return false;
+                }
+            } elseif (is_array($value)) {
                 $stored = json_encode($value, JSON_UNESCAPED_UNICODE);
             } elseif ($value === null) {
                 $stored = null;

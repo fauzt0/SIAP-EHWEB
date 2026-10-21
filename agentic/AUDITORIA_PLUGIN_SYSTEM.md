@@ -378,4 +378,8 @@ Riesgo aceptado: un plugin que ya está en disco, una vez instalado por un admin
 
 Notas aplicadas: `purge()` se niega si `restored_at`; la UI oculta Purgar/Restaurar en ese caso; `file_put_contents` comprobado; `getConfig()` no convierte texto JSON-like en array; `select` validado y pintado; `PLUGIN_MARKET_URL` entra por `getAvailable()` → `getCatalog()`; `requires` en deactivate/uninstall; `activate()` instancia y llama `registerHooks()` antes de marcar activo; `plugin:doctor` captura fallo de BD; caché de `onDiskManifests()`; respuesta remota ≤ 512 KiB.
 
-Pendientes conscientes (no bloquean el núcleo): passwords en claro en `sys_plugin_settings`; `plugin:action settings` por argv; dump SQL entero en memoria; `class_exists` al abrir el Market carga PHP del plugin aún no instalado; huérfanos `auth_permissions_users`; `min_erp_version` / caché de listado / hooks reservados.
+Pendientes conscientes (no bloquean el núcleo): dump SQL entero en memoria; `class_exists` al abrir el Market carga PHP del plugin aún no instalado; huérfanos `auth_permissions_users`; `min_erp_version` / caché de listado / hooks reservados.
+
+### Verificación final del núcleo (2026-10-21)
+
+`php spark plugin:doctor` en 0 errores con Notas internas activa. El ciclo install → update sigue rechazando slug, carpeta, prefijo, permisos de comodín y descripciones vacías. Un ajuste `password` se guarda cifrado (`enc1:` + `encryption.key`) y `plugin:action settings` lo rechaza para que el secreto no quede en el historial del shell. Los demás tipos siguen pudiendo fijarse por CLI. Sigue fuera de alcance: hooks reservados, caché del listado, `min_erp_version` y los plugins 001–006.

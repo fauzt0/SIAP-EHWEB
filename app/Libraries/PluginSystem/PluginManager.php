@@ -678,7 +678,7 @@ class PluginManager
             unset($current);
 
             if ($clean !== [] && ! $instance->setConfig($clean)) {
-                return ['success' => false, 'message' => 'No se pudo guardar la configuración.'];
+                return ['success' => false, 'message' => 'No se pudo guardar la configuración. Si hay un ajuste password, revisa encryption.key.'];
             }
         } catch (Throwable $e) {
             log_message('error', '[PluginManager::saveSettings] {message}', ['message' => $e->getMessage()]);

@@ -43,9 +43,7 @@ class PluginAction extends BaseCommand
             'purge'      => $extra === 'ELIMINAR'
                 ? PluginManager::purge((int) $target)
                 : ['success' => false, 'message' => 'La purga exige el argumento ELIMINAR.'],
-            'settings'   => $extra === ''
-                ? ['success' => false, 'message' => 'settings exige: plugin:action settings <slug> <clave> <valor>']
-                : PluginManager::saveSettings($target, [$extra => ($params[3] ?? '')]),
+            'settings'   => self::saveSettingFromCli($target, $extra, (string) ($params[3] ?? '')),
             default      => ['success' => false, 'message' => 'Acción no reconocida. Usa install, activate, deactivate, uninstall, restore, purge, update o settings.'],
         };
 
@@ -73,5 +71,33 @@ class PluginAction extends BaseCommand
         }
 
         return $ok ? EXIT_SUCCESS : EXIT_ERROR;
+    }
+
+    /**
+     * @return array{success: bool, message: string}
+     */
+    private static function saveSettingFromCli(string $slug, string $key, string $value): array
+    {
+        if ($slug === '' || $key === '') {
+            return ['success' => false, 'message' => 'settings exige: plugin:action settings <slug> <clave> <valor>'];
+        }
+
+        $found = PluginManager::findOnDisk($slug);
+        $type  = 'text';
+        if (is_array($found)) {
+            $definition = $found['manifest']['settings'][$key] ?? null;
+            if (is_array($definition)) {
+                $type = (string) ($definition['type'] ?? 'text');
+            }
+        }
+
+        if ($type === 'password') {
+            return [
+                'success' => false,
+                'message' => 'Un ajuste password no se guarda por la línea de comandos: el valor quedaría en el historial del shell. Usa el mercado de plugins.',
+            ];
+        }
+
+        return PluginManager::saveSettings($slug, [$key => $value]);
     }
 }
