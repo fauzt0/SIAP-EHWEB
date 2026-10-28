@@ -1,43 +1,47 @@
 # Seguimiento — Plugin NotasInternas (demo Keep)
 
-**Última actualización:** 2026-10-20  
+**Estado:** **CERRADO** (demo de referencia PLUGIN-000)  
+**Última actualización:** 2026-10-27  
 **Rama:** `feat/plugin-system-architecture`  
+**Manifiesto:** `notas-internas` v**1.3.1**  
 **Repo:** https://github.com/fauzt0/SIAP-EHWEB.git  
 
 ---
 
-## Pendiente inmediato
+## Resumen para el siguiente plugin
 
-Nada de código. En el VPS, después de `git pull`:
-
-```bash
-sudo systemctl reload php-fpm
-php spark plugin:action update notas-internas
-php spark plugin:doctor
-php spark routes | grep notasinternas
-```
-
-Luego abre `/nat/` con el permiso `notasinternas.access`. El icono de nota del menú superior lista las notas y las abre en un modal. Fijar deja la nota en el inicio; quitar el fijado la saca de ahí.
-
-`description` del manifiesto es obligatoria (40 a 1000 caracteres) y cuenta cómo funciona el plugin. `plugin:action update notas-internas` copia ese texto al mercado.
-
-### 404 web (causa real, corregida)
-
-`php spark routes` listaba las cuatro rutas y el navegador respondía *Can't find a route for 'GET: nat/plugins/notas-internas'*. CLI no dispara `pre_system`. En la web, `Events.php` fusionaba `permissionCatalog()` dentro de `AuthGroups.permissions` y después `bootActivePlugins()` comparaba el permiso del plugin contra ese catálogo ya fusionado. `notasinternas.access` parecía un permiso del ERP, `instantiateRow()` lanzaba, el plugin no entraba en `$loadedPlugins` y la ruta no se registraba. El log dice: `no se cargó notas-internas: El permiso 'notasinternas.access' ya existe en el ERP.` El reintento de arranque lo repetía; no lo resolvía.
-
-La foto del catálogo se toma ahora con `captureBasePermissions()` **antes** de la fusión. `permissionErrors()` compara solo contra esa foto. La fusión sigue después, para que Shield acepte el permiso en la UI.
-
-El reintento (`bootAttempts` / `ensureBooted`) se queda: un fallo de BD no debe marcar el arranque como listo. Si tras el pull el 404 sigue, recarga PHP-FPM (OPcache puede servir la clase anterior).
-
-### Vista y guardado (vistos al validar por HTTP)
-
-- `view()` no acepta una ruta absoluta. El índice usa un renderer no compartido con raíz en `plugins/NotasInternas/Views` y `render('notes_index')`. El layout sigue resolviéndose desde `app/Views`.
-- En PHP 8.3, `$casts` del modelo tiene que declararse `array` (el padre ya lo tipa). Sin eso, el listado es un fatal.
-- El cast `int-bool` de CI 4.5 solo acepta `bool` al escribir. `save()` manda `true`/`false`, no `1`/`0`.
+Esta demo validó de punta a punta el núcleo: manifiesto, migraciones (`install` / `update`), permiso Shield, rutas propias con `session` + `permission:`, sidebar (`getSidebarItems`), `PluginBaseController`, hook v1 `layout.footer`, vistas bajo `plugins/…/Views`, tabla `plg_*`, bitácora `notasinternas`. **No ampliar funcionalidad aquí** salvo bugfix; los plugins 001–006 siguen sus specs en `agentic/plugin_001_*.md`.
 
 ---
 
-## Identidad del plugin
+## Alcance entregado (A–G)
+
+| Área | Entregable |
+|------|------------|
+| Datos | `plg_notasinternas_items` + migración de campos Keep |
+| Modelo | `NoteModel` — `forUser()`, `ownedBy()` |
+| UI principal | `/nat/plugins/notas-internas` — grid, editor básico, colores, fijar |
+| Acceso rápido | Icono topbar, modal, nota fijada en `/nat/` (`quick_access.php` + `layout.footer`) |
+| API | `list_ajax`, `save`, `delete` — CSRF, solo notas del usuario |
+| Seguridad | `NoteContent::sanitizeBody`, colores acotados, 404 en notas ajenas |
+| Permiso | `notasinternas.access` |
+
+---
+
+## Operación en sandbox
+
+```bash
+php spark plugin:action update notas-internas   # tras pull si cambia versión/manifiesto
+php spark plugin:doctor
+php tests/smoke_notas_internas.php
+php spark routes | grep notasinternas
+```
+
+Permiso: asignar `notasinternas.access` en `/nat/user/permissions`. Tras cambios en `PluginManager` / `Events.php`, recargar PHP-FPM si el navegador no ve rutas.
+
+---
+
+## Identidad (no cambiar tras install)
 
 | Clave | Valor |
 |--------|--------|
@@ -45,75 +49,40 @@ El reintento (`bootAttempts` / `ensureBooted`) se queda: un fallo de BD no debe 
 | Carpeta | `plugins/NotasInternas/` |
 | Clase | `Plugins\NotasInternas\NotasInternasPlugin` |
 | Tabla | `plg_notasinternas_items` |
-| Permiso | `notasinternas.access` |
-| Versión manifiesto | `1.3.0` |
-| Estado esperado | Instalado y **activo**. Tras este corte: `php spark plugin:action update notas-internas` |
-
----
-
-## Hecho (pasos A–G)
-
-| Ítem | Detalle |
-|------|---------|
-| **A** | Migración `2026-10-19-185422_AddFieldsToNotasInternasItems.php` — `user_id`, `body`, `color`, `is_pinned`, `updated_at`, índice `idx_plg_notasinternas_user_list` |
-| **B** | `plugins/NotasInternas/Models/NoteModel.php` — `forUser()`, `ownedBy()`, timestamps, `protected array $casts` |
-| Manifiesto | `plugin.json` v1.3.0, icon `fa-sticky-note`. `description` explica el listado del menú, el modal y el fijado en `/nat/` |
-| Fix permisos | `captureBasePermissions()` antes de fusionar el catálogo; la fusión sigue para que Shield acepte el permiso en la UI |
-| **C–D** | Rutas + `getSidebarItems()` |
-| **E–F** | `NotesController` índice, `list_ajax`, `save`, `delete`. Vista con editor (negrita, cursiva, subrayado), colores, fijar y borrado. Cada usuario solo ve sus notas. |
-| **G** | CSS y JS van en la vista. `public_html/plugins/*` está en `.gitignore`, así que no se versionan assets sueltos. |
-| 404 | La colisión de permisos se evalúa contra el catálogo de antes de la fusión. Un fallo de BD no marca el arranque como listo. |
-
-**No tocar:** migración inicial `2026-10-16-231040_CreateNotasInternasItems.php` (ya aplicada en install).
 
 ---
 
 ## Rutas
 
-Grupo: `nat/plugins/notas-internas` — namespace `Plugins\NotasInternas\Controllers` — filter `session`.
+Grupo `nat/plugins/notas-internas` — `Plugins\NotasInternas\Controllers` — `session` + `permission:notasinternas.access`.
 
-| Método | Ruta | Acción | Alias |
-|--------|------|--------|--------|
-| GET | `/` | `NotesController::index` | `notasinternas.index` |
-| POST | `list_ajax` | `list_ajax` | `notasinternas.list_ajax` |
-| POST | `save` | `save` | `notasinternas.save` |
-| POST | `delete/(:num)` | `delete/$1` | `notasinternas.delete` |
-
-Cada ruta: `filter` => `permission:notasinternas.access`.
+| Método | Alias |
+|--------|--------|
+| GET `/` | `notasinternas.index` |
+| POST `list_ajax` | `notasinternas.list_ajax` |
+| POST `save` | `notasinternas.save` |
+| POST `delete/(:num)` | `notasinternas.delete` |
 
 ---
 
-## Reglas (no romper)
+## Incidencias resueltas (histórico)
 
-- **NO** modificar `app/Libraries/PluginSystem/` salvo bug crítico acordado.
-- **NO** plugins 001–006 ni PLUGIN-000b en esta tarea.
-- Migraciones del plugin **solo** en `plugins/NotasInternas/Database/Migrations/`; aplicar con `plugin:action update`, no `php spark migrate` global para schema del plugin.
-- No cambiar `slug`, `directory`, `table_prefix`, `class` en `plugin.json` tras install.
-- Sidebar: `getSidebarItems()`, no hook `sidebar.render`.
+- **404 web:** colisión al evaluar permisos del plugin contra `AuthGroups` ya fusionado con `permissionCatalog()` → `captureBasePermissions()` en el núcleo.
+- **Vistas:** renderer con raíz en `plugins/NotasInternas/Views` (no `view(ROOTPATH…)`).
+- **PHP 8.3:** `$casts` tipado `array`; booleanos en `save` para CI 4.5.
 
-**Normativa:** `agentic/plugin_000_plugin_system_core.md` (§0b prevalece).
+Detalle técnico ampliado en commits `a66e0fd`, `456af78`, `bdd8da7` y en `app/Libraries/PluginSystem/PluginManager.php` (solo lo acordado para arranque/permisos).
 
 ---
 
-## Verificación
+## Verificación registrada
 
-```bash
-php tests/smoke_notas_internas.php
-php spark plugin:doctor
-php spark routes | grep notasinternas
-```
-
-Validado por HTTP el 2026-10-20, con el plugin instalado y activo en 1.2.0:
-
-- Invitado: GET `/nat/plugins/notas-internas` → 302 a `/nat/login` (la ruta existe).
-- Con `notasinternas.access`: 200, compositor y enlace del sidebar.
-- Crear, fijar, listar (fijadas primero), borrar. El cuerpo sale sin `<script>` ni atributos. Color ajeno vuelve a `#fff9c4`. Nota vacía → 400. Id ajeno o inexistente → 404 y no aparece en el listado.
-- Bitácora `users_activity_logs`, type `notasinternas`.
-
-En 1.3.0, con la misma sesión: `/nat/` muestra la nota fijada, el icono del menú lista esa nota, el clic abre el modal y «Quitar del inicio» la saca del dashboard. Volver a fijar la regresa. La página de Notas internas sigue en 200 con el compositor y el mismo icono.
+- Smoke local: `tests/smoke_notas_internas.php` (18 comprobaciones).
+- `plugin:doctor`: 0 errores.
+- HTTP 2026-10-20: login, CRUD, fijado en dashboard, modal, sanitización HTML.
 
 ---
 
-## Handoff
+## Siguiente paso del producto
 
-La demo queda comprobada de punta a punta. El acceso rápido usa el hook v1 `layout.footer`: icono en el menú superior, modal y notas fijadas en `/nat/`. `description` del manifiesto es obligatoria. El núcleo, además, fotografía los permisos antes de fusionar el catálogo y reintenta el arranque si la BD falla.
+Elegir spec **PLUGIN-001** … **006** (p. ej. `agentic/plugin_001_server_admin.md`), copiar patrones de esta carpeta, **sin** reutilizar slug ni `table_prefix` de Notas internas.
