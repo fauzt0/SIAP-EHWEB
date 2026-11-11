@@ -318,6 +318,71 @@ class FinRecurringExpenseModel extends Model
     }
 
     /**
+     * Primera fecha de cobro en o después de hoy y de la fecha de inicio.
+     * Si la fecha cae después del fin del servicio, devuelve null.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function computeNextDueDate(array $data, ?string $today = null): ?string
+    {
+        $today     = $today ?: date('Y-m-d');
+        $start     = (string) ($data['start_date'] ?? $today);
+        $end       = ! empty($data['end_date']) ? (string) $data['end_date'] : null;
+        $frequency = (string) ($data['frequency'] ?? 'monthly');
+        $from      = $start > $today ? $start : $today;
+
+        if ($frequency === 'weekly') {
+            $weekday = (int) ($data['billing_weekday'] ?? 1);
+            if ($weekday < 1 || $weekday > 7) {
+                $weekday = 1;
+            }
+            $cursor = new \DateTime($from);
+            for ($i = 0; $i < 14; $i++) {
+                if ((int) $cursor->format('N') === $weekday) {
+                    $due = $cursor->format('Y-m-d');
+                    if ($due < $start || ($end !== null && $due > $end)) {
+                        return null;
+                    }
+
+                    return $due;
+                }
+                $cursor->modify('+1 day');
+            }
+
+            return null;
+        }
+
+        $step = match ($frequency) {
+            'quarterly'  => 3,
+            'semiannual' => 6,
+            'yearly'     => 12,
+            default      => 1,
+        };
+        $billingDay = (int) ($data['billing_day'] ?? 1);
+        if ($billingDay < 1) {
+            $billingDay = 1;
+        }
+
+        $cursor = new \DateTime(date('Y-m-01', strtotime($start)));
+        $limit  = (new \DateTime($from))->modify('+36 months');
+
+        while ($cursor <= $limit) {
+            $day = min($billingDay, (int) $cursor->format('t'));
+            $due = sprintf('%s-%02d', $cursor->format('Y-m'), $day);
+            if ($due >= $from && $due >= $start) {
+                if ($end !== null && $due > $end) {
+                    return null;
+                }
+
+                return $due;
+            }
+            $cursor->modify('+' . $step . ' months');
+        }
+
+        return null;
+    }
+
+    /**
      * createForSupplier
      *
      * Crea un gasto recurrente asociado a un proveedor.
@@ -350,10 +415,10 @@ class FinRecurringExpenseModel extends Model
             'frequency'            => $frequency,
             'start_date'           => $data['start_date'] ?? date('Y-m-d'),
             'end_date'             => !empty($data['end_date']) ? $data['end_date'] : null,
-            'next_due_date'        => $data['next_due_date'] ?? null,
             'notify_days_before'   => isset($data['notify_days_before']) ? (int) $data['notify_days_before'] : 3,
             'is_active'            => array_key_exists('is_active', $data) ? (int) $data['is_active'] : 1,
         ];
+        $payload['next_due_date'] = $data['next_due_date'] ?? self::computeNextDueDate($payload);
 
         if (isset($data['category_id'])) {
             $payload['category_id'] = (int) $data['category_id'] ?: null;
@@ -391,6 +456,7 @@ class FinRecurringExpenseModel extends Model
             'notify_days_before' => isset($data['notify_days_before']) ? (int) $data['notify_days_before'] : $existing->notify_days_before,
             'is_active'          => array_key_exists('is_active', $data) ? (int) $data['is_active'] : (int) $existing->is_active,
         ];
+        $payload['next_due_date'] = self::computeNextDueDate($payload);
 
         if (!empty($data['supplier_id'])) {
             $payload['supplier_id'] = (int) $data['supplier_id'];

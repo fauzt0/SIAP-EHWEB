@@ -208,6 +208,7 @@ UI: existing `#modalAddRecurringService` + new fields (branch, start_date, end_d
 New standalone index later in Phase 6; in this phase at least save the new fields from supplier offcanvas.
 
 Default `start_date` = today, `org_branch_id` = main branch if empty.
+Al guardar (alta o edición) `next_due_date` se calcula con el día de pago, la frecuencia y el inicio, sin esperar a “Generar vencimientos”. Generar no borra esa fecha si el horizonte todavía no alcanza el siguiente cobro.
 
 ---
 

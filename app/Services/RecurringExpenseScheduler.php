@@ -82,6 +82,16 @@ class RecurringExpenseScheduler
                 }
             }
 
+            if ($nextDue === null) {
+                $nextDue = FinRecurringExpenseModel::computeNextDueDate([
+                    'frequency'       => $template->frequency,
+                    'start_date'      => $template->start_date ?: date('Y-m-d'),
+                    'end_date'        => $template->end_date,
+                    'billing_day'     => $template->billing_day,
+                    'billing_weekday' => $template->billing_weekday,
+                ]);
+            }
+
             $this->templateModel->update($template->id, [
                 'last_generated_at' => date('Y-m-d H:i:s'),
                 'next_due_date'     => $nextDue,
