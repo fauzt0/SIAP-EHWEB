@@ -2126,8 +2126,8 @@ function initLinkProductSelect2() {
 }
 
 function openLinkProductModal(supplierId) {
-    document.getElementById('link-product-supplier-id').value = supplierId;
     document.getElementById('form-link-product').reset();
+    document.getElementById('link-product-supplier-id').value = supplierId;
     if ($('#link-catalog-product-id').hasClass('select2-hidden-accessible')) {
         $('#link-catalog-product-id').val(null).trigger('change');
     }

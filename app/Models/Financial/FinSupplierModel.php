@@ -209,11 +209,21 @@ class FinSupplierModel extends Model
 
         $newId = $this->insert($supplierData);
 
-        if ($newId && !empty($contacts)) {
+        if (! $newId) {
+            $this->db->transRollback();
+
+            return false;
+        }
+
+        if (! empty($contacts)) {
             $contactModel = new FinSupplierContactModel();
             foreach ($contacts as $contact) {
                 $contact['fin_supplier_id'] = $newId;
-                $contactModel->insert($contact);
+                if (! $contactModel->insert($contact)) {
+                    $this->db->transRollback();
+
+                    return false;
+                }
             }
         }
 
@@ -236,7 +246,11 @@ class FinSupplierModel extends Model
     {
         $this->db->transStart();
 
-        $this->update($id, $supplierData);
+        if (! $this->update($id, $supplierData)) {
+            $this->db->transRollback();
+
+            return false;
+        }
 
         // Reemplazar contactos: soft-delete los anteriores, insertar los nuevos
         $contactModel = new FinSupplierContactModel();
@@ -245,7 +259,11 @@ class FinSupplierModel extends Model
         if (!empty($contacts)) {
             foreach ($contacts as $contact) {
                 $contact['fin_supplier_id'] = $id;
-                $contactModel->insert($contact);
+                if (! $contactModel->insert($contact)) {
+                    $this->db->transRollback();
+
+                    return false;
+                }
             }
         }
 

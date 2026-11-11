@@ -433,7 +433,8 @@ function submitPoForm() {
     fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', '<?= csrf_header() ?>': getCsrfToken() }, body: new FormData(form) })
     .then(function(r) { refreshCsrf(r); return r.json(); })
     .then(function(data) {
-        notifyShow(data.message, data.success ? 'success' : 'danger');
+        var errs = data.errors ? Object.values(data.errors).join(' ') : '';
+        notifyShow((data.message || '') + (errs ? ' ' + errs : ''), data.success ? 'success' : 'danger');
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('modalGeneratePO')).hide();
             window.poTable.ajax.reload(null, false);

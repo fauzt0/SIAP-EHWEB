@@ -247,6 +247,11 @@ class FinPurchaseOrderModel extends Model
             $poData['po_number'] = $this->generatePoNumber();
         }
 
+        $status = (string) ($poData['status'] ?? 'draft');
+        if (! in_array($status, ['draft', 'sent'], true)) {
+            $poData['status'] = 'draft';
+        }
+
         // Calcular total si hay partidas
         if (!empty($items)) {
             $total = 0;
@@ -258,12 +263,22 @@ class FinPurchaseOrderModel extends Model
 
         $newId = $this->insert($poData);
 
-        if ($newId && !empty($items)) {
+        if (! $newId) {
+            $this->db->transRollback();
+
+            return false;
+        }
+
+        if (! empty($items)) {
             $itemModel = new FinPurchaseOrderItemModel();
             foreach ($items as $item) {
                 $item['fin_purchase_order_id'] = $newId;
                 $item['total_price'] = ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
-                $itemModel->insert($item);
+                if (! $itemModel->insert($item)) {
+                    $this->db->transRollback();
+
+                    return false;
+                }
             }
         }
 
@@ -293,7 +308,14 @@ class FinPurchaseOrderModel extends Model
             return false;
         }
 
-        $this->update($id, $poData);
+        unset($poData['status']);
+        $poData['id'] = $id;
+
+        if (! $this->update($id, $poData)) {
+            $this->db->transRollback();
+
+            return false;
+        }
 
         // Reemplazar partidas: eliminar las anteriores, insertar las nuevas
         $itemModel = new FinPurchaseOrderItemModel();
@@ -305,10 +327,17 @@ class FinPurchaseOrderModel extends Model
                 $item['fin_purchase_order_id'] = $id;
                 $item['total_price'] = ($item['quantity'] ?? 1) * ($item['unit_price'] ?? 0);
                 $total += $item['total_price'];
-                $itemModel->insert($item);
+                if (! $itemModel->insert($item)) {
+                    $this->db->transRollback();
+
+                    return false;
+                }
             }
-            // Actualizar el total de la orden
-            $this->update($id, ['total_amount' => $total]);
+            if (! $this->update($id, ['total_amount' => $total])) {
+                $this->db->transRollback();
+
+                return false;
+            }
         }
 
         $this->db->transComplete();

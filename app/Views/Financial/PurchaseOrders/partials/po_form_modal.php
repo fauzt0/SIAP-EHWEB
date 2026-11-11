@@ -76,10 +76,11 @@ $defaultBranchId  = (int) ($response['default_branch_id'] ?? 0);
                             <select name="status" id="po-status" class="form-select">
                                 <option value="draft">Borrador</option>
                                 <option value="sent">Enviada al Proveedor</option>
-                                <option value="approved">Aprobada</option>
-                                <option value="completed">Completada</option>
-                                <option value="cancelled">Cancelada</option>
+                                <option value="approved" disabled>Aprobada</option>
+                                <option value="completed" disabled>Completada</option>
+                                <option value="cancelled" disabled>Cancelada</option>
                             </select>
+                            <div class="form-text">Aprobar, completar o cancelar se hace con los botones de la lista.</div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Moneda <span class="text-danger">*</span></label>

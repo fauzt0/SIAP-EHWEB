@@ -206,12 +206,17 @@ class PurchaseOrderController extends BaseFinancialController
         $poData = $this->_extractPoData();
         $items  = $this->_extractItems();
 
+        if ($items === []) {
+            $this->setOutputError('Agregue al menos una línea con descripción.');
+            return $this->response->setJSON($this->outputData);
+        }
+
         // Delegate the full transaction to the model (§9)
         $newId = $this->purchaseOrderModel->createPurchaseOrderWithItems($poData, $items);
 
         if (!$newId) {
             $this->setOutputError(
-                'Error al guardar la orden de compra. Verifique los datos e intente nuevamente.',
+                $this->_withModelErrors('Error al guardar la orden de compra.'),
                 $this->purchaseOrderModel->errors()
             );
             return $this->response->setJSON($this->outputData);
@@ -256,12 +261,17 @@ class PurchaseOrderController extends BaseFinancialController
         $poData = $this->_extractPoData();
         $items  = $this->_extractItems();
 
+        if ($items === []) {
+            $this->setOutputError('Agregue al menos una línea con descripción.');
+            return $this->response->setJSON($this->outputData);
+        }
+
         // Delegate the full transaction to the model (§9)
         $ok = $this->purchaseOrderModel->updatePurchaseOrderWithItems($id, $poData, $items);
 
         if (!$ok) {
             $this->setOutputError(
-                'Error al actualizar la orden de compra.',
+                $this->_withModelErrors('Error al actualizar la orden de compra.'),
                 $this->purchaseOrderModel->errors()
             );
             return $this->response->setJSON($this->outputData);
@@ -485,6 +495,16 @@ class PurchaseOrderController extends BaseFinancialController
             'delivery_date'   => $this->request->getPost('delivery_date') ?: null,
             'notes'           => trim((string) $this->request->getPost('notes')) ?: null,
         ];
+    }
+
+    private function _withModelErrors(string $fallback): string
+    {
+        $errors = $this->purchaseOrderModel->errors();
+        if (! is_array($errors) || $errors === []) {
+            return $fallback;
+        }
+
+        return $fallback . ' ' . implode(' ', array_map('strval', $errors));
     }
 
     /**
