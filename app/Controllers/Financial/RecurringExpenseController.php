@@ -27,8 +27,8 @@ class RecurringExpenseController extends BaseFinancialController
 
     public function index(): string
     {
-        $this->setViewSuccess('Servicios Recurrentes');
-        $this->setPageTittleAhead('Servicios Recurrentes', 'Calendarización de Gastos');
+        $this->setViewSuccess('Pagos recurrentes');
+        $this->setPageTittleAhead('Pagos recurrentes', 'Órdenes de pago (luz, internet, basura…)');
 
         $this->viewData['breadcrumb'] = $this->breadcrumb->getBreadCrumbHtml([
             'Inicio'                 => base_url(),
@@ -83,7 +83,12 @@ class RecurringExpenseController extends BaseFinancialController
             $st = $statusMap[$row->status] ?? ['label' => $row->status, 'color' => 'secondary'];
             $badge = '<span class="badge badge-subtle-' . $st['color'] . '">' . $st['label'] . '</span>';
 
-            $actions = '<button class="btn btn-outline-primary btn-sm btn-view-expense" data-id="' . $row->id . '" title="Ver"><i class="fas fa-eye"></i></button>';
+            $docCount = (int) ($row->document_count ?? 0);
+            $receipts = $docCount > 0
+                ? '<span class="badge badge-subtle-info" title="Comprobantes adjuntos"><i class="fas fa-paperclip me-1"></i>' . $docCount . '</span>'
+                : '<span class="text-muted small">—</span>';
+
+            $actions = '<button class="btn btn-outline-primary btn-sm btn-view-expense" data-id="' . $row->id . '" title="Ver recibo y estatus"><i class="fas fa-receipt"></i></button>';
             if (auth()->user()->can('catalog.recurring-manage') && in_array($row->status, ['pending', 'partial'], true)) {
                 $actions .= ' <button class="btn btn-outline-success btn-sm btn-mark-paid" data-id="' . $row->id . '" data-total="' . (float) $row->total_amount . '" title="Marcar pagado"><i class="fas fa-check"></i></button>';
                 $actions .= ' <button class="btn btn-outline-secondary btn-sm btn-reschedule-expense" data-id="' . $row->id . '" data-due="' . esc($row->due_date) . '" title="Reprogramar"><i class="fas fa-calendar-day"></i></button>';
@@ -98,6 +103,7 @@ class RecurringExpenseController extends BaseFinancialController
                 esc($row->period_label ?? '—'),
                 number_format((float) $row->total_amount, 2),
                 number_format((float) ($row->paid_amount ?? 0), 2),
+                $receipts,
                 $badge,
                 $actions,
             ];
@@ -355,8 +361,19 @@ class RecurringExpenseController extends BaseFinancialController
             'Alta de plantilla recurrente ID: ' . $newId . ' | Proveedor ID: ' . $supplierId
         );
 
-        $this->setOutputSuccess('Plantilla creada correctamente.');
-        $this->outputData['response'] = ['id' => $newId];
+        $created = $this->_generateOccurrencesForTemplate($newId);
+
+        $msg = 'Plantilla creada correctamente.';
+        if ($created > 0) {
+            $msg .= ' Se generaron ' . $created . ' orden(es) de pago recurrente.';
+        }
+
+        $this->setOutputSuccess($msg);
+        $this->outputData['response'] = [
+            'id'                  => $newId,
+            'occurrences_created' => $created,
+            'stats'               => $this->expenseModel->getDashboardStats(),
+        ];
         $this->outputData['csrf']     = csrf_hash();
 
         return $this->response->setJSON($this->outputData);
@@ -413,8 +430,22 @@ class RecurringExpenseController extends BaseFinancialController
             'Actualizó plantilla recurrente ID: ' . $id
         );
 
-        $this->setOutputSuccess('Plantilla actualizada correctamente.');
-        $this->outputData['response'] = ['id' => $id];
+        $activeFlag = $this->request->getPost('is_active') !== null
+            ? (int) $this->request->getPost('is_active')
+            : (int) $template->is_active;
+        $created = $activeFlag === 1 ? $this->_generateOccurrencesForTemplate($id) : 0;
+
+        $msg = 'Plantilla actualizada correctamente.';
+        if ($created > 0) {
+            $msg .= ' Se generaron ' . $created . ' nueva(s) orden(es) de pago.';
+        }
+
+        $this->setOutputSuccess($msg);
+        $this->outputData['response'] = [
+            'id'                  => $id,
+            'occurrences_created' => $created,
+            'stats'               => $this->expenseModel->getDashboardStats(),
+        ];
         $this->outputData['csrf']     = csrf_hash();
 
         return $this->response->setJSON($this->outputData);
@@ -445,8 +476,14 @@ class RecurringExpenseController extends BaseFinancialController
             'Cambió is_active=' . $next . ' en plantilla ID: ' . $id
         );
 
-        $this->setOutputSuccess($next === 1 ? 'Plantilla activada.' : 'Plantilla desactivada.');
-        $this->outputData['response'] = ['is_active' => $next];
+        $created = $next === 1 ? $this->_generateOccurrencesForTemplate($id) : 0;
+        $msg     = $next === 1 ? 'Plantilla activada.' : 'Plantilla desactivada.';
+        if ($created > 0) {
+            $msg .= ' Se generaron ' . $created . ' orden(es) de pago.';
+        }
+
+        $this->setOutputSuccess($msg);
+        $this->outputData['response'] = ['is_active' => $next, 'occurrences_created' => $created];
         $this->outputData['csrf']     = csrf_hash();
 
         return $this->response->setJSON($this->outputData);
@@ -540,6 +577,18 @@ class RecurringExpenseController extends BaseFinancialController
         $single = $this->request->getFile($field);
 
         return ($single && $single->isValid()) ? [$single] : [];
+    }
+
+    private function _generateOccurrencesForTemplate(int $templateId): int
+    {
+        if ($templateId <= 0) {
+            return 0;
+        }
+
+        $horizon = date('Y-m-t', strtotime('+2 months'));
+        $result  = (new RecurringExpenseScheduler())->generate($horizon, $templateId);
+
+        return (int) ($result['created'] ?? 0);
     }
 
     private function _templatePayloadFromRequest(string $frequency): array

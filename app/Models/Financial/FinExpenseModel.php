@@ -57,6 +57,7 @@ class FinExpenseModel extends Model
             'fin_expenses.period_label',
             'fin_expenses.total_amount',
             'fin_expenses.paid_amount',
+            null,
             'fin_expenses.status',
             null,
         ],
@@ -78,6 +79,8 @@ class FinExpenseModel extends Model
                 'fin_recurring_expenses.description AS template_description',
                 'fin_recurring_expenses.service_type',
                 'org_branches.name AS branch_name',
+                '(SELECT COUNT(*) FROM fin_expense_documents fed '
+                . 'WHERE fed.fin_expense_id = fin_expenses.id AND fed.deleted_at IS NULL) AS document_count',
             ])
             ->join('fin_suppliers', 'fin_suppliers.id = fin_expenses.supplier_id', 'left')
             ->join('fin_recurring_expenses', 'fin_recurring_expenses.id = fin_expenses.recurring_expense_id', 'left')

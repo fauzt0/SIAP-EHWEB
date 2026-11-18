@@ -7,6 +7,7 @@ use App\Models\Financial\FinSupplierModel;
 use App\Models\Financial\FinSupplierContactModel;
 use App\Models\Users\UserActivityLogsModel;
 use App\Models\Catalog\CatalogProductModel;
+use App\Services\RecurringExpenseScheduler;
 
 /**
  * SupplierController
@@ -609,8 +610,19 @@ class SupplierController extends BaseFinancialController
                 . ' | Proveedor ID: ' . $id
         );
 
-        $this->setOutputSuccess('Servicio recurrente guardado correctamente.');
-        $this->outputData['response'] = ['id' => $newId];
+        $created = 0;
+        if ((int) ($data['is_active'] ?? 1) === 1) {
+            $horizon = date('Y-m-t', strtotime('+2 months'));
+            $created = (int) ((new RecurringExpenseScheduler())->generate($horizon, $newId)['created'] ?? 0);
+        }
+
+        $msg = 'Servicio recurrente guardado correctamente.';
+        if ($created > 0) {
+            $msg .= ' Se generaron ' . $created . ' orden(es) de pago recurrente.';
+        }
+
+        $this->setOutputSuccess($msg);
+        $this->outputData['response'] = ['id' => $newId, 'occurrences_created' => $created];
         $this->outputData['csrf']     = csrf_hash();
 
         return $this->response->setJSON($this->outputData);

@@ -25,6 +25,14 @@ $canEmail  = auth()->user()->can('catalog.po-send-email');
             </div>
         </div>
 
+        <div class="alert alert-info border-0 mb-3 py-2">
+            <i class="fas fa-info-circle me-2"></i>
+            Las <strong>órdenes de compra puntuales</strong> son compras únicas (equipo, insumos).
+            Para <strong>internet, luz, basura</strong> y otros pagos periódicos use
+            <a href="<?= route_to('suppliers.recurring.index') ?>" class="alert-link">Pagos recurrentes</a>
+            (cada mes genera un vencimiento con recibo y estatus de pago).
+        </div>
+
         <div class="row">
             <div class="col-12">
                 <div class="card">

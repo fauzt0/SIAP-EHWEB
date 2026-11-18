@@ -138,7 +138,7 @@
               <a class="sidebar-link" href="<?= route_to('suppliers.po.index') ?>">Órdenes de Compra</a>
             </li>
             <li class="sidebar-item <?= url_is('nat/suppliers/recurring*') ? 'active' : '' ?>">
-              <a class="sidebar-link" href="<?= route_to('suppliers.recurring.index') ?>">Servicios recurrentes</a>
+              <a class="sidebar-link" href="<?= route_to('suppliers.recurring.index') ?>">Pagos recurrentes</a>
             </li>
             <li class="sidebar-item <?= url_is('nat/suppliers/reports*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('suppliers.reports.index') ?>">Reportes</a>

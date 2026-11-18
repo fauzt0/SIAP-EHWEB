@@ -14,7 +14,10 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
 <main class="content">
     <div class="container-fluid p-0">
         <div class="row mb-2 mb-xl-3">
-            <div class="col-auto"><h1 class="h3 mb-3"><i class="fas fa-fw fa-calendar-alt me-2 text-warning"></i><?= esc($pageTitle ?? 'Servicios Recurrentes') ?></h1></div>
+            <div class="col-auto">
+                <h1 class="h3 mb-1"><i class="fas fa-fw fa-calendar-alt me-2 text-warning"></i><?= esc($pageTitle ?? 'Pagos recurrentes') ?></h1>
+                <p class="text-muted small mb-0">Internet, luz, basura y otros: cada periodo es una <strong>orden de pago</strong> con estatus (pendiente, parcial, pagado) y comprobantes.</p>
+            </div>
             <div class="col-auto ms-auto text-end mt-n1"><nav><?= $breadcrumb ?? '' ?></nav></div>
         </div>
 
@@ -35,6 +38,24 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
             }
         }
         ?>
+        <?php if ($canManage): ?>
+        <div class="alert alert-light border mb-3 py-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted small me-1">Crear rápido:</span>
+                <button type="button" class="btn btn-outline-primary btn-sm btn-quick-recurring" data-type="internet" data-desc="Internet — servicio mensual">
+                    <i class="fas fa-wifi me-1"></i>Internet
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm btn-quick-recurring" data-type="electricity" data-desc="Luz (CFE) — servicio mensual">
+                    <i class="fas fa-bolt me-1"></i>Luz
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm btn-quick-recurring" data-type="trash" data-desc="Basura / saneamiento — servicio mensual">
+                    <i class="fas fa-trash-alt me-1"></i>Basura
+                </button>
+                <span class="text-muted small ms-md-2">Las OC puntuales (compras únicas) están en <a href="<?= route_to('suppliers.po.index') ?>">Órdenes de compra</a>.</span>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="row mb-3">
             <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pendientes este mes</div><div class="h4 mb-0 text-warning" id="stat-pending"><?= esc(recurring_stat_money($stats, 'pending_this_month_amount', 'pending_this_month_by_currency')) ?></div><div class="small text-muted" id="stat-pending-count"><?= (int) ($stats['pending_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
             <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Vencidos</div><div class="h4 mb-0 text-danger" id="stat-overdue"><?= esc(recurring_stat_money($stats, 'overdue_amount', 'overdue_by_currency')) ?></div><div class="small text-muted" id="stat-overdue-count"><?= (int) ($stats['overdue'] ?? 0) ?> vencimiento(s)</div></div></div></div>
@@ -110,7 +131,7 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
                         <thead>
                             <tr>
                                 <th>Vencimiento</th><th>Proveedor</th><th>Servicio</th><th>Sucursal</th>
-                                <th>Periodo</th><th>Total</th><th>Pagado</th><th>Estatus</th><th></th>
+                                <th>Periodo</th><th>Total</th><th>Pagado</th><th>Recibos</th><th>Estatus</th><th></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -120,7 +141,7 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
                     <?php if ($canManage): ?>
                     <div class="text-end mb-2">
                         <button type="button" class="btn btn-warning btn-sm" id="btn-new-template">
-                            <i class="fas fa-plus me-1"></i>Nueva plantilla
+                            <i class="fas fa-plus me-1"></i>Nueva orden recurrente
                         </button>
                     </div>
                     <?php endif; ?>
@@ -178,7 +199,7 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modal-template-title"><i class="fas fa-bolt me-2 text-warning"></i>Nueva plantilla recurrente</h5>
+                <h5 class="modal-title" id="modal-template-title"><i class="fas fa-bolt me-2 text-warning"></i>Nueva orden de pago recurrente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -342,6 +363,11 @@ document.addEventListener('DOMContentLoaded', function() {
         resetTemplateModal();
         new bootstrap.Modal(document.getElementById('modalNewTemplate')).show();
     });
+    document.querySelectorAll('.btn-quick-recurring').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            openQuickRecurringTemplate(btn.dataset.type, btn.dataset.desc || '');
+        });
+    });
     document.getElementById('btn-submit-template').addEventListener('click', submitTemplate);
     $('#modalNewTemplate').on('shown.bs.modal', function() {
         if (!$('#tpl-supplier-id').hasClass('select2-hidden-accessible')) {
@@ -418,8 +444,8 @@ function initExpensesTable() {
                 d.filter_month = document.getElementById('filter-exp-month').value;
             }
         },
-        columns: Array.from({length: 9}, function(_, i) { return { data: i, orderable: i < 8 }; }),
-        columnDefs: [{ targets: 8, orderable: false, searchable: false }],
+        columns: Array.from({length: 10}, function(_, i) { return { data: i, orderable: i < 9 }; }),
+        columnDefs: [{ targets: 9, orderable: false, searchable: false }],
         language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
     });
     $('#datatables-recurring-expenses').on('xhr.dt', function(e,s,j,xhr) { refreshCsrf(xhr); });
@@ -582,8 +608,26 @@ function submitTemplate() {
             bootstrap.Modal.getInstance(document.getElementById('modalNewTemplate')).hide();
             resetTemplateModal();
             if (window.templatesTable) window.templatesTable.ajax.reload(null, false);
+            if (window.expensesTable) window.expensesTable.ajax.reload(null, false);
+            if (window.recurringCal) window.recurringCal.refetchEvents();
+            if ((data.response && data.response.occurrences_created > 0) || !tplId) {
+                var tabBtn = document.getElementById('btn-tab-expenses');
+                if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            }
+            if (data.response && data.response.stats) {
+                applyStats(data.response.stats);
+            }
         }
     });
+}
+
+function openQuickRecurringTemplate(type, description) {
+    resetTemplateModal();
+    document.getElementById('tpl-service-type').value = type || 'other';
+    var descInput = document.querySelector('#form-new-template [name="description"]');
+    if (descInput) descInput.value = description || '';
+    document.getElementById('modal-template-title').innerHTML = '<i class="fas fa-bolt me-2 text-warning"></i>Nueva orden de pago recurrente';
+    new bootstrap.Modal(document.getElementById('modalNewTemplate')).show();
 }
 
 function resetTemplateModal() {
@@ -591,7 +635,7 @@ function resetTemplateModal() {
     form.reset();
     document.getElementById('tpl-id').value = '';
     document.getElementById('tpl-is-active').checked = true;
-    document.getElementById('modal-template-title').innerHTML = '<i class="fas fa-bolt me-2 text-warning"></i>Nueva plantilla recurrente';
+    document.getElementById('modal-template-title').innerHTML = '<i class="fas fa-bolt me-2 text-warning"></i>Nueva orden de pago recurrente';
     toggleTplBillingFields();
     var sel = document.getElementById('tpl-supplier-id');
     if (sel) { sel.value = ''; $(sel).trigger('change'); }

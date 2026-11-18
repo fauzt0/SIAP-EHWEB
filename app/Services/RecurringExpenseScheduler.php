@@ -22,14 +22,19 @@ class RecurringExpenseScheduler
     /**
      * @return array{created: int, templates: int}
      */
-    public function generate(?string $horizonEnd = null): array
+    public function generate(?string $horizonEnd = null, ?int $onlyTemplateId = null): array
     {
         $horizonEnd = $horizonEnd ?: date('Y-m-t', strtotime('first day of next month'));
 
-        $templates = $this->templateModel
+        $builder = $this->templateModel
             ->where('is_active', 1)
-            ->where('deleted_at IS NULL', null, false)
-            ->findAll();
+            ->where('deleted_at IS NULL', null, false);
+
+        if ($onlyTemplateId !== null && $onlyTemplateId > 0) {
+            $builder->where('id', $onlyTemplateId);
+        }
+
+        $templates = $builder->findAll();
 
         $created   = 0;
         $processed = 0;
