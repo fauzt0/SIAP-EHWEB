@@ -203,6 +203,7 @@ php spark migrate                # “Migrations complete” (sin pendientes)
 php tests/smoke_notas_internas.php
 php tests/smoke_recurring_due.php
 php tests/smoke_supplier_reports.php
+php tests/smoke_suppliers_integration.php
 ```
 
 Consultas útiles (ajustar credenciales):
