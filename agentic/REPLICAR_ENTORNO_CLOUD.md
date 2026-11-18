@@ -98,15 +98,25 @@ las del ERP viven en `app/Database/Migrations/`. Las de cada plugin corren en
 Ejecutar en orden lógico (fallan si faltan tablas):
 
 ```bash
+# Recomendado (orquesta Initial + User + demo ERP + permisos del plugin Notas internas):
+php spark plugin:action install notas-internas
+php spark db:seed App\\Database\\Seeds\\AgentCloudBootstrapSeeder
+
+# Paso a paso (equivalente):
 php spark db:seed App\\Database\\Seeds\\InitialSeeder
 php spark db:seed App\\Database\\Seeds\\UserSeeder
-# Opcionales según módulo a probar:
-php spark db:seed App\\Database\\Seeds\\BranchSeeder
-php spark db:seed App\\Database\\Seeds\\CatalogSeeder
+php spark db:seed App\\Database\\Seeds\\AgentCloudErpDemoSeeder
+php spark db:seed App\\Database\\Seeds\\PluginDemoPermissionsSeeder
+
+# Seeders sueltos (mismo contenido que AgentCloudErpDemoSeeder):
 php spark db:seed App\\Database\\Seeds\\BrandSeeder
+php spark db:seed App\\Database\\Seeds\\CatalogSeeder
 php spark db:seed App\\Database\\Seeds\\SupplierSeeder
-# Usuario maestro documentado en DatamasterSeeder (revisar clase antes de ejecutar)
 ```
+
+**BD vacía y `php spark migrate` falla en `users`:** ejecutar una sola vez
+`php spark migrate -n CodeIgniter\\Shield -all`, luego `php spark migrate` hasta quedar
+sin pendientes (documentado en troubleshooting §H).
 
 Algunas categorías de proveedor se insertan **dentro de migraciones**
 (`CreateFinSupplierCategories`). `SupplierSeeder` requiere esas filas.
@@ -246,6 +256,6 @@ Ramas remotas típicas: `main` (producción), `feat/plugin-system-architecture` 
 - [ ] `composer install`, `.env` completo (DB + baseURL + encryption.key)
 - [ ] BD: **dump restore (B)** *o* **migrate + seeders (C)**
 - [ ] `php spark plugin:action install notas-internas` (+ `update` si aplica)
-- [ ] Asignar `notasinternas.access` a usuario de prueba si se prueba el módulo
+- [ ] `php spark db:seed App\\Database\\Seeds\\AgentCloudBootstrapSeeder` (asigna `notasinternas.access` a superadmin/admin)
 - [ ] `plugin:doctor` + smoke tests en `tests/`
 - [ ] Documentar host/baseURL y nombre de BD usados (sin contraseñas en el repo)
