@@ -39,6 +39,10 @@ sr_ok(str_contains($side, 'suppliers.reports.index'), 'el menú enlaza reportes'
 sr_ok(str_contains($model, "whereNotIn('status', ['cancelled'])"), 'los gastos cancelados no entran al monto');
 sr_ok(str_contains($model, "whereIn('po.status', ['sent', 'approved'])"), 'OC abierta = enviada o aprobada');
 sr_ok(str_contains($types, "'phone'") && str_contains($types, "'internet'") && str_contains($types, "'hosting'"), 'telefonía, internet y hosting existen');
+sr_ok(is_file($root . '/app/Services/SupplierRecurringBridge.php'), 'puente SupplierRecurringBridge para plugins');
+$bridge = file_get_contents($root . '/app/Services/SupplierRecurringBridge.php');
+sr_ok(is_string($bridge) && str_contains($bridge, 'syncTemplate'), 'puente expone syncTemplate');
+sr_ok(str_contains($plugin, 'SupplierRecurringBridge'), 'el plugin 001 documenta el puente');
 sr_ok(str_contains($plugin, 'recurring_expense_id'), 'el plugin 001 guarda la plantilla de proveedores');
 sr_ok(str_contains($plugin, 'service_type = hosting'), 'el servidor recurrente usa hosting');
 sr_ok(str_contains($plugin, 'supplier.show.tabs') && str_contains($plugin, 'no están cableados'), 'el documento no trata supplier.show.tabs como hook v1');

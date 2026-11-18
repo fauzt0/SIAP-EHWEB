@@ -33,6 +33,7 @@ CodeIgniter\Boot::bootTest($paths);
 use App\Models\Financial\FinPurchaseOrderModel;
 use App\Models\Financial\FinRecurringExpenseModel;
 use App\Services\RecurringExpenseScheduler;
+use App\Services\SupplierRecurringBridge;
 $failed = 0;
 
 function int_ok(bool $cond, string $message): void
@@ -114,6 +115,21 @@ int_ok($result['created'] > 0, 'scheduler genera vencimientos');
 
 $expCount = $db->table('fin_expenses')->where('recurring_expense_id', $tplId)->countAllResults();
 int_ok($expCount > 0, 'fin_expenses con recurring_expense_id');
+
+$hosting = SupplierRecurringBridge::hostingPayloadFromServer([
+    'name'          => 'VPS test',
+    'monthly_cost'  => 12.5,
+    'currency'      => 'USD',
+    'renewal_date'  => date('Y-m-15', strtotime('+1 month')),
+], 'Interserver');
+$bridgeResult = (new SupplierRecurringBridge())->syncTemplate(
+    (int) $supplier->id,
+    $hosting,
+    null,
+    true
+);
+int_ok($bridgeResult['success'] ?? false, 'SupplierRecurringBridge crea plantilla hosting');
+int_ok(($bridgeResult['template_id'] ?? 0) > 0, 'template_id para plugin recurring_expense_id');
 
 $crmControllers = is_dir(APPPATH . 'Controllers/CRM');
 int_ok(! $crmControllers, 'CRM dedicado aún no existe (esperado)');

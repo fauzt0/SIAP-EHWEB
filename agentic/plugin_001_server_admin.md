@@ -368,9 +368,21 @@ Un VPS de InterServer (u otro proveedor del ENUM) es un servicio recurrente del 
 
 Al guardar un servidor con `supplier_id`, `monthly_cost > 0` y `renewal_date`:
 
-1. Crear o actualizar la fila `fin_recurring_expenses` guardada en `recurring_expense_id`.
-2. Campos de esa plantilla: `supplier_id` del servidor, `service_type = hosting`, `description` con nombre y proveedor (`interserver`, etc.), `amount = monthly_cost`, `currency` del servidor, `frequency = monthly`, `next_due_date = renewal_date`, `notify_days_before` (15 días es el mismo horizonte que el aviso operativo de renovación), `is_active = 1` mientras el servidor no esté `retired`.
-3. Los vencimientos los genera el programador que ya existe (`RecurringExpenseScheduler` / el comando de gastos recurrentes). Cada ocurrencia es un `fin_expenses` con `paid_amount`, `status` (`pending|partial|paid|cancelled`) y `due_date`.
+1. Usar el puente del ERP **`App\Services\SupplierRecurringBridge`** (no insertar SQL ni duplicar modelos desde el plugin).
+2. Ejemplo:
+   ```php
+   $bridge = new \App\Services\SupplierRecurringBridge();
+   $payload = \App\Services\SupplierRecurringBridge::hostingPayloadFromServer($server, $supplier->commercial_name);
+   $result = $bridge->syncTemplate(
+       (int) $server['supplier_id'],
+       $payload,
+       $server['recurring_expense_id'] ?: null
+   );
+   // Guardar $result['template_id'] en plg_srvadm_servers.recurring_expense_id
+   ```
+3. Al retirar el servidor: `$bridge->deactivateTemplate((int) $server['recurring_expense_id'])`; no borrar gastos históricos en `fin_expenses`.
+4. Campos de la plantilla: `service_type = hosting`, `amount = monthly_cost`, `next_due_date = renewal_date`, `notify_days_before` (p. ej. 15).
+5. Los vencimientos los genera `RecurringExpenseScheduler` (también vía el puente tras `syncTemplate`). Cada ocurrencia es un `fin_expenses` con recibos, estatus y reportes del módulo Proveedores.
 4. Esos `fin_expenses` alimentan las alertas del ERP (`_detectOverdueRecurringExpenses`, `_detectDueSoonRecurringExpenses`), el calendario de servicios recurrentes y el reporte de proveedores (pendiente, pagado, porcentaje y recordatorios).
 5. Si cambia el costo, la moneda, el proveedor o la fecha de renovación, se actualiza la misma plantilla. No se inserta otra. Si el servidor se retira, la plantilla pasa a `is_active = 0`; no se borran los gastos ya contabilizados.
 6. `InterServerClient::getInvoices()` solo concilia: puede proponer el monto y la fecha de la plantilla. La factura no se guarda como deuda dentro del plugin.
