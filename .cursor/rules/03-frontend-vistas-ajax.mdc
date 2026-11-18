@@ -1,0 +1,42 @@
+---
+description: Vistas AppStack, CSRF, DataTables, Fetch y UI (§2, §6, §10–§12, §17)
+globs: app/Views/**/*,public_html/**/*
+alwaysApply: false
+---
+
+# Frontend y vistas
+
+## Layouts (§14)
+
+Vistas de módulo: `extend($layout)`, secciones `title`, `main`, `scripts`. Contenido dentro de `<main class="content">`.
+
+## CSRF (§2)
+
+- El layout `user_loggedin_layout.php` incluye `#csrf_token` global; vistas con DataTables u operaciones AJAX frecuentes deben mantener el input al inicio de `main` si la vista se usa sin layout completo.
+- DataTables POST: inyectar token en `ajax.data` y renovar en `$('#tabla').on('xhr.dt', ...)` leyendo el header `csrf_header()`.
+- `fetch()` en mutaciones: cabeceras `X-Requested-With: XMLHttpRequest` y token en header CSRF; actualizar `#csrf_token` desde la respuesta.
+
+## DataTables guard (§6)
+
+Antes de inicializar:
+
+```javascript
+if ($.fn.dataTable.isDataTable('#mi-tabla')) return;
+```
+
+## Select2 en modales (§10)
+
+`dropdownParent` apuntando al modal/offcanvas padre.
+
+## Fechas e iconos (§11, §12)
+
+- BD/modelos: `Y-m-d`; tabla UI: `d/m/Y`; formularios: `<input type="date">`.
+- Iconos: **FontAwesome** (`fas`/`far`) en contenido dinámico y DataTables. Evitar Lucide u otros que requieran re-scan del DOM en AJAX.
+
+## Feedback (§17)
+
+Usar `notifyShow(mensaje, tipo)`; no `alert()` salvo fallback documentado.
+
+## Sidebar (§4)
+
+Menú en `loggedin_sidebar.php` con `url_is('ruta*')` para `active`, `collapsed`, `show`.

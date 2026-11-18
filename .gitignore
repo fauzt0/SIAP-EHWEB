@@ -148,6 +148,7 @@ private_html/
 # Cursor: ignorar config local; versionar skills del proyecto
 .cursor/*
 !.cursor/skills/
+!.cursor/rules/
 .cursorignore
 
 

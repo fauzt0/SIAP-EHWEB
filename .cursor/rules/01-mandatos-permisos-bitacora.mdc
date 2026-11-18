@@ -1,0 +1,39 @@
+---
+description: Mandatos obligatorios §7 Shield y §8 bitácora (sin excepciones)
+alwaysApply: true
+---
+
+# Mandatos absolutos (DOCUMENTACION_TECNICA §7 y §8)
+
+## Permisos Shield
+
+Toda ruta que **lea datos sensibles** o **mute** el sistema debe declarar filtro de permiso en `app/Config/Routes.php` (o rutas del plugin):
+
+```php
+['filter' => 'permission:modulo.accion']
+```
+
+La sesión (`session`) no basta. En vistas y partials, ocultar acciones con:
+
+```php
+auth()->user()->can('modulo.accion')
+```
+
+Los permisos de plugins se integran al catálogo Shield vía `PluginManager::permissionCatalog()` (no inventar helpers paralelos).
+
+## Bitácora de auditoría
+
+Toda mutación (CREATE, UPDATE, DELETE lógico/físico, uploads relevantes, cambios de contraseña/roles/permisos) debe registrar:
+
+```php
+(new \App\Models\Users\UserActivityLogsModel())->logActivity(
+    'tipo_accion',
+    'Descripción con nombre e ID del registro'
+);
+```
+
+Registrar **antes** de devolver éxito al cliente.
+
+## Rechazo automático en revisión
+
+Si falta permiso en ruta o bitácora en mutación, el cambio no está listo para merge. Ver plantilla en `agentic/AUDITORIA_ARQUITECTURA.md`.

@@ -1,0 +1,54 @@
+---
+description: Controladores, modelos, rutas y servicios según DOCUMENTACION_TECNICA
+globs: app/**/*.php,plugins/**/*.php
+alwaysApply: false
+---
+
+# Backend PHP (CI4)
+
+## AJAX (§1)
+
+Endpoints solo para AJAX:
+
+```php
+if (! $this->request->isAJAX()) {
+    throw PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
+}
+```
+
+## MVC y base de datos (§9)
+
+- **Prohibido** en controladores: `\Config\Database::connect()`, `db_connect()` salvo casos documentados (detectores en `AlertController`).
+- **Prohibido** en controladores: `transStart()` / `transComplete()`. Encapsular en el modelo principal con `$this->db`.
+- Validación en **modelos** (`$validationRules`), no en controladores (§19).
+- Modelos de negocio críticos: `$useSoftDeletes = true`, `$allowedFields` explícito.
+
+## Rutas (§3)
+
+- Verbo HTTP acorde a la acción (GET listados, POST mutaciones).
+- **Obligatorio** `['as' => 'modulo.accion']` en cada ruta activa; usar `route_to()` en PHP y vistas.
+- Grupo administrativo bajo `nat/` con filtro `session` + `permission` granular.
+
+## Flujo controlador (§15)
+
+- HTML: `$this->viewData`, `setPageTittleAhead()` / `setViewSuccess()`, `renderLayout(...)`.
+- JSON: `$this->outputData`, `setOutputSuccess()` / `setOutputError()`, incluir `csrf_hash()` cuando aplique.
+
+## DataTables (§5, §16)
+
+- Trait en modelo: `use \App\Traits\DataTableTrait;`
+- Definir `$column_order` y `$column_search`; sobrescribir `_get_datatables_query()` si hay JOINs.
+- Controlador delgado: POST → modelo `get_datatables()` → JSON.
+
+## Otros
+
+- Bitácora y permisos en cada mutación (regla `01-mandatos-*`).
+- Uploads: `FCPATH . 'uploads/{modulo}/'`, `getRandomName()`, ruta relativa en BD (§18); documentos privados en `WRITEPATH/uploads/` cuando corresponda.
+- Alertas manuales: `AlertService::dispatch()`; automáticas: detector `_detect*()` en `AlertController` + `_safeDetect()` (§21).
+- Breadcrumbs: `App\Libraries\Breadcrumb` (§13).
+
+## Plugins
+
+- Namespace `Plugins\{Slug}\`, tablas `plg_{slug}_*`, rutas bajo convención del mercado.
+- Seguir `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md` y no editar el core del ERP para un plugin concreto.
+- Ciclo de vida solo vía `PluginManager` / comandos `plugin:*`, no SQL manual sobre tablas `sys_plugin_*`.

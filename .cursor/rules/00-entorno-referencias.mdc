@@ -1,0 +1,39 @@
+---
+description: Stack ERP (PHP 8.3+, CodeIgniter 4, MariaDB) y documentos fuente de verdad
+alwaysApply: true
+---
+
+# Entorno y referencias
+
+## Stack objetivo
+
+- **PHP:** 8.3+ en VPS y desarrollo local (tipado estricto, `declare(strict_types=1);` en código nuevo cuando el archivo lo permita).
+- **Framework:** CodeIgniter 4 (`codeigniter4/framework` ^4.x) + **Shield** para autenticación y permisos.
+- **Base de datos:** MariaDB (MySQL compatible); migraciones con `php spark migrate`; charset/collation según `.env` del entorno.
+- **Docroot web:** `public_html/` (`FCPATH` del sitio). No confundir con `public/` usado solo por `spark` en CLI.
+- **UI:** AppStack + Bootstrap 5; plantillas en `app/Views/Layouts/` y `app/Views/Partials/`.
+
+## Fuente de verdad (leer antes de implementar)
+
+| Documento | Uso |
+|-----------|-----|
+| `DOCUMENTACION_TECNICA.md` | Estándares §1–§21 (AJAX, CSRF, rutas, MVC, DataTables, Shield, bitácora, alertas, etc.) |
+| `agentic/AUDITORIA_ARQUITECTURA.md` | Checklist de auditoría y **dos mandatos** (permisos + bitácora) |
+| `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md` | Plugins bajo `plugins/{Slug}/`; código vigente en `agentic/plugin_000_plugin_system_core.md` |
+
+## Comandos habituales
+
+```bash
+composer install
+php spark migrate
+php spark plugin:doctor
+```
+
+## Skills del repo (VPS / ramas de agentes)
+
+- `sync-rama` — actualizar la rama actual desde `origin`.
+- `integrar-rama-vps` — comparar/integrar otra rama (ej. `agente-nube-841d` → `cursor/agente-nube-841d`) y correr migraciones.
+
+## Convención de ramas Cloud Agent
+
+Prefijo `cursor/`, sufijo `-841d` en ramas creadas por agentes.
