@@ -56,11 +56,62 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
         </div>
         <?php endif; ?>
 
+        <?php $charts = $stats['charts'] ?? ['status' => ['pending' => 0, 'partial' => 0, 'paid' => 0, 'cancelled' => 0], 'monthly' => []]; ?>
         <div class="row mb-3">
             <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pendientes este mes</div><div class="h4 mb-0 text-warning" id="stat-pending"><?= esc(recurring_stat_money($stats, 'pending_this_month_amount', 'pending_this_month_by_currency')) ?></div><div class="small text-muted" id="stat-pending-count"><?= (int) ($stats['pending_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
             <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Vencidos</div><div class="h4 mb-0 text-danger" id="stat-overdue"><?= esc(recurring_stat_money($stats, 'overdue_amount', 'overdue_by_currency')) ?></div><div class="small text-muted" id="stat-overdue-count"><?= (int) ($stats['overdue'] ?? 0) ?> vencimiento(s)</div></div></div></div>
             <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Pagados este mes</div><div class="h4 mb-0 text-success" id="stat-paid"><?= esc(recurring_stat_money($stats, 'paid_this_month_amount', 'paid_this_month_by_currency')) ?></div><div class="small text-muted" id="stat-paid-count"><?= (int) ($stats['paid_this_month'] ?? 0) ?> vencimiento(s)</div></div></div></div>
             <div class="col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Por vencer (aviso)</div><div class="h4 mb-0 text-info" id="stat-due-soon"><?= esc(recurring_stat_money($stats, 'due_soon_amount', 'due_soon_by_currency')) ?></div><div class="small text-muted" id="stat-due-soon-count"><?= (int) ($stats['due_soon'] ?? 0) ?> vencimiento(s)</div></div></div></div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-lg-4 mb-3 mb-lg-0">
+                <div class="card h-100">
+                    <div class="card-header"><h5 class="card-title mb-0"><i class="fas fa-chart-pie me-2"></i>Estatus de vencimientos</h5></div>
+                    <div class="card-body" id="chart-status-wrap">
+                        <?php
+                        $st = $charts['status'] ?? [];
+                        $stTotal = max(1, array_sum($st));
+                        $stColors = ['pending' => '#ffc107', 'partial' => '#0dcaf0', 'paid' => '#198754', 'cancelled' => '#6c757d'];
+                        $stLabels = ['pending' => 'Pendiente', 'partial' => 'Parcial', 'paid' => 'Pagado', 'cancelled' => 'Cancelado'];
+                        foreach ($stLabels as $k => $lab):
+                            $pct = round((($st[$k] ?? 0) / $stTotal) * 100);
+                        ?>
+                        <div class="d-flex justify-content-between small mb-1"><span><?= esc($lab) ?></span><span id="chart-st-<?= $k ?>-n"><?= (int) ($st[$k] ?? 0) ?></span></div>
+                        <div class="progress progress-sm mb-2"><div id="chart-st-<?= $k ?>" class="progress-bar" style="width:<?= $pct ?>%;background:<?= $stColors[$k] ?>"></div></div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header"><h5 class="card-title mb-0"><i class="fas fa-chart-bar me-2"></i>Últimos 6 meses (pendiente vs pagado)</h5></div>
+                    <div class="card-body" id="chart-monthly-wrap">
+                        <?php
+                        $monthly = $charts['monthly'] ?? [];
+                        $maxM = 1;
+                        foreach ($monthly as $mRow) {
+                            $maxM = max($maxM, (float) ($mRow['pending'] ?? 0), (float) ($mRow['paid'] ?? 0));
+                        }
+                        ?>
+                        <div class="d-flex align-items-end gap-2" style="height:160px" id="chart-monthly-bars">
+                            <?php foreach ($monthly as $mRow):
+                                $hP = (int) round(((float) $mRow['pending'] / $maxM) * 140);
+                                $hD = (int) round(((float) $mRow['paid'] / $maxM) * 140);
+                            ?>
+                            <div class="flex-fill text-center">
+                                <div class="d-flex justify-content-center align-items-end gap-1" style="height:140px">
+                                    <div class="bg-warning rounded-top" style="width:40%;height:<?= max(4, $hP) ?>px" title="Pendiente <?= number_format((float) $mRow['pending'], 2) ?>"></div>
+                                    <div class="bg-success rounded-top" style="width:40%;height:<?= max(4, $hD) ?>px" title="Pagado <?= number_format((float) $mRow['paid'], 2) ?>"></div>
+                                </div>
+                                <div class="small text-muted mt-1"><?= esc($mRow['month']) ?></div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="small text-muted mt-2"><span class="badge bg-warning">&nbsp;</span> Pendiente · <span class="badge bg-success">&nbsp;</span> Pagado</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="card">
@@ -131,7 +182,7 @@ $canManage = auth()->user()->can('catalog.recurring-manage');
                         <thead>
                             <tr>
                                 <th>Vencimiento</th><th>Proveedor</th><th>Servicio</th><th>Sucursal</th>
-                                <th>Periodo</th><th>Total</th><th>Pagado</th><th>Recibos</th><th>Estatus</th><th></th>
+                                <th>Periodo</th><th>OC</th><th>Total</th><th>Pagado</th><th>Recibos</th><th>Estatus</th><th></th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -444,7 +495,7 @@ function initExpensesTable() {
                 d.filter_month = document.getElementById('filter-exp-month').value;
             }
         },
-        columns: Array.from({length: 10}, function(_, i) { return { data: i, orderable: i < 9 }; }),
+        columns: Array.from({length: 11}, function(_, i) { return { data: i, orderable: i !== 8 && i !== 10 }; }),
         columnDefs: [{ targets: 9, orderable: false, searchable: false }],
         language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
     });
@@ -728,6 +779,21 @@ function applyStats(stats) {
     document.getElementById('stat-paid-count').textContent = (stats.paid_this_month || 0) + ' vencimiento(s)';
     document.getElementById('stat-due-soon').textContent = moneyMap(stats.due_soon_by_currency, stats.due_soon_amount);
     document.getElementById('stat-due-soon-count').textContent = (stats.due_soon || 0) + ' vencimiento(s)';
+    if (stats.charts) renderRecurringCharts(stats.charts);
+}
+
+function renderRecurringCharts(charts) {
+    var st = charts.status || {};
+    var total = 0;
+    ['pending','partial','paid','cancelled'].forEach(function(k) { total += parseInt(st[k] || 0, 10); });
+    total = Math.max(1, total);
+    ['pending','partial','paid','cancelled'].forEach(function(k) {
+        var n = parseInt(st[k] || 0, 10);
+        var elN = document.getElementById('chart-st-' + k + '-n');
+        var elB = document.getElementById('chart-st-' + k);
+        if (elN) elN.textContent = n;
+        if (elB) elB.style.width = Math.round((n / total) * 100) + '%';
+    });
 }
 
 function generateRecurring() {

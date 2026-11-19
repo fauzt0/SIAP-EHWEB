@@ -27,10 +27,11 @@ $canEmail  = auth()->user()->can('catalog.po-send-email');
 
         <div class="alert alert-info border-0 mb-3 py-2">
             <i class="fas fa-info-circle me-2"></i>
-            Las <strong>órdenes de compra puntuales</strong> son compras únicas (equipo, insumos).
-            Para <strong>internet, luz, basura</strong> y otros pagos periódicos use
-            <a href="<?= route_to('suppliers.recurring.index') ?>" class="alert-link">Pagos recurrentes</a>
-            (cada mes genera un vencimiento con recibo y estatus de pago).
+            Las <strong>órdenes de compra</strong> pueden ser <em>manuales</em> (compra única) o
+            <em>automáticas</em> (generadas al crear el vencimiento de un servicio recurrente).
+            Cada OC tiene estatus (borrador → enviada → aprobada → completada) y puede adjuntar facturas y recibos.
+            El flujo de pagos periódicos vive también en
+            <a href="<?= route_to('suppliers.recurring.index') ?>" class="alert-link">Pagos recurrentes</a>.
         </div>
 
         <div class="row">
@@ -48,7 +49,7 @@ $canEmail  = auth()->user()->can('catalog.po-send-email');
                     </div>
                     <div class="card-body pt-2">
                         <div class="row g-2 mb-3">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <select id="filter-status" class="form-select form-select-sm">
                                     <option value="">— Todos los estatus —</option>
                                     <?php foreach ($response['statuses'] ?? [] as $key => $st): ?>
@@ -70,6 +71,13 @@ $canEmail  = auth()->user()->can('catalog.po-send-email');
                                     <?php foreach ($response['branches'] ?? [] as $b): ?>
                                     <option value="<?= (int) $b->id ?>"><?= esc($b->commercial_name ?? $b->name) ?></option>
                                     <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="filter-source" class="form-select form-select-sm">
+                                    <option value="">— Origen —</option>
+                                    <option value="manual">Manual</option>
+                                    <option value="recurring">Recurrente</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -273,6 +281,7 @@ function initPurchaseOrdersDataTable() {
                 d.filter_supplier_id = document.getElementById('filter-supplier').value;
                 d.filter_branch_id = document.getElementById('filter-branch').value;
                 d.filter_deleted = document.getElementById('filter-deleted').checked ? 1 : '';
+                d.filter_source = document.getElementById('filter-source').value;
             }
         },
         columns: [
@@ -283,13 +292,14 @@ function initPurchaseOrdersDataTable() {
         language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
     });
     $('#datatables-purchase-orders').on('xhr.dt', function (e, s, j, xhr) { refreshCsrf(xhr); });
-    ['filter-status','filter-supplier','filter-branch','filter-deleted'].forEach(function(id) {
+    ['filter-status','filter-supplier','filter-branch','filter-source','filter-deleted'].forEach(function(id) {
         document.getElementById(id).addEventListener('change', function() { window.poTable.ajax.reload(); });
     });
     document.getElementById('btn-clear-filters').addEventListener('click', function() {
         document.getElementById('filter-status').value = '';
         document.getElementById('filter-supplier').value = '';
         document.getElementById('filter-branch').value = '';
+        document.getElementById('filter-source').value = '';
         document.getElementById('filter-deleted').checked = false;
         window.poTable.ajax.reload();
     });

@@ -95,12 +95,18 @@ class RecurringExpenseController extends BaseFinancialController
                 $actions .= ' <button class="btn btn-outline-danger btn-sm btn-cancel-expense" data-id="' . $row->id . '" title="Cancelar periodo"><i class="fas fa-ban"></i></button>';
             }
 
+            $poCell = ! empty($row->po_number)
+                ? '<a class="font-monospace small" href="' . route_to('suppliers.po.index') . '?open=' . (int) $row->purchase_order_id . '">'
+                  . esc($row->po_number) . '</a>'
+                : '<span class="text-muted">—</span>';
+
             $data[] = [
                 !empty($row->due_date) ? date('d/m/Y', strtotime($row->due_date)) : '—',
                 esc($row->supplier_name ?? '—'),
                 esc($row->template_description ?? '—'),
                 esc($row->branch_name ?? '—'),
                 esc($row->period_label ?? '—'),
+                $poCell,
                 number_format((float) $row->total_amount, 2),
                 number_format((float) ($row->paid_amount ?? 0), 2),
                 $receipts,
@@ -193,10 +199,15 @@ class RecurringExpenseController extends BaseFinancialController
 
         (new UserActivityLogsModel())->logActivity(
             'generate_recurring_expenses',
-            'Generó vencimientos recurrentes: ' . $result['created'] . ' nuevos de ' . $result['templates'] . ' plantillas'
+            'Generó vencimientos recurrentes: ' . $result['created'] . ' nuevos y '
+            . ($result['created_pos'] ?? 0) . ' OC automáticas de ' . $result['templates'] . ' plantillas'
         );
 
-        $this->setOutputSuccess('Generación completada: ' . $result['created'] . ' vencimiento(s) nuevo(s).');
+        (new \App\Services\SupplierReminderService())->afterRecurringGeneration($result);
+
+        $msg = 'Generación completada: ' . $result['created'] . ' vencimiento(s) y '
+            . (int) ($result['created_pos'] ?? 0) . ' orden(es) de compra automática(s).';
+        $this->setOutputSuccess($msg);
         $this->outputData['response'] = $result;
         $this->outputData['response']['stats'] = $this->expenseModel->getDashboardStats();
         $this->outputData['csrf']     = csrf_hash();

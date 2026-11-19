@@ -266,17 +266,20 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingPayrolls'));
         }
 
-        // ── Proveedores ───────────────────────────────────────────────────────
-        if ($user->can('purchasing.suppliers') || $user->can('catalog.manage-suppliers')) {
+        // ── Proveedores (acceso al módulo) ───────────────────────────────────
+        if ($user->can('catalog.access') || $user->can('catalog.manage-suppliers') || $user->can('purchasing.suppliers')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersInactive'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersMissingTaxId'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueRecurringExpenses'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueSoonRecurringExpenses'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingPurchaseOrders'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverduePurchaseOrders'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectPoMissingDocuments'));
         }
 
         // ── Catálogo / Inventario ─────────────────────────────────────────────
         if ($user->can('catalog.access')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectLowStockProducts'));
-            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueRecurringExpenses'));
-            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueSoonRecurringExpenses'));
         }
 
         try {
@@ -604,6 +607,61 @@ class AlertController extends BaseController
             'message'    => $count . ' vencimiento(s) dentro de la ventana de aviso (notify_days_before)',
             'module'     => 'Proveedores',
             'target_url' => route_to('suppliers.recurring.index'),
+        ])];
+    }
+
+    private function _detectPendingPurchaseOrders(): array
+    {
+        $poModel = new \App\Models\Financial\FinPurchaseOrderModel();
+        $draft   = $poModel->countByStatus('draft');
+        $sent    = $poModel->countByStatus('sent');
+        $count   = $draft + $sent;
+
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'info',
+            'icon'       => 'fa-file-invoice-dollar',
+            'title'      => 'Órdenes de compra pendientes',
+            'message'    => $draft . ' en borrador y ' . $sent . ' enviada(s) sin aprobar',
+            'module'     => 'Proveedores',
+            'target_url' => route_to('suppliers.po.index'),
+        ])];
+    }
+
+    private function _detectOverduePurchaseOrders(): array
+    {
+        $count = (new \App\Models\Financial\FinPurchaseOrderModel())->countApprovedOverdue();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-clock',
+            'title'      => 'OC aprobadas con entrega vencida',
+            'message'    => $count . ' orden(es) aprobada(s) con fecha de entrega pasada',
+            'module'     => 'Proveedores',
+            'target_url' => route_to('suppliers.po.index'),
+        ])];
+    }
+
+    private function _detectPoMissingDocuments(): array
+    {
+        $count = (new \App\Models\Financial\FinPurchaseOrderModel())->countWithoutDocuments();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-paperclip',
+            'title'      => 'OC sin factura o recibo',
+            'message'    => $count . ' orden(es) enviada(s)/aprobada(s) sin documentos adjuntos',
+            'module'     => 'Proveedores',
+            'target_url' => route_to('suppliers.po.index'),
         ])];
     }
 

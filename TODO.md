@@ -71,6 +71,9 @@ Orden sugerido:
 
 ### Proveedores — polish opcional (no bloquea roadmap)
 
+- [x] OC automáticas desde recurrentes + origen Manual/Recurrente (2026-11-19)
+- [x] Alertas de módulo (vencidos, OC pendientes, sin factura) + canal email `queued_until_smtp`
+- [x] Dashboard de recurrentes con gráficas rápidas
 - [ ] Split vista en partials (`supplier_modals`, `supplier_offcanvas`)
 - [ ] Cursor pointer en filas DataTable, debounce en búsqueda
 - [ ] Timeline actividad en offcanvas (endpoint `activity` existe; verificar UX completa)

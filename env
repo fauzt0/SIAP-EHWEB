@@ -154,3 +154,8 @@
 # email.SMTPPass  =
 # email.SMTPPort  = 587
 # email.SMTPCrypto = tls
+#
+# Recordatorios de proveedores (alertas + cola email):
+#   php spark financial:generate-recurring
+#   php spark financial:send-supplier-reminders
+# Sin SMTPHost el canal email queda en queued_until_smtp (listo para activar).

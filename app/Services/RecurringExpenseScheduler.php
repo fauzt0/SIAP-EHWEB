@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Financial\FinRecurringExpenseModel;
 use App\Models\Financial\FinExpenseModel;
+use App\Models\Financial\FinPurchaseOrderModel;
 
 /**
  * Genera vencimientos en fin_expenses a partir de plantillas recurrentes activas.
@@ -20,7 +21,7 @@ class RecurringExpenseScheduler
     }
 
     /**
-     * @return array{created: int, templates: int}
+     * @return array{created: int, created_pos: int, templates: int}
      */
     public function generate(?string $horizonEnd = null, ?int $onlyTemplateId = null): array
     {
@@ -36,8 +37,10 @@ class RecurringExpenseScheduler
 
         $templates = $builder->findAll();
 
-        $created   = 0;
-        $processed = 0;
+        $created    = 0;
+        $createdPos = 0;
+        $processed  = 0;
+        $poModel    = new FinPurchaseOrderModel();
 
         foreach ($templates as $template) {
             $processed++;
@@ -62,13 +65,20 @@ class RecurringExpenseScheduler
                     ->first();
 
                 if ($exists) {
+                    if (empty($exists->purchase_order_id) && (int) $template->supplier_id > 0) {
+                        $poId = $poModel->createFromRecurringOccurrence($template, $period, (int) $exists->id);
+                        if ($poId) {
+                            $this->expenseModel->update((int) $exists->id, ['purchase_order_id' => $poId]);
+                            $createdPos++;
+                        }
+                    }
                     if ($period['due_date'] >= date('Y-m-d')) {
                         $nextDue = $nextDue === null ? $period['due_date'] : min($nextDue, $period['due_date']);
                     }
                     continue;
                 }
 
-                $this->expenseModel->insert([
+                $expenseId = $this->expenseModel->insert([
                     'supplier_id'          => $template->supplier_id,
                     'category_id'          => $template->category_id,
                     'recurring_expense_id' => $template->id,
@@ -79,8 +89,16 @@ class RecurringExpenseScheduler
                     'due_date'             => $period['due_date'],
                     'status'               => 'pending',
                     'period_label'         => $period['label'],
-                ]);
+                ], true);
                 $created++;
+
+                if ($expenseId) {
+                    $poId = $poModel->createFromRecurringOccurrence($template, $period, (int) $expenseId);
+                    if ($poId) {
+                        $this->expenseModel->update((int) $expenseId, ['purchase_order_id' => $poId]);
+                        $createdPos++;
+                    }
+                }
 
                 if ($period['due_date'] >= date('Y-m-d')) {
                     $nextDue = $nextDue === null ? $period['due_date'] : min($nextDue, $period['due_date']);
@@ -105,7 +123,7 @@ class RecurringExpenseScheduler
             $this->templateModel->db->transComplete();
         }
 
-        return ['created' => $created, 'templates' => $processed];
+        return ['created' => $created, 'created_pos' => $createdPos, 'templates' => $processed];
     }
 
     /**

@@ -22,11 +22,16 @@ class GenerateRecurringExpenses extends BaseCommand
 
         CLI::write(
             sprintf(
-                'Procesadas %d plantillas. Creados %d vencimientos nuevos.',
+                'Procesadas %d plantillas. Creados %d vencimientos y %d OC automáticas.',
                 $result['templates'],
-                $result['created']
+                $result['created'],
+                $result['created_pos'] ?? 0
             ),
             'green'
         );
+
+        if (($result['created'] ?? 0) > 0 || ($result['created_pos'] ?? 0) > 0) {
+            (new \App\Services\SupplierReminderService())->afterRecurringGeneration($result);
+        }
     }
 }

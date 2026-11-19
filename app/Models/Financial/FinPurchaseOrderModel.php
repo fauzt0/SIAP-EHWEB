@@ -27,6 +27,9 @@ class FinPurchaseOrderModel extends Model
         'org_branch_id',
         'po_number',
         'status',
+        'source',
+        'recurring_expense_id',
+        'period_label',
         'total_amount',
         'currency',
         'issue_date',
@@ -58,6 +61,10 @@ class FinPurchaseOrderModel extends Model
         'status' => [
             'label' => 'Estatus',
             'rules' => 'required|in_list[draft,sent,approved,completed,cancelled]',
+        ],
+        'source' => [
+            'label' => 'Origen',
+            'rules' => 'permit_empty|in_list[manual,recurring]',
         ],
         'total_amount' => [
             'label' => 'Monto Total',
@@ -177,6 +184,13 @@ class FinPurchaseOrderModel extends Model
             $this->builder()->where(
                 'fin_purchase_orders.org_branch_id',
                 (int) $postData['filter_branch_id']
+            );
+        }
+
+        if (!empty($postData['filter_source'])) {
+            $this->builder()->where(
+                'fin_purchase_orders.source',
+                $postData['filter_source']
             );
         }
 
@@ -464,5 +478,94 @@ class FinPurchaseOrderModel extends Model
         $this->builder()->where('id', $id)->update(['deleted_at' => null]);
 
         return $this->db->affectedRows() > 0;
+    }
+
+    /**
+     * OC automática a partir de un vencimiento recurrente (idempotente por plantilla + periodo).
+     *
+     * @return int|false ID de la OC (existente o nueva)
+     */
+    public function createFromRecurringOccurrence(object $template, array $period, int $expenseId): int|false
+    {
+        $supplierId = (int) ($template->supplier_id ?? 0);
+        $branchId   = (int) ($template->org_branch_id ?? 0);
+        $label      = (string) ($period['label'] ?? '');
+
+        if ($supplierId <= 0 || $label === '') {
+            return false;
+        }
+
+        if ($branchId <= 0) {
+            $branchId = (int) (new \App\Models\Organization\OrgBranchModel())->getMainBranchId();
+        }
+
+        if ($branchId <= 0) {
+            return false;
+        }
+
+        $existing = $this->where('recurring_expense_id', (int) $template->id)
+            ->where('period_label', $label)
+            ->first();
+
+        if ($existing) {
+            return (int) $existing->id;
+        }
+
+        $amount   = (float) ($template->amount ?? 0);
+        $currency = $template->currency ?? 'MXN';
+        $desc     = trim((string) ($template->description ?? 'Servicio recurrente'));
+        $due      = $period['due_date'] ?? date('Y-m-d');
+
+        $poId = $this->createPurchaseOrderWithItems([
+            'fin_supplier_id'      => $supplierId,
+            'org_branch_id'        => $branchId,
+            'status'               => 'sent',
+            'source'               => 'recurring',
+            'recurring_expense_id' => (int) $template->id,
+            'period_label'         => $label,
+            'total_amount'         => $amount,
+            'currency'             => $currency,
+            'issue_date'           => date('Y-m-d'),
+            'delivery_date'        => $due,
+            'notes'                => 'OC automática periodo ' . $label . ' (vencimiento #' . $expenseId . ')',
+        ], [[
+            'catalog_product_id' => null,
+            'description'        => $desc . ' [' . $label . ']',
+            'quantity'           => 1,
+            'unit_price'         => $amount,
+            'total_price'        => $amount,
+        ]]);
+
+        return $poId ?: false;
+    }
+
+    public function countByStatus(string $status): int
+    {
+        return $this->where('status', $status)
+            ->where('deleted_at', null)
+            ->countAllResults();
+    }
+
+    public function countApprovedOverdue(): int
+    {
+        return $this->where('status', 'approved')
+            ->where('deleted_at', null)
+            ->where('delivery_date IS NOT NULL', null, false)
+            ->where('delivery_date <', date('Y-m-d'))
+            ->countAllResults();
+    }
+
+    public function countWithoutDocuments(array $statuses = ['sent', 'approved']): int
+    {
+        $builder = $this->db->table('fin_purchase_orders po')
+            ->where('po.deleted_at', null)
+            ->whereIn('po.status', $statuses)
+            ->where(
+                '(SELECT COUNT(*) FROM fin_purchase_order_documents d WHERE d.fin_purchase_order_id = po.id AND d.deleted_at IS NULL) = 0',
+                null,
+                false
+            );
+
+        return (int) $builder->countAllResults();
     }
 }

@@ -72,6 +72,9 @@ class PurchaseOrderController extends BaseFinancialController
             $deliveryDate = !empty($po->delivery_date) ? date('d/m/Y', strtotime($po->delivery_date)) : '—';
 
             $amount = number_format((float) ($po->total_amount ?? 0), 2) . ' ' . esc($po->currency ?? 'MXN');
+            $origin = (($po->source ?? 'manual') === 'recurring')
+                ? '<span class="badge badge-subtle-warning" title="Generada desde servicio recurrente"><i class="fas fa-sync-alt me-1"></i>Recurrente</span>'
+                : '<span class="badge badge-subtle-secondary">Manual</span>';
 
             // Actions (§7)
             $pid     = $po->id;
@@ -109,7 +112,7 @@ class PurchaseOrderController extends BaseFinancialController
             $actions .= '</div>';
 
             $data[] = [
-                '<span class="font-monospace small fw-semibold">' . esc($po->po_number) . '</span>',
+                '<span class="font-monospace small fw-semibold">' . esc($po->po_number) . '</span> ' . $origin,
                 esc($po->supplier_name ?? '—'),
                 esc($po->branch_name ?? $po->branch_commercial_name ?? '—'),
                 $statusBadge,

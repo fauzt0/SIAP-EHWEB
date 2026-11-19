@@ -22,6 +22,7 @@ class FinExpenseModel extends Model
         'supplier_id',
         'category_id',
         'recurring_expense_id',
+        'purchase_order_id',
         'org_branch_id',
         'total_amount',
         'paid_amount',
@@ -55,6 +56,7 @@ class FinExpenseModel extends Model
             'fin_recurring_expenses.description',
             'org_branches.name',
             'fin_expenses.period_label',
+            'fin_purchase_orders.po_number',
             'fin_expenses.total_amount',
             'fin_expenses.paid_amount',
             null,
@@ -66,6 +68,7 @@ class FinExpenseModel extends Model
             'fin_recurring_expenses.description',
             'fin_expenses.period_label',
             'org_branches.name',
+            'fin_purchase_orders.po_number',
         ],
         'order' => ['fin_expenses.due_date' => 'asc'],
     ];
@@ -79,12 +82,14 @@ class FinExpenseModel extends Model
                 'fin_recurring_expenses.description AS template_description',
                 'fin_recurring_expenses.service_type',
                 'org_branches.name AS branch_name',
+                'fin_purchase_orders.po_number AS po_number',
                 '(SELECT COUNT(*) FROM fin_expense_documents fed '
                 . 'WHERE fed.fin_expense_id = fin_expenses.id AND fed.deleted_at IS NULL) AS document_count',
             ])
             ->join('fin_suppliers', 'fin_suppliers.id = fin_expenses.supplier_id', 'left')
             ->join('fin_recurring_expenses', 'fin_recurring_expenses.id = fin_expenses.recurring_expense_id', 'left')
             ->join('org_branches', 'org_branches.id = fin_expenses.org_branch_id', 'left')
+            ->join('fin_purchase_orders', 'fin_purchase_orders.id = fin_expenses.purchase_order_id', 'left')
             ->where('fin_expenses.deleted_at IS NULL');
 
         if (!empty($postData['filter_status'])) {
@@ -142,10 +147,30 @@ class FinExpenseModel extends Model
         $paid   = min($paidAmount, $total);
         $status = $paid >= $total ? 'paid' : ($paid > 0 ? 'partial' : 'pending');
 
-        return $this->update($id, [
+        $ok = $this->update($id, [
             'paid_amount' => $paid,
             'status'      => $status,
         ]);
+
+        if ($ok && $status === 'paid' && ! empty($expense->purchase_order_id)) {
+            $poModel = new FinPurchaseOrderModel();
+            $po      = $poModel->find((int) $expense->purchase_order_id);
+            if ($po && in_array($po->status, ['draft', 'sent', 'approved'], true)) {
+                if ($po->status === 'draft') {
+                    $poModel->updateStatus((int) $po->id, 'sent');
+                    $po = $poModel->find((int) $po->id);
+                }
+                if ($po && $po->status === 'sent') {
+                    $poModel->updateStatus((int) $po->id, 'approved');
+                    $po = $poModel->find((int) $po->id);
+                }
+                if ($po && $po->status === 'approved') {
+                    $poModel->updateStatus((int) $po->id, 'completed');
+                }
+            }
+        }
+
+        return $ok;
     }
 
     /**
@@ -256,7 +281,72 @@ class FinExpenseModel extends Model
                 $paidThisMonth['by_currency'],
                 $dueSoon['by_currency'],
             ]),
+            'charts'                            => $this->getChartPayload(),
         ];
+    }
+
+    /**
+     * Series compactas para gráficas del dashboard de recurrentes.
+     *
+     * @return array{status: array<string,int>, monthly: list<array{month:string,pending:float,paid:float}>}
+     */
+    public function getChartPayload(): array
+    {
+        $statusRows = $this->db->table($this->table)
+            ->select('status, COUNT(*) AS cnt')
+            ->where('deleted_at IS NULL')
+            ->where('recurring_expense_id IS NOT NULL', null, false)
+            ->groupBy('status')
+            ->get()
+            ->getResult();
+
+        $status = [
+            'pending'   => 0,
+            'partial'   => 0,
+            'paid'      => 0,
+            'cancelled' => 0,
+        ];
+        foreach ($statusRows as $row) {
+            $key = (string) $row->status;
+            if (isset($status[$key])) {
+                $status[$key] = (int) $row->cnt;
+            }
+        }
+
+        $monthly = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $start = date('Y-m-01', strtotime('-' . $i . ' months'));
+            $end   = date('Y-m-t', strtotime($start));
+            $label = date('m/Y', strtotime($start));
+
+            $pending = $this->db->table($this->table)
+                ->selectSum('total_amount')
+                ->where('deleted_at IS NULL')
+                ->where('recurring_expense_id IS NOT NULL', null, false)
+                ->whereIn('status', ['pending', 'partial'])
+                ->where('due_date >=', $start)
+                ->where('due_date <=', $end)
+                ->get()
+                ->getRow();
+
+            $paid = $this->db->table($this->table)
+                ->selectSum('paid_amount')
+                ->where('deleted_at IS NULL')
+                ->where('recurring_expense_id IS NOT NULL', null, false)
+                ->where('status', 'paid')
+                ->where('due_date >=', $start)
+                ->where('due_date <=', $end)
+                ->get()
+                ->getRow();
+
+            $monthly[] = [
+                'month'   => $label,
+                'pending' => round((float) ($pending->total_amount ?? 0), 2),
+                'paid'    => round((float) ($paid->paid_amount ?? 0), 2),
+            ];
+        }
+
+        return ['status' => $status, 'monthly' => $monthly];
     }
 
     /**
@@ -409,7 +499,16 @@ class FinExpenseModel extends Model
             return false;
         }
 
-        return $this->update($id, ['status' => 'cancelled']);
+        $ok = $this->update($id, ['status' => 'cancelled']);
+        if ($ok && ! empty($expense->purchase_order_id)) {
+            $poModel = new FinPurchaseOrderModel();
+            $po      = $poModel->find((int) $expense->purchase_order_id);
+            if ($po && in_array($po->status, ['draft', 'sent', 'approved'], true)) {
+                $poModel->updateStatus((int) $po->id, 'cancelled');
+            }
+        }
+
+        return $ok;
     }
 
     public function rescheduleOccurrence(int $id, string $dueDate): bool

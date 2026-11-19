@@ -70,4 +70,14 @@ class AppMailer
     {
         return $this->lastError;
     }
+
+    /**
+     * Canal SMTP listo: hay host configurado (el operador puede activarlo después).
+     */
+    public function isSmtpConfigured(): bool
+    {
+        $config = config('Email');
+
+        return is_string($config->SMTPHost) && trim($config->SMTPHost) !== '';
+    }
 }
