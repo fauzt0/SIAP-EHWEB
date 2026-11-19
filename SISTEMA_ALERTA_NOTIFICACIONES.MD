@@ -1,5 +1,9 @@
 # Sistema de Alertas y Notificaciones — ERP CHISA
 
+> **Documento obsoleto (legacy).** Describe rutas y archivos de un stack anterior (`public_html/application/...`, controlador `Notifications.php`).  
+> **Implementación vigente:** [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md) sección 21, `app/Controllers/System/AlertController.php`, `app/Libraries/AlertService.php`, `app/Views/Partials/loggedin_topbar.php`.  
+> Plan de implementación histórico: `agentic/archivo/planes-cerrados/004_sistema_alertas_notificaciones.md`.
+
 ## Descripción General
 
 El sistema de notificaciones es un componente **global** que se muestra en el topbar de todas las páginas del ERP. Su función es agregar y mostrar alertas operativas en tiempo real provenientes de distintos módulos del sistema (Almacén, Ventas, Obras, RH, Compras, Producción), sin que el usuario tenga que navegar a cada sección para enterarse de problemas.

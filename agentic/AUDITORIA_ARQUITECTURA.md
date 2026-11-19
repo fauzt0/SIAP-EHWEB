@@ -390,7 +390,7 @@ RESULTADO: ✅ APROBADO / ⚠️ APROBADO CON OBSERVACIONES / ❌ RECHAZADO — 
 ### REPORTE-008: Proveedores — cierre de gaps OC / documentos / email / recurrentes
 
 **Tarea ID:** Proveedores-Gaps-008
-**Archivo de plan:** `agentic/008_close_po_recurring_gaps.md` (cierre de gaps post-007; el plan original es `agentic/006_suppliers_po_docs_email_recurring.md` y los fixes `agentic/007_fix_po_recurring_audit.md`)
+**Archivo de plan:** `agentic/archivo/planes-cerrados/008_close_po_recurring_gaps.md` (planes 006–007 en la misma carpeta)
 **Agente / Modelo:** Cursor Grok 4.6
 **Fecha de ejecución:** 2026-09-18
 **Sesión de chat:** Cierre de pendientes del módulo proveedores (plantillas, calendario, montos, adjuntos múltiples, SMTP vía `.env`, restore OC) + resumen para auditoría
@@ -511,7 +511,7 @@ Esquema ya presente (tasks 006/007, **no** corrido por este agente; archivos ver
 ### REPORTE-009: Proveedores — OC, documentos, email y servicios recurrentes (Task 006)
 
 **Tarea ID:** Proveedores-006-OC-Docs-Email-Recurrentes  
-**Archivo de plan:** `agentic/006_suppliers_po_docs_email_recurring.md` (esquema: `agentic/2026-08-18_tables_po_documents_email_recurring.md`)  
+**Archivo de plan:** `agentic/archivo/planes-cerrados/006_suppliers_po_docs_email_recurring.md` (esquema en archivo: `2026-08-18_tables_po_documents_email_recurring.md`)  
 **Agente / Modelo:** Composer (agente implementador, sesión de arquitectura 006)  
 **Fecha de ejecución:** 2026-08-18 (migraciones y código base); verificación de auditoría: 2026-09-18  
 **Sesión de chat:** Implementación fases 0→6 — permisos, listado OC, PDF fiscal, documentos inbound/outbound, email CI4, plantillas recurrentes, scheduler, calendario y alerta de vencidos  
@@ -903,6 +903,8 @@ Migraciones RRHH:
 ---
 
 ## Apéndice D: Análisis de `pendientes.md` vs. Estado Real del Sistema
+
+> **Aviso (2026-11-19):** `pendientes.md` y varios planes Task 001/006–011 están en `agentic/archivo/planes-cerrados/`. Este apéndice conserva el análisis del **2026-09-18**; para el estado actual usar [TODO.md](../TODO.md) y [INDICE.md](INDICE.md). Tasks 001, 009, 011 y proveedores 006–008 **ya están implementados** salvo lo explícito en TODO.
 
 > **Fecha de análisis:** 2026-09-18 | **Auditor:** Agente Orquestador
 

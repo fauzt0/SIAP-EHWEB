@@ -1,5 +1,7 @@
 # Plan de Organización: Marcas y Sucursales
 
+> **Estado (2026-11-19):** Hitos 4.5 y 4.6 **completados** en código. Pendiente de producto: vista **Stock crítico** (§4 abajo). Seguimiento: [TODO.md](TODO.md).
+
 Este plan detalla la implementación de Marcas (Brands) y la asociación granular de productos con sucursales.
 
 ## 1. Estructura de Datos (Marcas)

@@ -221,7 +221,7 @@ SELECT slug, version, status, table_prefix FROM sys_plugins;
 
 ## F. Web server / sandbox
 
-- Document root: carpeta `public/`, no la raíz del repo.
+- Document root: carpeta **`public_html/`** (sitio real). La carpeta `public/` del starter CI4 no es el docroot de este ERP.
 - `writable/` debe ser escribible por PHP.
 - Sandbox puede tener Basic Auth en `.htaccess` / `.htpasswd` (independiente de Shield).
 - `app.baseURL` en `.env` debe coincidir con la URL pública (con barra final según convención actual).
@@ -236,6 +236,8 @@ bash .cursor/skills/sync-rama/scripts/check.sh
 ```
 
 Ramas remotas típicas: `main` (producción), `feat/plugin-system-architecture` (desarrollo).
+
+Traer otra rama de agente en VPS: skill `integrar-rama-vps` (`.cursor/skills/integrar-rama-vps/`). Índice de documentación: `agentic/INDICE.md`.
 
 ---
 

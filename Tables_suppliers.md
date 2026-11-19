@@ -1,4 +1,6 @@
 # Esquema de Base de Datos - Módulo de Proveedores y Órdenes de Compra
+
+> **Referencia técnica** (no es prompt de agente). El módulo está implementado; migraciones reales en `app/Database/Migrations/`. Detalle operativo: `agentic/archivo/planes-cerrados/006_suppliers_po_docs_email_recurring.md`.
 **Framework Objetivo:** CodeIgniter 4 (Migraciones)
 **Motor de BD:** MySQL / MariaDB (InnoDB)
 **Reglas Generales:**

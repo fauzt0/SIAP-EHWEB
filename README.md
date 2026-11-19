@@ -1,3 +1,10 @@
+# SIAP-EHWEB (ERP / CRM — CodeIgniter 4)
+
+**Stack:** PHP 8.3+ (objetivo), CodeIgniter 4, MariaDB, Shield, AppStack.  
+**Estándares:** [DOCUMENTACION_TECNICA.md](DOCUMENTACION_TECNICA.md) · **Tareas:** [TODO.md](TODO.md) · **Agentic:** [agentic/INDICE.md](agentic/INDICE.md)  
+**Docroot del sitio:** `public_html/` (no usar solo `public/` del starter CI4 para el hosting real).
+
+---
 
 # CodeIgniter 4 Application Starter
 
@@ -56,8 +63,7 @@ and any database settings.
 
 ## Important Change with index.php
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+En este proyecto el sitio se sirve desde **`public_html/index.php`**. En el starter upstream de CI4, `index.php` vive en `public/`; aquí ese patrón se adaptó al docroot `public_html/`.
 
 This means that you should configure your web server to "point" to your project's *public* folder, and
 not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
