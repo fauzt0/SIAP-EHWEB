@@ -10,7 +10,8 @@
 | Archivo | Rol |
 |---------|-----|
 | [AUDITORIA_ARQUITECTURA.md](AUDITORIA_ARQUITECTURA.md) | Checklist §1–§21, pilares permisos + bitácora, historial de reportes |
-| [AUDITORIA_CUMPLIMIENTO_DOC_TECNICA.md](AUDITORIA_CUMPLIMIENTO_DOC_TECNICA.md) | Auditoría de cumplimiento vs `DOCUMENTACION_TECNICA.md` |
+| [AUDITORIA_CUMPLIMIENTO_DOC_TECNICA.md](AUDITORIA_CUMPLIMIENTO_DOC_TECNICA.md) | Auditoría de cumplimiento vs `DOCUMENTACION_TECNICA.md` (vigente) |
+| [archivo/auditorias/](archivo/auditorias/README.md) | Reportes y evaluaciones purgados (2026-09/10) |
 | [REPLICAR_ENTORNO_CLOUD.md](REPLICAR_ENTORNO_CLOUD.md) | Runbook VPS/sandbox: clone, migrate, plugins, skills `sync-rama` / `integrar-rama-vps` |
 
 ---

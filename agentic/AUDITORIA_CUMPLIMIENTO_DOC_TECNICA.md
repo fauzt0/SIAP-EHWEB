@@ -1,6 +1,6 @@
 # Auditoría de cumplimiento — DOCUMENTACION_TECNICA.md (§1–§21)
 
-**Fecha:** 2026-11-18 (America/Mexico_City)  
+**Fecha:** 2026-11-19 (America/Mexico_City) — snapshot vigente; sin cambios de código en esta purga.  
 **Alcance:** ERP base (`app/`), vistas, rutas, plugins (`plugins/NotasInternas/`)  
 **Método:** Revisión automatizada (grep/scripts) + muestreo manual. No sustituye pruebas E2E.  
 **Reglas Cursor generadas:** `.cursor/rules/*.mdc` (entorno, mandatos, backend, frontend)
@@ -165,3 +165,4 @@ Cumplimiento por diseño en `FinRecurringExpenseModel::SERVICE_TYPES` (referenci
 | Fecha | Notas |
 |-------|--------|
 | 2026-11-18 | Auditoría inicial post-creación de project rules `.cursor/rules/`. |
+| 2026-11-19 | Se mantiene como referencia activa; reportes antiguos movidos a `agentic/archivo/auditorias/`. |
