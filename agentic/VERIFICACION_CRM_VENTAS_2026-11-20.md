@@ -41,4 +41,6 @@ No existía `app/Controllers/CRM/`. Había migraciones de ventas (2026-03/04) li
 
 Permisos nuevos: `sales.billing`, `sales.collections`, `sales.activate` (cubiertos por `sales.*`).
 
-Plugins ServerAdmin/CRM chatbot, POS de mostrador, facturación SAT XML.
+## Fuera de alcance
+
+Plugins ServerAdmin/CRM chatbot, POS de mostrador y timbrado SAT. El borrador de `billing_invoices` queda listo para ese conector.
