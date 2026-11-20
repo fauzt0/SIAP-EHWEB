@@ -289,6 +289,15 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectLowStockProducts'));
         }
 
+        if ($user->can('crm.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleLeads'));
+        }
+
+        if ($user->can('sales.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectExpiringQuotes'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueCustomerServices'));
+        }
+
         try {
             $alerts = array_merge($alerts, \App\Libraries\PluginSystem\PluginManager::runAlertDetectors($user));
         } catch (\Throwable $e) {
@@ -863,6 +872,82 @@ class AlertController extends BaseController
         }
 
         return $alerts;
+    }
+
+    private function _detectStaleLeads(): array
+    {
+        $db    = db_connect();
+        if (! $db->tableExists('crm_clients')) {
+            return [];
+        }
+        $count = $db->table('crm_clients')
+            ->whereIn('status', ['lead', 'prospect'])
+            ->where('deleted_at', null)
+            ->where('updated_at <', date('Y-m-d H:i:s', strtotime('-7 days')))
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-user-clock',
+            'title'      => 'Leads sin seguimiento',
+            'message'    => $count . ' lead/prospecto(s) sin actualización en 7 días',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.clients'),
+        ])];
+    }
+
+    private function _detectExpiringQuotes(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_quotes')) {
+            return [];
+        }
+        $count = $db->table('sales_quotes')
+            ->whereIn('status', ['draft', 'sent'])
+            ->where('valid_until <=', date('Y-m-d', strtotime('+5 days')))
+            ->where('valid_until >=', date('Y-m-d'))
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'info',
+            'icon'       => 'fa-file-signature',
+            'title'      => 'Cotizaciones por vencer',
+            'message'    => $count . ' cotización(es) vencen en 5 días o menos',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.quotes'),
+        ])];
+    }
+
+    private function _detectDueCustomerServices(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('customer_services')) {
+            return [];
+        }
+        $count = $db->table('customer_services')
+            ->where('status', 'active')
+            ->where('next_due_date <=', date('Y-m-d', strtotime('+7 days')))
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-sync',
+            'title'      => 'Servicios por renovar',
+            'message'    => $count . ' servicio(s) con cobro en los próximos 7 días',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.services'),
+        ])];
     }
 
     // ──────────────────────────────────────────────────────────────────────

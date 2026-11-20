@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Commands;
 
 use App\Libraries\PluginSystem\PluginBackupService;
+use App\Libraries\PluginSystem\PluginHookRegistry;
 use App\Libraries\PluginSystem\PluginManager;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -136,7 +137,7 @@ class PluginDoctor extends BaseCommand
             $hooks = $entry['manifest']['hooks'] ?? [];
             if (is_array($hooks)) {
                 foreach ($hooks as $hook) {
-                    if (! in_array($hook, ['alert.detect', 'layout.footer'], true)) {
+                    if (! in_array($hook, PluginHookRegistry::wiredHooks(), true)) {
                         $warnings++;
                         CLI::write('  [WARN]  Hook reservado o desconocido en ' . ($entry['manifest']['slug'] ?? basename($entry['path'])) . ': ' . $hook, 'yellow');
                     }
@@ -177,7 +178,7 @@ class PluginDoctor extends BaseCommand
             }
         }
 
-        CLI::write('  [OK]    Hooks v1 disponibles: alert.detect, layout.footer', 'green');
+        CLI::write('  [OK]    Hooks cableados: ' . implode(', ', PluginHookRegistry::wiredHooks()), 'green');
 
         foreach ($installed as $row) {
             if (preg_match('/^[A-Z][A-Za-z0-9]+$/', (string) ($row['class_dir'] ?? '')) !== 1) {

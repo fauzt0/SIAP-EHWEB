@@ -28,7 +28,7 @@ class CatalogPlanModel extends Model
     protected $validationRules = [
         'product_id'    => 'required|is_natural_no_zero',
         'plan_name'     => 'required|max_length[100]',
-        'billing_cycle' => 'required|in_list[one_time,monthly,yearly,custom]',
+        'billing_cycle' => 'required|in_list[one_time,monthly,semiannual,yearly,annual,custom]',
         'sale_price'    => 'required|decimal|greater_than_equal_to[0]',
         'renewal_price' => 'permit_empty|decimal|greater_than_equal_to[0]',
         'setup_fee'     => 'permit_empty|decimal|greater_than_equal_to[0]',

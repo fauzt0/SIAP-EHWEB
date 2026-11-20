@@ -187,6 +187,32 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
 
     }); // fin del grupo hr
 
+    $routes->group('crm', ['filter' => 'permission:crm.access'], function ($routes) {
+        $routes->get('/', 'CRM\ClientController::index', ['as' => 'crm.clients']);
+        $routes->get('clients', 'CRM\ClientController::index', ['as' => 'crm.clients.index']);
+        $routes->post('clients/list_ajax', 'CRM\ClientController::list_ajax', ['as' => 'crm.clients.ajax']);
+        $routes->get('clients/show_ajax/(:num)', 'CRM\ClientController::show_ajax/$1', ['as' => 'crm.clients.show_ajax']);
+        $routes->post('clients/store', 'CRM\ClientController::store', ['as' => 'crm.clients.store', 'filter' => 'permission:crm.manage']);
+        $routes->post('clients/update/(:num)', 'CRM\ClientController::update/$1', ['as' => 'crm.clients.update', 'filter' => 'permission:crm.manage']);
+        $routes->post('clients/delete/(:num)', 'CRM\ClientController::delete/$1', ['as' => 'crm.clients.delete', 'filter' => 'permission:crm.delete']);
+        $routes->get('clients/(:num)/followups', 'CRM\FollowupController::history_ajax/$1', ['as' => 'crm.followups.history']);
+        $routes->post('clients/(:num)/followups', 'CRM\FollowupController::store/$1', ['as' => 'crm.followups.store', 'filter' => 'permission:crm.manage']);
+    });
+
+    $routes->group('sales', ['filter' => 'permission:sales.access'], function ($routes) {
+        $routes->get('orders', 'Sales\OrderController::index', ['as' => 'sales.orders']);
+        $routes->post('orders/list_ajax', 'Sales\OrderController::list_ajax', ['as' => 'sales.orders.ajax']);
+        $routes->get('orders/show_ajax/(:num)', 'Sales\OrderController::show_ajax/$1', ['as' => 'sales.orders.show_ajax']);
+        $routes->post('orders/store', 'Sales\OrderController::store', ['as' => 'sales.orders.store', 'filter' => 'permission:sales.create']);
+        $routes->get('quotes', 'Sales\QuoteController::index', ['as' => 'sales.quotes']);
+        $routes->post('quotes/list_ajax', 'Sales\QuoteController::list_ajax', ['as' => 'sales.quotes.ajax']);
+        $routes->get('quotes/show_ajax/(:num)', 'Sales\QuoteController::show_ajax/$1', ['as' => 'sales.quotes.show_ajax']);
+        $routes->post('quotes/store', 'Sales\QuoteController::store', ['as' => 'sales.quotes.store', 'filter' => 'permission:sales.create']);
+        $routes->post('quotes/convert/(:num)', 'Sales\QuoteController::convert/$1', ['as' => 'sales.quotes.convert', 'filter' => 'permission:sales.create']);
+        $routes->get('services', 'Sales\OrderController::services', ['as' => 'sales.services']);
+        $routes->post('services/list_ajax', 'Sales\OrderController::services_ajax', ['as' => 'sales.services.ajax']);
+    });
+
     // ── Módulo de Organización (Perfil de Compañía y Sucursales) ──
     $routes->group('organization', ['filter' => 'permission:admin.manage-organization'], function ($routes) {
         $routes->get('profile', 'Organization\OrganizationController::profile', ['as' => 'organization.profile']);

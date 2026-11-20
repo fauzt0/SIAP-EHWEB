@@ -132,13 +132,7 @@ int_ok($bridgeResult['success'] ?? false, 'SupplierRecurringBridge crea plantill
 int_ok(($bridgeResult['template_id'] ?? 0) > 0, 'template_id para plugin recurring_expense_id');
 
 $crmControllers = is_dir(APPPATH . 'Controllers/CRM');
-int_ok(! $crmControllers, 'CRM dedicado aún no existe (esperado)');
-
-$catalog = $db->table('information_schema.tables')
-    ->where('table_schema', $db->getDatabase())
-    ->like('table_name', 'crm_', 'after')
-    ->countAllResults();
-int_ok($catalog === 0, 'sin tablas crm_* (módulo CRM no implementado)');
+int_ok($crmControllers, 'CRM dedicado existe');
 
 if ($failed > 0) {
     fwrite(STDERR, "{$failed} comprobaciones fallaron\n");

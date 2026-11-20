@@ -21,7 +21,7 @@
 | Archivo | Módulo | Estado |
 |---------|--------|--------|
 | [002_hr_advanced_incidents.md](002_hr_advanced_incidents.md) | RRHH — incidencias avanzadas, justificaciones, pre-nómina | Pendiente |
-| [004_crm_clients.md](004_crm_clients.md) | CRM / clientes | Pendiente (sin tablas `crm_*` en código) |
+| [004_crm_clients.md](004_crm_clients.md) | CRM / clientes + enlace a ventas | Implementado 2026-11-20 |
 
 ---
 

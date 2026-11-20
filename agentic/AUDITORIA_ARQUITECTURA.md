@@ -82,7 +82,7 @@ Esta tarjeta resume los **21 estándares** de `DOCUMENTACION_TECNICA.md`. Úsala
 | 002 | `002_hr_advanced_incidents.md` | RRHH incidencias avanzadas | ❌ Pendiente | Spec viva |
 | 003 | `archivo/planes-cerrados/003_*` | Proveedores (fases) | ✅ Código | Archivado |
 | 004a | `archivo/planes-cerrados/004_sistema_alertas_*` | Alertas | ✅ Código | Ver doc §21 |
-| 004b | `004_crm_clients.md` | CRM clientes | ❌ Pendiente | Sin `crm_*` |
+| 004b | `004_crm_clients.md` | CRM clientes | ✅ Código | `crm_*` + ventas + hooks |
 | 005 | `archivo/planes-cerrados/005_*` | Transacciones MVC | ✅ Código | |
 | 006–008 | `archivo/planes-cerrados/006–008_*` | OC / recurrentes | ✅ Código | |
 | 009 | `archivo/planes-cerrados/009_*` | Bitácora global | ✅ Código | |

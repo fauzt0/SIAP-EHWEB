@@ -147,6 +147,35 @@
         </li>
       <?php endif; ?>
 
+      <?php if (auth()->user()->can('crm.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/crm*') ? 'active' : '' ?>">
+          <a class="sidebar-link" href="<?= route_to('crm.clients') ?>">
+            <i class="fas fa-fw fa-address-book align-middle me-1"></i> <span class="align-middle">CRM</span>
+          </a>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('sales.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/sales*') ? 'active' : '' ?>">
+          <a data-bs-target="#sales-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/sales*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-cash-register align-middle me-1"></i> <span class="align-middle">Ventas</span>
+          </a>
+          <ul id="sales-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/sales*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/sales/orders*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.orders') ?>">Órdenes</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/sales/quotes*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.quotes') ?>">Cotizaciones</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/sales/services*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.services') ?>">Servicios recurrentes</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
       <?= \App\Libraries\PluginSystem\PluginManager::renderSidebar(auth()->user()) ?>
 
       <li class="sidebar-header">

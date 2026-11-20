@@ -111,6 +111,12 @@ class PluginHookRegistry
     /** @return list<string> */
     public static function wiredHooks(): array
     {
-        return ['alert.detect', 'layout.footer'];
+        return [
+            'alert.detect',
+            'layout.footer',
+            'crm.client.show.tabs',
+            'sales.order.show.tabs',
+            'sales.quote.show.tabs',
+        ];
     }
 }

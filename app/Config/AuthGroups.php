@@ -163,6 +163,12 @@ class AuthGroups extends ShieldAuthGroups
         'sales.edit'          => 'Can edit sales orders',
         'sales.reports'       => 'Can generate sales reports',
         'sales.customers'     => 'Can manage customers',
+        'sales.quotes'        => 'Crear y convertir cotizaciones',
+
+        // CRM
+        'crm.access'          => 'Ver clientes, leads y seguimiento',
+        'crm.manage'          => 'Alta y edición de clientes y bitácora',
+        'crm.delete'          => 'Eliminar clientes (soft delete)',
         
         // Purchasing module
         'purchasing.access'   => 'Can access purchasing module',
@@ -210,6 +216,7 @@ class AuthGroups extends ShieldAuthGroups
             'purchasing.*',
             'hr.*',
             'catalog.*',
+            'crm.*',
         ],
         'admin' => [
             'admin.*',
@@ -220,6 +227,7 @@ class AuthGroups extends ShieldAuthGroups
             'purchasing.*',
             'hr.*',
             'catalog.*',
+            'crm.*',
         ],
         'editor' => [
             'admin.access',
@@ -228,6 +236,8 @@ class AuthGroups extends ShieldAuthGroups
         'seller' => [
             'admin.access',
             'sales.*',
+            'crm.*',
+            'catalog.access',
             'users.view',
         ],
         'customer' => [
@@ -262,6 +272,8 @@ class AuthGroups extends ShieldAuthGroups
         'sales' => [
             'admin.access',
             'sales.*',
+            'crm.*',
+            'catalog.access',
             'users.view',
         ],
         'purchasing' => [
