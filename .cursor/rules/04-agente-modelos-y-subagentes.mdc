@@ -1,0 +1,21 @@
+---
+description: Uso de modelos y prohibición de subagentes en este proyecto
+alwaysApply: true
+---
+
+# Agente Cloud — modelos y subagentes
+
+## Prohibido
+
+- **No lanzar subagentes** (`Task`, workers en segundo plano, `explore` / `generalPurpose` / `computerUse` / etc.) salvo que el usuario lo pida **explícitamente** en ese mensaje.
+- **No usar modelos pesados** para tareas de este repo (p. ej. Claude Sonnet, Opus, Fable, Gemini Pro/Ultra en modo profundo, GPT de alta capacidad dedicada). El usuario reservó el coste para otros flujos.
+- **No delegar por defecto** la auditoría o verificación de módulos a otros agentes; trabajar en el hilo principal con herramientas locales (`Grep`, `Read`, `Shell`, tests Spark).
+
+## Obligatorio
+
+- Ejecutar el trabajo **en este agente** con **Composer** (modelo del Cloud Agent por defecto) y, si el usuario lo nombra, **Grok** como alternativa permitida — no sustituir por familias prohibidas arriba.
+- Mantener alcance acotado: leer reglas §1–§21, permisos Shield y bitácora antes de tocar admin, RH, catálogo o alertas.
+
+## Cuando el usuario pida subagente o modelo concreto
+
+- Solo entonces evaluar la petición; si pide un modelo **no listado** en el entorno, informar y seguir con Composer/Grok.

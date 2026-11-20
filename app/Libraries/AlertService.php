@@ -366,12 +366,8 @@ class AlertService
      */
     public function getUnreadCount(int $userId): int
     {
-        return $this->alertUserModel
-            ->join('sys_alerts', 'sys_alerts.id = sys_alert_user.alert_id')
-            ->where('sys_alert_user.user_id', $userId)
-            ->where('sys_alert_user.is_read', 0)
-            ->where('sys_alerts.deleted_at', null)
-            ->countAllResults();
+        // Alinear contador del topbar con getUnreadByUser (filtro por required_permission).
+        return count($this->getUnreadByUser($userId, 500));
     }
 
     // ────────────────────────────────────────────────────────────────────────

@@ -253,12 +253,19 @@ class AlertController extends BaseController
             return $alerts;
         }
 
-        // ── RH ────────────────────────────────────────────────────────────────
-        if ($user->can('hr.access')) {
+        // ── RH (expediente: quien puede ver/editar trabajadores) ───────────────
+        if ($user->can('hr.view') || $user->can('hr.edit') || $user->can('hr.employees')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingNss'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingRfc'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingCurp'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingBankData'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingLaborData'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingDocuments'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersWithoutActiveContract'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersWithoutSchedule'));
+        }
+
+        if ($user->can('hr.edit')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingVacationRequests'));
         }
 
@@ -266,8 +273,8 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingPayrolls'));
         }
 
-        // ── Proveedores (acceso al módulo) ───────────────────────────────────
-        if ($user->can('catalog.access') || $user->can('catalog.manage-suppliers') || $user->can('purchasing.suppliers')) {
+        // ── Proveedores / compras (no mezclar con solo lectura de catálogo) ───
+        if ($user->can('catalog.manage-suppliers') || $user->can('purchasing.suppliers')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersInactive'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersMissingTaxId'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueRecurringExpenses'));
@@ -278,7 +285,7 @@ class AlertController extends BaseController
         }
 
         // ── Catálogo / Inventario ─────────────────────────────────────────────
-        if ($user->can('catalog.access')) {
+        if ($user->can('catalog.manage') || $user->can('catalog.access')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectLowStockProducts'));
         }
 
@@ -443,6 +450,142 @@ class AlertController extends BaseController
                 'target_url' => route_to('hr.worker.edit', $row->id),
             ]);
         }
+        return $alerts;
+    }
+
+    /**
+     * Trabajadores activos sin fila en hr_employment_data (datos laborales).
+     */
+    private function _detectWorkersMissingLaborData(): array
+    {
+        $db   = db_connect();
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name
+            FROM hr_profiles hp
+            LEFT JOIN hr_employment_data hed ON hed.profile_id = hp.id
+            WHERE hp.deleted_at IS NULL AND hed.profile_id IS NULL
+            LIMIT 10
+        ")->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'warning',
+                'icon'       => 'fa-briefcase',
+                'title'      => 'Sin datos laborales',
+                'message'    => $name . ' — Falta registrar puesto, salario y alta laboral',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.worker.edit', $row->id),
+            ]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Expediente: tipos de documento del catálogo sin archivo cargado (trabajadores activos).
+     */
+    private function _detectWorkersMissingDocuments(): array
+    {
+        $db   = db_connect();
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name, COUNT(dt.id) AS missing_types
+            FROM hr_profiles hp
+            INNER JOIN hr_employment_data hed ON hed.profile_id = hp.id AND hed.status = 'active'
+            CROSS JOIN hr_cat_document_types dt
+            LEFT JOIN hr_documents hd ON hd.profile_id = hp.id
+                AND hd.document_type_id = dt.id
+                AND hd.deleted_at IS NULL
+            WHERE hp.deleted_at IS NULL
+              AND dt.deleted_at IS NULL
+              AND hd.id IS NULL
+            GROUP BY hp.id, hp.first_name, hp.last_name
+            HAVING missing_types > 0
+            ORDER BY missing_types DESC
+            LIMIT 10
+        ")->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'danger',
+                'icon'       => 'fa-folder-open',
+                'title'      => 'Expediente incompleto',
+                'message'    => $name . ' — Faltan ' . (int) $row->missing_types . ' tipo(s) de documento',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.worker.edit', $row->id),
+            ]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Trabajadores activos sin contrato digital con estatus active.
+     */
+    private function _detectWorkersWithoutActiveContract(): array
+    {
+        $db   = db_connect();
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name
+            FROM hr_profiles hp
+            INNER JOIN hr_employment_data hed ON hed.profile_id = hp.id AND hed.status = 'active'
+            LEFT JOIN hr_contracts hc ON hc.profile_id = hp.id
+                AND hc.status = 'active'
+                AND hc.deleted_at IS NULL
+            WHERE hp.deleted_at IS NULL AND hc.id IS NULL
+            LIMIT 10
+        ")->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'warning',
+                'icon'       => 'fa-file-signature',
+                'title'      => 'Sin contrato vigente',
+                'message'    => $name . ' — Generar o activar contrato digital',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.contracts.generate', $row->id),
+            ]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Trabajadores activos sin horario asignado vigente.
+     */
+    private function _detectWorkersWithoutSchedule(): array
+    {
+        $db   = db_connect();
+        $today = date('Y-m-d');
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name
+            FROM hr_profiles hp
+            INNER JOIN hr_employment_data hed ON hed.profile_id = hp.id AND hed.status = 'active'
+            LEFT JOIN hr_worker_schedules hws ON hws.profile_id = hp.id
+                AND hws.deleted_at IS NULL
+                AND (hws.end_date IS NULL OR hws.end_date >= ?)
+            WHERE hp.deleted_at IS NULL AND hws.id IS NULL
+            LIMIT 10
+        ", [$today])->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'info',
+                'icon'       => 'fa-clock',
+                'title'      => 'Sin horario vigente',
+                'message'    => $name . ' — Asignar turno en expediente',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.worker.edit', $row->id),
+            ]);
+        }
+
         return $alerts;
     }
 
