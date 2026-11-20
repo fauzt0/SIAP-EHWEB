@@ -164,6 +164,9 @@ class AuthGroups extends ShieldAuthGroups
         'sales.reports'       => 'Can generate sales reports',
         'sales.customers'     => 'Can manage customers',
         'sales.quotes'        => 'Crear y convertir cotizaciones',
+        'sales.billing'       => 'Emitir recibos y preparar facturas',
+        'sales.collections'   => 'Registrar cobros y comprobantes de pago',
+        'sales.activate'      => 'Activar productos o servicios vendidos',
 
         // CRM
         'crm.access'          => 'Ver clientes, leads y seguimiento',

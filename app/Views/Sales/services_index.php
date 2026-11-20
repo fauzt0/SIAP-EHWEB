@@ -17,10 +17,12 @@
 const csrfName = '<?= csrf_token() ?>';
 function csrfVal(){ return document.getElementById('csrf_token').value; }
 function csrfHdr(h){ const n=h.get('<?= csrf_header() ?>'); if(n) document.getElementById('csrf_token').value=n; }
+if (!$.fn.dataTable.isDataTable('#tbl-services')) {
 $('#tbl-services').DataTable({
   processing:true, serverSide:true,
   ajax:{ url:'<?= route_to('sales.services.ajax') ?>', type:'POST', data:d=>{ d[csrfName]=csrfVal(); } }
 });
 $('#tbl-services').on('xhr.dt', (e,s,j,xhr)=>{ if(xhr) csrfHdr(xhr); });
+}
 </script>
 <?php $this->endSection(); ?>

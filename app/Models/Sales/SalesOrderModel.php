@@ -121,6 +121,7 @@ class SalesOrderModel extends Model
             if (empty($item['product_id'])) {
                 $item['product_id'] = null;
             }
+            $item['activation_status'] = 'pending';
             $itemId = $itemModel->insert($item);
             if (! $itemId) {
                 $this->db->transRollback();
@@ -140,8 +141,9 @@ class SalesOrderModel extends Model
                     'status'         => 'active',
                     'billing_cycle'  => $this->normalizeCycle((string) $cycle),
                     'amount'         => $item['unit_price'] ?? 0,
-                    'next_due_date'  => $this->nextDue((string) $cycle, (string) $start),
-                    'auto_renew'     => 0,
+                    'next_due_date'      => $this->nextDue((string) $cycle, (string) $start),
+                    'auto_renew'         => 0,
+                    'activation_status'  => 'pending',
                 ]);
                 if (! $svcOk) {
                     $this->db->transRollback();

@@ -26,6 +26,19 @@ No existía `app/Controllers/CRM/`. Había migraciones de ventas (2026-03/04) li
 
 `php tests/smoke_crm_sales.php` y `php tests/smoke_crm_sales_db.php` en verde tras migrate.
 
-## Fuera de alcance (pedido)
+## Recibos y cobros (2026-11-20 tarde)
+
+| Capacidad | Estado |
+|-----------|--------|
+| Recibo interno por orden (`sales_receipts`) | OK |
+| Factura en borrador ligada (`billing_invoices.receipt_id`) | Preparada, sin CFDI |
+| Cobro y saldo (`billing_payments`) | OK |
+| Comprobante del cliente en `WRITEPATH` | OK |
+| Activación pendiente de partidas y servicios | Columna + permiso `sales.activate` |
+| Alertas cobros sin liquidar / sin activar | `sales.collections` / `sales.activate` |
+| Ficha CRM (offcanvas) muestra recibos y comprobantes | OK |
+| Detalle de recibo | Offcanvas + modales de cobro y archivo |
+
+Permisos nuevos: `sales.billing`, `sales.collections`, `sales.activate` (cubiertos por `sales.*`).
 
 Plugins ServerAdmin/CRM chatbot, POS de mostrador, facturación SAT XML.

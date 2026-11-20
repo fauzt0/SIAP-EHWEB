@@ -109,12 +109,17 @@ class ClientController extends BaseCrmController
         }
 
         $bridge = new ClientCommerceBridge();
+        $orders = (new SalesOrderModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20);
+        $receipts = (new \App\Models\Sales\SalesReceiptModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20);
+        $proofs = (new \App\Models\Sales\SalesPaymentProofModel())->where('client_id', $id)->findAll(20);
         $this->setOutputSuccess('Cliente cargado', [
             'client'   => $client,
             'contacts' => (new CrmClientContactModel())->where('client_id', $id)->findAll(),
             'billing'  => (new CrmBillingProfileModel())->where('client_id', $id)->findAll(),
             'followups'=> (new CrmFollowupModel())->getTree($id),
-            'orders'   => (new SalesOrderModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20),
+            'orders'   => $orders,
+            'receipts' => $receipts,
+            'proofs'   => $proofs,
             'quotes'   => (new SalesQuoteModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20),
             'services' => (new CustomerServiceModel())->where('client_id', $id)->findAll(),
             'plugin_tabs'  => $bridge->collectClientTabs($id),

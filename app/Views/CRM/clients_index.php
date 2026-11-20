@@ -106,6 +106,8 @@
         <h6>Cotizaciones</h6><div id="oc-quotes"></div>
         <h6 class="mt-3">Órdenes</h6><div id="oc-orders"></div>
         <h6 class="mt-3">Servicios</h6><div id="oc-services"></div>
+        <h6 class="mt-3">Recibos</h6><div id="oc-receipts"></div>
+        <h6 class="mt-3">Comprobantes</h6><div id="oc-proofs"></div>
       </div>
     </div>
   </div>
@@ -216,6 +218,7 @@ function ajaxHeaders(){ return { 'X-Requested-With':'XMLHttpRequest', '<?= csrf_
 let currentClientId = 0;
 let followupCache = [];
 
+if (!$.fn.dataTable.isDataTable('#tbl-clients')) {
 window.tblClients = $('#tbl-clients').DataTable({
   processing: true, serverSide: true, searching: true,
   ajax: {
@@ -228,6 +231,7 @@ window.tblClients = $('#tbl-clients').DataTable({
   }
 });
 $('#tbl-clients').on('xhr.dt', function(e,s,j,xhr){ if(xhr) csrfHdr(xhr); });
+}
 document.getElementById('filter-status').addEventListener('change', () => tblClients.ajax.reload());
 
 document.getElementById('btn-new-client')?.addEventListener('click', () => {
@@ -372,7 +376,9 @@ function renderOffcanvas(d){
   renderFollowups(followupCache);
   document.getElementById('oc-quotes').innerHTML = (d.quotes||[]).map(x => `<div class="small">${x.quote_number} · ${x.status} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin cotizaciones</p>';
   document.getElementById('oc-orders').innerHTML = (d.orders||[]).map(x => `<div class="small">${x.order_number||('#'+x.id)} · ${x.status} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin órdenes</p>';
-  document.getElementById('oc-services').innerHTML = (d.services||[]).map(x => `<div class="small">${x.reference_name||'Servicio'} · ${x.billing_cycle} · vence ${x.next_due_date||'—'}</div>`).join('') || '<p class="text-muted small">Sin servicios</p>';
+  document.getElementById('oc-services').innerHTML = (d.services||[]).map(x => `<div class="small">${x.reference_name||'Servicio'} · ${x.billing_cycle} · ${x.activation_status||''} · vence ${x.next_due_date||'—'}</div>`).join('') || '<p class="text-muted small">Sin servicios</p>';
+  document.getElementById('oc-receipts').innerHTML = (d.receipts||[]).map(x => `<div class="small">${x.receipt_number} · $${x.total_amount} · ${x.status}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
+  document.getElementById('oc-proofs').innerHTML = (d.proofs||[]).map(x => `<div class="small"><a href="<?= site_url('nat/sales/billing/proof') ?>/${x.id}">${x.original_name}</a></div>`).join('') || '<p class="text-muted small">Sin comprobantes</p>';
   const pluginHtml = (d.plugin_tabs||[]).map(t => `<div class="alert alert-light border small"><strong>${t.title||t.hook||'Plugin'}</strong><div>${t.html||''}</div></div>`).join('');
   document.getElementById('oc-plugin-tabs').innerHTML = pluginHtml;
 }

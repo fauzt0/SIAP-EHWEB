@@ -172,6 +172,11 @@
             <li class="sidebar-item <?= url_is('nat/sales/services*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('sales.services') ?>">Servicios recurrentes</a>
             </li>
+            <?php if (auth()->user()->can('sales.billing')): ?>
+            <li class="sidebar-item <?= url_is('nat/sales/billing*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.billing') ?>">Recibos y cobros</a>
+            </li>
+            <?php endif; ?>
           </ul>
         </li>
       <?php endif; ?>

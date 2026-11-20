@@ -211,6 +211,15 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('quotes/convert/(:num)', 'Sales\QuoteController::convert/$1', ['as' => 'sales.quotes.convert', 'filter' => 'permission:sales.create']);
         $routes->get('services', 'Sales\OrderController::services', ['as' => 'sales.services']);
         $routes->post('services/list_ajax', 'Sales\OrderController::services_ajax', ['as' => 'sales.services.ajax']);
+        $routes->get('billing', 'Sales\BillingController::index', ['as' => 'sales.billing', 'filter' => 'permission:sales.billing']);
+        $routes->post('billing/list_ajax', 'Sales\BillingController::list_ajax', ['as' => 'sales.billing.ajax', 'filter' => 'permission:sales.billing']);
+        $routes->get('billing/show_ajax/(:num)', 'Sales\BillingController::show_ajax/$1', ['as' => 'sales.billing.show', 'filter' => 'permission:sales.billing']);
+        $routes->post('billing/issue', 'Sales\BillingController::issue', ['as' => 'sales.billing.issue', 'filter' => 'permission:sales.billing']);
+        $routes->post('billing/pay', 'Sales\BillingController::pay', ['as' => 'sales.billing.pay', 'filter' => 'permission:sales.collections']);
+        $routes->post('billing/proof', 'Sales\BillingController::upload_proof', ['as' => 'sales.billing.proof', 'filter' => 'permission:sales.collections']);
+        $routes->get('billing/proof/(:num)', 'Sales\BillingController::download_proof/$1', ['as' => 'sales.billing.proof.download', 'filter' => 'permission:sales.collections']);
+        $routes->post('billing/activate-item/(:num)', 'Sales\BillingController::activate_item/$1', ['as' => 'sales.billing.activate_item', 'filter' => 'permission:sales.activate']);
+        $routes->post('billing/activate-service/(:num)', 'Sales\BillingController::activate_service/$1', ['as' => 'sales.billing.activate_service', 'filter' => 'permission:sales.activate']);
     });
 
     // ── Módulo de Organización (Perfil de Compañía y Sucursales) ──

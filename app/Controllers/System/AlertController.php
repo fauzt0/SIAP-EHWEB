@@ -298,6 +298,14 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectDueCustomerServices'));
         }
 
+        if ($user->can('sales.collections') || $user->can('sales.billing')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectUnpaidOrders'));
+        }
+
+        if ($user->can('sales.activate')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingActivations'));
+        }
+
         try {
             $alerts = array_merge($alerts, \App\Libraries\PluginSystem\PluginManager::runAlertDetectors($user));
         } catch (\Throwable $e) {
@@ -945,6 +953,61 @@ class AlertController extends BaseController
             'icon'       => 'fa-sync',
             'title'      => 'Servicios por renovar',
             'message'    => $count . ' servicio(s) con cobro en los próximos 7 días',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.services'),
+        ])];
+    }
+
+    private function _detectUnpaidOrders(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_orders')) {
+            return [];
+        }
+        $count = $db->table('sales_orders')
+            ->whereIn('status', ['confirmed', 'pending', 'partial', 'draft'])
+            ->where('total_amount >', 0)
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-file-invoice-dollar',
+            'title'      => 'Cobros pendientes',
+            'message'    => $count . ' orden(es) sin liquidar',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.billing'),
+        ])];
+    }
+
+    private function _detectPendingActivations(): array
+    {
+        $db = db_connect();
+        $count = 0;
+        if ($db->tableExists('customer_services') && $db->fieldExists('activation_status', 'customer_services')) {
+            $count += $db->table('customer_services')
+                ->where('activation_status', 'pending')
+                ->where('deleted_at', null)
+                ->countAllResults();
+        }
+        if ($db->tableExists('sales_order_items') && $db->fieldExists('activation_status', 'sales_order_items')) {
+            $count += $db->table('sales_order_items')
+                ->where('activation_status', 'pending')
+                ->where('deleted_at', null)
+                ->countAllResults();
+        }
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-toggle-off',
+            'title'      => 'Productos o servicios sin activar',
+            'message'    => $count . ' partida(s) vendida(s) pendientes de activación',
             'module'     => 'Ventas',
             'target_url' => route_to('sales.services'),
         ])];

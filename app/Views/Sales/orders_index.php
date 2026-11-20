@@ -48,11 +48,13 @@ const csrfName = '<?= csrf_token() ?>';
 function csrfVal(){ return document.getElementById('csrf_token').value; }
 function csrfHdr(h){ const n=h.get('<?= csrf_header() ?>'); if(n) document.getElementById('csrf_token').value=n; }
 function ajaxHeaders(){ return {'X-Requested-With':'XMLHttpRequest','<?= csrf_header() ?>': csrfVal()}; }
+if (!$.fn.dataTable.isDataTable('#tbl-orders')) {
 window.tblOrders = $('#tbl-orders').DataTable({
   processing:true, serverSide:true,
   ajax:{ url:'<?= route_to('sales.orders.ajax') ?>', type:'POST', data:d=>{ d[csrfName]=csrfVal(); } }
 });
 $('#tbl-orders').on('xhr.dt', (e,s,j,xhr)=>{ if(xhr) csrfHdr(xhr); });
+}
 function addOItem(){
   const opts = products.map(p=>`<option value="${p.id}" data-name="${p.commercial_name}">${p.commercial_name}</option>`).join('');
   const tr = document.createElement('tr');
