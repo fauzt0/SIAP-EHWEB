@@ -79,4 +79,15 @@ final class ClientCommerceBridge
     {
         return (new CrmPluginLinkModel())->where('client_id', $clientId)->findAll();
     }
+
+    /**
+     * Productos/servicios contratados del cliente (dominios, certificados, físicos, etc.).
+     * Hosting/VPS lo aporta un plugin vía plugin_ref + crm.client.show.tabs.
+     *
+     * @return list<object>
+     */
+    public function clientServices(int $clientId): array
+    {
+        return (new \App\Models\Sales\CustomerServiceModel())->where('client_id', $clientId)->findAll();
+    }
 }

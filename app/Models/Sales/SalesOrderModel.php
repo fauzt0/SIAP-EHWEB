@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models\Sales;
 
+use App\Libraries\PluginSystem\PluginHookRegistry;
+use App\Models\Catalog\CatalogProductModel;
+use App\Services\SalesBillingCycle;
 use App\Traits\DataTableTrait;
 use CodeIgniter\Model;
 
@@ -114,14 +117,32 @@ class SalesOrderModel extends Model
 
         $itemModel    = new SalesOrderItemModel();
         $serviceModel = new CustomerServiceModel();
+        $seq          = 0;
         foreach ($items as $item) {
+            $seq++;
+            $item = PluginHookRegistry::applyFilter('sales.order.item.prepare', $item, $order);
+            if (! is_array($item)) {
+                $this->db->transRollback();
+
+                return false;
+            }
             $cycle = $item['billing_cycle'] ?? 'one_time';
             $item['order_id']      = $id;
             $item['billing_cycle'] = $cycle;
             if (empty($item['product_id'])) {
                 $item['product_id'] = null;
             }
-            $item['activation_status'] = 'pending';
+            $item['activation_status']  = $item['activation_status'] ?? 'pending';
+            $item['fulfillment_status'] = $item['fulfillment_status'] ?? 'pending';
+            $item['line_code']          = $item['line_code'] ?? sprintf('%s-%02d', $order['order_number'], $seq);
+            $item['product_type']       = $item['product_type'] ?? $this->snapshotProductType($item['product_id'] ?? null);
+            $start = $item['period_start'] ?? date('Y-m-d');
+            $item['period_start'] = $start;
+            if (empty($item['period_end'])) {
+                $item['period_end'] = SalesBillingCycle::isRecurring((string) $cycle)
+                    ? SalesBillingCycle::periodEnd((string) $cycle, (string) $start)
+                    : $start;
+            }
             $itemId = $itemModel->insert($item);
             if (! $itemId) {
                 $this->db->transRollback();
@@ -129,53 +150,63 @@ class SalesOrderModel extends Model
                 return false;
             }
 
-            if ($cycle !== 'one_time' && ! empty($order['client_id'])) {
-                $start = $item['period_start'] ?? date('Y-m-d');
+            if (SalesBillingCycle::isRecurring((string) $cycle) && ! empty($order['client_id'])) {
                 $svcOk = $serviceModel->insert([
-                    'client_id'      => $order['client_id'],
-                    'user_id'        => $order['user_id'] ?? null,
-                    'order_id'       => $id,
-                    'product_id'     => $item['product_id'] ?? null,
-                    'plan_id'        => $item['plan_id'] ?? null,
-                    'reference_name' => $item['item_name'] ?? '',
-                    'status'         => 'active',
-                    'billing_cycle'  => $this->normalizeCycle((string) $cycle),
-                    'amount'         => $item['unit_price'] ?? 0,
-                    'next_due_date'      => $this->nextDue((string) $cycle, (string) $start),
-                    'auto_renew'         => 0,
+                    'client_id'          => $order['client_id'],
+                    'user_id'            => $order['user_id'] ?? null,
+                    'order_id'           => $id,
+                    'product_id'         => $item['product_id'] ?? null,
+                    'plan_id'            => $item['plan_id'] ?? null,
+                    'reference_name'     => $item['item_name'] ?? '',
+                    'status'             => 'active',
+                    'billing_cycle'      => SalesBillingCycle::normalize((string) $cycle),
+                    'amount'             => $item['unit_price'] ?? 0,
+                    'next_due_date'      => SalesBillingCycle::nextDue((string) $cycle, (string) $start),
+                    'auto_renew'         => $item['auto_renew'] ?? 1,
                     'activation_status'  => 'pending',
+                    'plugin_ref'         => $item['plugin_ref'] ?? null,
+                    'order_item_id'      => (int) $itemId,
                 ]);
                 if (! $svcOk) {
                     $this->db->transRollback();
 
                     return false;
                 }
+                $itemModel->update((int) $itemId, ['service_id' => (int) $svcOk]);
             }
         }
 
         $this->db->transComplete();
+        if (! $this->db->transStatus()) {
+            return false;
+        }
 
-        return $this->db->transStatus() ? (int) $id : false;
+        (new SalesCustomerPoModel())->generateFromOrder((int) $id, null, $order['created_by'] ?? null, 'OC automática de ' . $order['order_number']);
+        (new \App\Services\SalesReceiptScheduler())->issueInitialForOrder((int) $id, $order['created_by'] ?? null, 'Prefactura inicial');
+        PluginHookRegistry::doAction('sales.order.created', (int) $id);
+
+        return (int) $id;
+    }
+
+    public function snapshotProductType(mixed $productId): ?string
+    {
+        $pid = (int) $productId;
+        if ($pid <= 0) {
+            return 'service';
+        }
+        $product = (new CatalogProductModel())->find($pid);
+
+        return is_object($product) ? ($product->product_type ?? 'service') : 'service';
     }
 
     public function normalizeCycle(string $cycle): string
     {
-        return match ($cycle) {
-            'annual' => 'yearly',
-            default  => $cycle,
-        };
+        return SalesBillingCycle::normalize($cycle);
     }
 
     public function nextDue(string $cycle, string $from): string
     {
-        $base = strtotime($from) ?: time();
-
-        return match ($cycle) {
-            'monthly'    => date('Y-m-d', strtotime('+1 month', $base)),
-            'semiannual' => date('Y-m-d', strtotime('+6 months', $base)),
-            'yearly', 'annual' => date('Y-m-d', strtotime('+1 year', $base)),
-            default      => date('Y-m-d', $base),
-        };
+        return SalesBillingCycle::nextDue($cycle, $from);
     }
 
     public function getWithItems(int $id): ?object
@@ -186,8 +217,11 @@ class SalesOrderModel extends Model
         if (! $order) {
             return null;
         }
-        $order->items    = (new SalesOrderItemModel())->where('order_id', $id)->findAll();
-        $order->services = (new CustomerServiceModel())->where('order_id', $id)->findAll();
+        $order->items     = (new SalesOrderItemModel())->where('order_id', $id)->findAll();
+        $order->services  = (new CustomerServiceModel())->where('order_id', $id)->findAll();
+        $order->documents = (new SalesOrderDocumentModel())->where('order_id', $id)->findAll();
+        $order->customer_pos = (new SalesCustomerPoModel())->where('order_id', $id)->findAll();
+        $order->receipts  = (new SalesReceiptModel())->where('order_id', $id)->orderBy('id', 'DESC')->findAll(20);
 
         return $order;
     }

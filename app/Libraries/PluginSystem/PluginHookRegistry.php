@@ -115,8 +115,17 @@ class PluginHookRegistry
             'alert.detect',
             'layout.footer',
             'crm.client.show.tabs',
+            'crm.followup.created',
             'sales.order.show.tabs',
             'sales.quote.show.tabs',
+            'sales.order.created',
+            'sales.order.item.prepare',
+            'sales.order.receipts.issued',
+            'sales.receipt.issued',
+            'sales.receipt.paid',
+            'sales.customer_po.created',
+            'sales.order.documents',
+            'sales.collections.forecast',
         ];
     }
 }

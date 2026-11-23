@@ -60,8 +60,8 @@ Seguimiento de pendientes y próximos hitos.
 
 Orden sugerido:
 
-- [x] **[CLIENTES / CRM]** `agentic/004_crm_clients.md` (2026-11-20)
-- [x] **[VENTAS]** Cotizaciones, órdenes one-shot/recurrentes y servicios (`customer_services`) — POS físico pendiente
+- [x] **[CLIENTES / CRM]** `agentic/004_crm_clients.md` (2026-11-20; cobranza/seguimiento 2026-11-23)
+- [x] **[VENTAS]** Cotizaciones, órdenes one-shot/recurrentes, recibos por periodo, OC cliente — POS físico pendiente
 - [ ] **[CONTABILIDAD]** Ingresos vs egresos
 - [ ] Módulo de reportes base
 - [ ] Vista **Stock crítico** por sucursal y marca (`PLAN_ORGANIZACION_CATALOGO.md` §4)

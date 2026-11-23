@@ -36,9 +36,26 @@
     <div class="modal-footer"><button class="btn btn-primary">Guardar</button></div>
   </form></div>
 </div>
-<div class="offcanvas offcanvas-end" tabindex="-1" id="oc-order" style="width:420px">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="oc-order" style="width:480px">
   <div class="offcanvas-header"><h5 class="offcanvas-title">Orden</h5><button class="btn-close" data-bs-dismiss="offcanvas"></button></div>
   <div class="offcanvas-body" id="oc-order-body"></div>
+</div>
+<div class="modal fade" id="modal-odoc" tabindex="-1">
+  <div class="modal-dialog"><form class="modal-content" id="form-odoc" enctype="multipart/form-data">
+    <div class="modal-header"><h5 class="modal-title">Adjuntar documento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" name="order_id" id="odoc-order">
+      <label class="form-label">Tipo</label>
+      <select class="form-select mb-2" name="doc_type">
+        <option value="contract">Contrato</option>
+        <option value="id">Identificación</option>
+        <option value="other">Otro</option>
+      </select>
+      <input class="form-control" type="file" name="document" accept="application/pdf,image/*,application/xml,text/xml" required>
+      <textarea class="form-control mt-2" name="notes" placeholder="Notas"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Cargar</button></div>
+  </form></div>
 </div>
 <?php $this->endSection(); ?>
 <?php $this->section('scripts'); ?>
@@ -94,11 +111,60 @@ document.addEventListener('click', async e=>{
   const j = await r.json();
   if(!j.success) return;
   const o = j.response.order;
-  document.getElementById('oc-order-body').innerHTML = `<p class="fw-bold">${o.order_number||('#'+o.id)}</p>` +
-    (o.items||[]).map(i=>`<div class="small">${i.item_name} · ${i.billing_cycle||'—'} · $${i.unit_price}</div>`).join('') +
-    '<h6 class="mt-3">Servicios</h6>' + (o.services||[]).map(s=>`<div class="small">${s.reference_name} · ${s.billing_cycle} · ${s.next_due_date||''}</div>`).join('') +
-    (j.response.plugin_tabs||[]).map(t=>`<div class="alert alert-light mt-2">${t.title||''}${t.html||''}</div>`).join('');
+  window.currentOrderId = o.id;
+  const items = (o.items||[]).map(i=>`<div class="border rounded p-2 mb-1 small">
+      <div class="d-flex justify-content-between"><strong>${i.line_code||''}</strong> <span class="badge bg-secondary">${i.fulfillment_status||'pending'}</span></div>
+      ${i.item_name} · ${i.product_type||''} · ${i.billing_cycle||'—'} · $${i.unit_price}
+      <div class="mt-1">
+        <select class="form-select form-select-sm d-inline w-auto fulfill-sel" data-id="${i.id}">
+          ${['pending','processing','shipped','delivered','activated','cancelled'].map(s=>`<option value="${s}" ${i.fulfillment_status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>`).join('');
+  const pos = (o.customer_pos||[]).map(p=>`<div class="small"><a href="<?= site_url('nat/sales/customer-po') ?>/${p.id}" target="_blank">${p.po_number}</a> · $${p.total_amount}</div>`).join('') || '<p class="text-muted small">Sin OC de cliente</p>';
+  const docs = (o.documents||[]).map(d=>`<div class="small"><a href="<?= site_url('nat/sales/orders/documents') ?>/${d.id}">${d.original_name}</a></div>`).join('') || '<p class="text-muted small">Sin adjuntos</p>';
+  const recs = (o.receipts||[]).map(r=>`<div class="small">${r.receipt_number} · ${r.receipt_kind||''} · ${r.collection_status||r.status} · $${r.total_amount}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
+  document.getElementById('oc-order-body').innerHTML = `<p class="fw-bold">${o.order_number||('#'+o.id)}</p>
+    <h6>Partidas individuales</h6>${items}
+    <h6 class="mt-3">OC del cliente</h6>${pos}
+    <button class="btn btn-sm btn-outline-primary mb-2" id="btn-split-po">Generar OC (partidas)</button>
+    <h6>Recibos / prefacturas</h6>${recs}
+    <h6 class="mt-3">Documentos</h6>${docs}
+    <button class="btn btn-sm btn-outline-secondary" id="btn-odoc">Adjuntar</button>
+    <h6 class="mt-3">Servicios</h6>` + (o.services||[]).map(s=>`<div class="small">${s.reference_name} · ${s.billing_cycle} · ${s.next_due_date||''}</div>`).join('') +
+    (j.response.plugin_tabs||o.plugin_tabs||[]).map(t=>`<div class="alert alert-light mt-2">${t.title||''}${t.html||''}</div>`).join('');
   bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('oc-order')).show();
+});
+document.addEventListener('change', async e=>{
+  const sel = e.target.closest('.fulfill-sel');
+  if(!sel) return;
+  const fd = new FormData(); fd.append('fulfillment_status', sel.value); fd.append(csrfName, csrfVal());
+  const r = await fetch('<?= site_url('nat/sales/orders/items') ?>/'+sel.dataset.id+'/fulfill', {method:'POST', headers: ajaxHeaders(), body: fd});
+  csrfHdr(r.headers);
+  const j = await r.json();
+  notifyShow(j.message, j.success?'success':'danger');
+});
+document.addEventListener('click', e=>{
+  if(e.target.id==='btn-odoc' && window.currentOrderId){
+    document.getElementById('odoc-order').value = window.currentOrderId;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-odoc')).show();
+  }
+  if(e.target.id==='btn-split-po' && window.currentOrderId){
+    const ids = [...document.querySelectorAll('.fulfill-sel')].map(s=>s.dataset.id);
+    const fd = new FormData(); fd.append('item_ids_json', JSON.stringify(ids)); fd.append(csrfName, csrfVal());
+    fetch('<?= site_url('nat/sales/orders') ?>/'+window.currentOrderId+'/customer-po', {method:'POST', headers: ajaxHeaders(), body: fd})
+      .then(r=>{ csrfHdr(r.headers); return r.json(); })
+      .then(j=> notifyShow(j.message, j.success?'success':'danger'));
+  }
+});
+document.getElementById('form-odoc').addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const oid = document.getElementById('odoc-order').value;
+  const r = await fetch('<?= site_url('nat/sales/orders') ?>/'+oid+'/documents', {method:'POST', headers: ajaxHeaders(), body: new FormData(ev.target)});
+  csrfHdr(r.headers);
+  const j = await r.json();
+  notifyShow(j.message, j.success?'success':'danger');
+  if(j.success) bootstrap.Modal.getInstance(document.getElementById('modal-odoc')).hide();
 });
 </script>
 <?php $this->endSection(); ?>

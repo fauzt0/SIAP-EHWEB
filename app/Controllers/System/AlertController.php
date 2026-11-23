@@ -291,6 +291,7 @@ class AlertController extends BaseController
 
         if ($user->can('crm.access')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleLeads'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOpenFollowups'));
         }
 
         if ($user->can('sales.access')) {
@@ -300,10 +301,13 @@ class AlertController extends BaseController
 
         if ($user->can('sales.collections') || $user->can('sales.billing')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectUnpaidOrders'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectUnpaidReceipts'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueReceipts'));
         }
 
         if ($user->can('sales.activate')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingActivations'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectUnprocessedItems'));
         }
 
         try {
@@ -1010,6 +1014,106 @@ class AlertController extends BaseController
             'message'    => $count . ' partida(s) vendida(s) pendientes de activación',
             'module'     => 'Ventas',
             'target_url' => route_to('sales.services'),
+        ])];
+    }
+
+    private function _detectUnpaidReceipts(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_receipts') || ! $db->fieldExists('collection_status', 'sales_receipts')) {
+            return [];
+        }
+        $count = $db->table('sales_receipts')
+            ->whereIn('collection_status', ['pending', 'partial'])
+            ->where('status !=', 'void')
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-hand-holding-usd',
+            'title'      => 'Cobranza: recibos sin liquidar',
+            'message'    => $count . ' prefactura(s) pendiente(s) o parcial(es)',
+            'module'     => 'CRM',
+            'target_url' => route_to('sales.billing'),
+        ])];
+    }
+
+    private function _detectOverdueReceipts(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_receipts') || ! $db->fieldExists('collection_status', 'sales_receipts')) {
+            return [];
+        }
+        $count = $db->table('sales_receipts')
+            ->where('collection_status', 'overdue')
+            ->where('status !=', 'void')
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-exclamation-circle',
+            'title'      => 'Recibos vencidos',
+            'message'    => $count . ' recibo(s) de renovación o venta vencido(s)',
+            'module'     => 'CRM',
+            'target_url' => route_to('sales.billing'),
+        ])];
+    }
+
+    private function _detectUnprocessedItems(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_order_items') || ! $db->fieldExists('fulfillment_status', 'sales_order_items')) {
+            return [];
+        }
+        $count = $db->table('sales_order_items')
+            ->whereIn('fulfillment_status', ['pending', 'processing'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-truck',
+            'title'      => 'Productos sin procesar o enviar',
+            'message'    => $count . ' partida(s) pendientes de gestión (físico, digital o servicio)',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.orders'),
+        ])];
+    }
+
+    private function _detectOpenFollowups(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('crm_followups') || ! $db->fieldExists('followup_status', 'crm_followups')) {
+            return [];
+        }
+        $count = $db->table('crm_followups')
+            ->whereIn('followup_status', ['open', 'in_progress', 'waiting'])
+            ->where('status', 'active')
+            ->where('updated_at <', date('Y-m-d H:i:s', strtotime('-5 days')))
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'info',
+            'icon'       => 'fa-headset',
+            'title'      => 'Seguimientos CRM abiertos',
+            'message'    => $count . ' incidencia(s) o contacto(s) sin cerrar en 5 días',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.clients'),
         ])];
     }
 

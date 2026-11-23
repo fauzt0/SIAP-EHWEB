@@ -127,6 +127,7 @@ class QuoteController extends BaseSalesController
             'sales_quote_id'    => $id,
             'created_by'        => auth()->id(),
             'change_source'     => 'auto',
+            'followup_status'   => 'closed',
         ]);
         (new UserActivityLogsModel())->logActivity('sales_quote_create', 'Cotización ID ' . $id . ' ' . $quote->quote_number);
         $this->setOutputSuccess('Cotización creada', ['id' => $id]);

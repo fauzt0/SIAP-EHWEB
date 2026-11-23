@@ -25,6 +25,7 @@ class BillingController extends BaseSalesController
             'Ventas'       => route_to('sales.orders'),
             'Facturación'  => '',
         ]);
+        $receipts = new SalesReceiptModel();
         $this->viewData['response'] = [
             'orders' => (new SalesOrderModel())
                 ->select('sales_orders.id, sales_orders.order_number, sales_orders.total_amount, sales_orders.status, crm_clients.company_name')
@@ -32,6 +33,8 @@ class BillingController extends BaseSalesController
                 ->whereIn('sales_orders.status', ['draft', 'pending', 'partial', 'confirmed', 'paid'])
                 ->orderBy('sales_orders.id', 'DESC')
                 ->findAll(100),
+            'forecast' => $receipts->forecastNextMonth(),
+            'open'     => $receipts->openCollections(null, 8),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'Sales/billing_index');
@@ -52,13 +55,17 @@ class BillingController extends BaseSalesController
 
         $data = [];
         foreach ($rows as $row) {
+            $kind = ($row->receipt_kind ?? 'one_time') === 'renewal' ? 'Renovación' : 'Único';
+            $coll = $row->collection_status ?? $row->status;
             $data[] = [
                 '<span class="font-monospace">' . esc($row->receipt_number) . '</span>',
                 esc($row->company_name ?? '—'),
                 esc($row->order_number ?? ('#' . $row->order_id)),
+                '<span class="badge badge-subtle-info">' . esc($kind) . '</span> '
+                    . esc($row->period_label ?? '—'),
                 '$' . number_format((float) $row->total_amount, 2),
-                '<span class="badge badge-subtle-primary">' . esc($row->status) . '</span>',
-                '<span class="badge badge-subtle-secondary">' . esc($row->order_status ?? '') . '</span>',
+                '<span class="badge badge-subtle-primary">' . esc($coll) . '</span>',
+                esc($row->due_date ?? ''),
                 '<button class="btn btn-outline-info btn-sm btn-show-receipt" data-id="' . (int) $row->id . '"><i class="fas fa-eye"></i></button>',
             ];
         }
@@ -84,9 +91,9 @@ class BillingController extends BaseSalesController
             return $this->response->setJSON($this->outputData);
         }
 
-        $payments = (new BillingPaymentModel())->where('order_id', (int) $receipt->order_id)->findAll();
-        $proofs   = (new SalesPaymentProofModel())->where('client_id', (int) $receipt->client_id)->where('order_id', (int) $receipt->order_id)->findAll();
-        $paid     = (new BillingPaymentModel())->paidTotal((int) $receipt->order_id);
+        $payments = (new BillingPaymentModel())->where('receipt_id', (int) $receipt->id)->findAll();
+        $proofs   = (new SalesPaymentProofModel())->where('client_id', (int) $receipt->client_id)->where('receipt_id', (int) $receipt->id)->findAll();
+        $paid     = (new BillingPaymentModel())->paidTotalForReceipt((int) $receipt->id);
 
         $this->setOutputSuccess('Recibo', [
             'receipt'  => $receipt,
@@ -123,8 +130,9 @@ class BillingController extends BaseSalesController
             'title'          => 'Recibo ' . $receipt->receipt_number,
             'comment'        => 'Recibo emitido. Factura interna en borrador para timbrado posterior.',
             'sales_order_id' => $orderId,
-            'created_by'     => auth()->id(),
-            'change_source'  => 'auto',
+            'created_by'       => auth()->id(),
+            'change_source'    => 'auto',
+            'followup_status'  => 'closed',
         ]);
         (new UserActivityLogsModel())->logActivity(
             'sales_receipt_issue',
@@ -164,13 +172,14 @@ class BillingController extends BaseSalesController
         $pay = $model->find($id);
         if (! empty($pay->client_id)) {
             (new CrmFollowupModel())->createVersion([
-                'client_id'      => (int) $pay->client_id,
-                'followup_type'  => 'order',
-                'title'          => 'Cobro registrado',
-                'comment'        => 'Pago ' . $pay->amount_paid . ' vía ' . $pay->payment_method,
-                'sales_order_id' => (int) $pay->order_id,
-                'created_by'     => auth()->id(),
-                'change_source'  => 'auto',
+                'client_id'       => (int) $pay->client_id,
+                'followup_type'   => 'order',
+                'title'           => 'Cobro registrado',
+                'comment'         => 'Pago ' . $pay->amount_paid . ' vía ' . $pay->payment_method,
+                'sales_order_id'  => (int) $pay->order_id,
+                'created_by'      => auth()->id(),
+                'change_source'   => 'auto',
+                'followup_status' => 'closed',
             ]);
         }
         (new UserActivityLogsModel())->logActivity('sales_payment_register', 'Cobro ID ' . $id . ' orden ' . $pay->order_id);
@@ -260,6 +269,40 @@ class BillingController extends BaseSalesController
             'Activó ' . $kind . ' ID ' . $id
         );
         $this->setOutputSuccess('Activado');
+        $this->outputData['csrf'] = csrf_hash();
+
+        return $this->response->setJSON($this->outputData);
+    }
+
+    public function generate_renewals(): ResponseInterface
+    {
+        if (! $this->request->isAJAX() || strtolower($this->request->getMethod()) !== 'post') {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
+        }
+
+        $result = (new \App\Services\SalesReceiptScheduler())->generateDue(null, auth()->id());
+        (new UserActivityLogsModel())->logActivity(
+            'sales_receipts_generate',
+            'Generó recibos de renovación: ' . ($result['created'] ?? 0)
+        );
+        $this->setOutputSuccess(
+            'Revisión de mes: ' . (int) ($result['created'] ?? 0) . ' recibo(s) nuevo(s).',
+            $result
+        );
+        $this->outputData['csrf'] = csrf_hash();
+
+        return $this->response->setJSON($this->outputData);
+    }
+
+    public function forecast_ajax(): ResponseInterface
+    {
+        if (! $this->request->isAJAX()) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
+        }
+
+        $forecast = (new SalesReceiptModel())->forecastNextMonth();
+        \App\Libraries\PluginSystem\PluginHookRegistry::doAction('sales.collections.forecast', $forecast, null);
+        $this->setOutputSuccess('Cobranza aproximada del siguiente mes', $forecast);
         $this->outputData['csrf'] = csrf_hash();
 
         return $this->response->setJSON($this->outputData);

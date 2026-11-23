@@ -21,7 +21,8 @@
 | Archivo | Módulo | Estado |
 |---------|--------|--------|
 | [002_hr_advanced_incidents.md](002_hr_advanced_incidents.md) | RRHH — incidencias avanzadas, justificaciones, pre-nómina | Pendiente |
-| [004_crm_clients.md](004_crm_clients.md) | CRM / clientes + enlace a ventas | Implementado 2026-11-20 |
+| [004_crm_clients.md](004_crm_clients.md) | CRM / clientes + enlace a ventas | Implementado 2026-11-20; cobranza 2026-11-23 |
+| [VERIFICACION_CRM_COBRANZA_2026-11-23.md](VERIFICACION_CRM_COBRANZA_2026-11-23.md) | Recibos recurrentes, OC cliente, seguimiento por contacto | Verificado 2026-11-23 |
 
 ---
 

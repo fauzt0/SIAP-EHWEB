@@ -6,15 +6,40 @@
     <div class="row mb-3">
       <div class="col">
         <h1 class="h3"><i class="fas fa-file-invoice-dollar me-2 text-primary"></i><?= esc($pageTitle) ?></h1>
-        <p class="text-muted mb-0">Recibo interno y factura en borrador. El timbrado CFDI se conectará después.</p>
+        <p class="text-muted mb-0">Prefactura cobrable: venta única (un recibo) o renovación mensual/semestral/anual. El timbrado CFDI se conecta después. Los reportes contables viven en Contabilidad.</p>
       </div>
       <?php if (auth()->user()->can('sales.billing')): ?>
-      <div class="col-auto"><button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-issue"><i class="fas fa-plus me-1"></i>Emitir recibo</button></div>
+      <div class="col-auto d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" id="btn-generate-renewals"><i class="fas fa-sync me-1"></i>Revisión del mes</button>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-issue"><i class="fas fa-plus me-1"></i>Emitir recibo</button>
+      </div>
       <?php endif; ?>
+    </div>
+    <?php $fc = $response['forecast'] ?? ['total_estimated' => 0, 'count' => 0, 'period' => []]; ?>
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <div class="text-muted small">Cobranza aproximada del siguiente mes</div>
+          <div class="h4 mb-0">$<?= number_format((float) ($fc['total_estimated'] ?? 0), 2) ?></div>
+          <div class="small text-muted"><?= (int) ($fc['count'] ?? 0) ?> vencimiento(s) · <?= esc(($fc['period']['start'] ?? '') . ' → ' . ($fc['period']['end'] ?? '')) ?></div>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <div class="text-muted small">Recibos ya emitidos (próximo mes)</div>
+          <div class="h4 mb-0">$<?= number_format((float) ($fc['receipts_due'] ?? 0), 2) ?></div>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <div class="text-muted small">Servicios aún sin recibo</div>
+          <div class="h4 mb-0">$<?= number_format((float) ($fc['services_pending'] ?? 0), 2) ?></div>
+        </div></div>
+      </div>
     </div>
     <div class="card"><div class="card-body">
       <table id="tbl-receipts" class="table table-striped w-100">
-        <thead><tr><th>Recibo</th><th>Cliente</th><th>Orden</th><th>Total</th><th>Recibo</th><th>Orden</th><th></th></tr></thead>
+        <thead><tr><th>Recibo</th><th>Cliente</th><th>Orden</th><th>Tipo / periodo</th><th>Total</th><th>Cobranza</th><th>Vence</th><th></th></tr></thead>
       </table>
     </div></div>
   </div>
@@ -96,6 +121,13 @@ if (!$.fn.dataTable.isDataTable('#tbl-receipts')) {
   $('#tbl-receipts').on('xhr.dt', (e,s,j,xhr)=>{ if(xhr) csrfHdr(xhr); });
 }
 let currentReceipt = null;
+document.getElementById('btn-generate-renewals')?.addEventListener('click', async ()=>{
+  const r = await fetch('<?= route_to('sales.billing.generate') ?>', {method:'POST', headers: ajaxHeaders(), body: new URLSearchParams({[csrfName]: csrfVal()})});
+  csrfHdr(r.headers);
+  const j = await r.json();
+  notifyShow(j.message, j.success?'success':'danger');
+  if(j.success) tblReceipts.ajax.reload();
+});
 document.getElementById('form-issue').addEventListener('submit', async ev=>{
   ev.preventDefault();
   const r = await fetch('<?= route_to('sales.billing.issue') ?>', {method:'POST', headers: ajaxHeaders(), body: new FormData(ev.target)});
@@ -119,7 +151,8 @@ document.addEventListener('click', async e=>{
   document.getElementById('oc-receipt-body').innerHTML = `
     <p class="mb-1"><strong>${rec.company_name||''}</strong> · ${rec.client_code||''}</p>
     <p class="small">Orden ${rec.order_number||rec.order_id} · Factura borrador #${rec.invoice_id||'—'}</p>
-    <p>Total $${Number(rec.total_amount).toFixed(2)} · Pagado $${Number(j.response.paid).toFixed(2)} · Saldo $${Number(j.response.balance).toFixed(2)}</p>
+    <p class="small">${rec.receipt_kind==='renewal'?'Renovación':'Venta única'} · ${rec.period_label||'—'} · vence ${rec.due_date||'—'}</p>
+    <p>Total $${Number(rec.total_amount).toFixed(2)} · Pagado $${Number(j.response.paid).toFixed(2)} · Saldo $${Number(j.response.balance).toFixed(2)} · ${rec.collection_status||''}</p>
     <h6>Partidas</h6>${items}
     <h6 class="mt-3">Cobros</h6>${pays}
     <h6 class="mt-3">Comprobantes</h6>${proofs}

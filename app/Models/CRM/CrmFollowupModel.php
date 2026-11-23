@@ -15,8 +15,8 @@ class CrmFollowupModel extends Model
     protected $useSoftDeletes   = true;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'client_id', 'parent_followup_id', 'version', 'change_source', 'status',
-        'followup_type', 'title', 'comment', 'client_status_snapshot',
+        'client_id', 'contact_id', 'parent_followup_id', 'version', 'change_source', 'status',
+        'followup_status', 'followup_type', 'title', 'incident', 'comment', 'client_status_snapshot',
         'sales_order_id', 'sales_quote_id', 'created_by',
     ];
     protected $useTimestamps = true;
@@ -27,9 +27,10 @@ class CrmFollowupModel extends Model
     protected $validationRules = [
         'client_id'     => 'required|is_natural_no_zero',
         'title'         => 'required|max_length[180]',
-        'followup_type' => 'required|in_list[comment,status_change,meeting,call,email,quote,order,service]',
-        'change_source' => 'required|in_list[auto,manual,fork]',
-        'status'        => 'required|in_list[active,archived,draft]',
+        'followup_type'   => 'required|in_list[comment,status_change,meeting,call,email,quote,order,service,whatsapp,ticket,support]',
+        'followup_status' => 'permit_empty|in_list[open,in_progress,waiting,closed]',
+        'change_source'   => 'required|in_list[auto,manual,fork]',
+        'status'          => 'required|in_list[active,archived,draft]',
     ];
 
     public function getActive(int $clientId, bool $forUpdate = false): ?object
@@ -71,9 +72,13 @@ class CrmFollowupModel extends Model
             return false;
         }
 
-        $data['change_source'] = $data['change_source'] ?? 'manual';
-        $data['status']        = $data['status'] ?? 'active';
-        $data['followup_type'] = $data['followup_type'] ?? 'comment';
+        $data['change_source']   = $data['change_source'] ?? 'manual';
+        $data['status']          = $data['status'] ?? 'active';
+        $data['followup_type']   = $data['followup_type'] ?? 'comment';
+        $data['followup_status'] = $data['followup_status'] ?? 'open';
+        if (empty($data['incident'])) {
+            $data['incident'] = $data['title'] ?? null;
+        }
 
         $this->db->transBegin();
 
@@ -119,6 +124,8 @@ class CrmFollowupModel extends Model
 
             $this->db->transCommit();
 
+            \App\Libraries\PluginSystem\PluginHookRegistry::doAction('crm.followup.created', (int) $newId, $clientId);
+
             return (int) $newId;
         } catch (\Throwable $e) {
             $this->db->transRollback();
@@ -130,9 +137,11 @@ class CrmFollowupModel extends Model
 
     public function getHistoryByClient(int $clientId): array
     {
-        return $this->where('client_id', $clientId)
-            ->orderBy('version', 'DESC')
-            ->orderBy('id', 'DESC')
+        return $this->select('crm_followups.*, crm_client_contacts.name AS contact_name, crm_client_contacts.contact_type')
+            ->join('crm_client_contacts', 'crm_client_contacts.id = crm_followups.contact_id', 'left')
+            ->where('crm_followups.client_id', $clientId)
+            ->orderBy('crm_followups.version', 'DESC')
+            ->orderBy('crm_followups.id', 'DESC')
             ->findAll();
     }
 

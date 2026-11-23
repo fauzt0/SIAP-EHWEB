@@ -41,6 +41,16 @@ class BillingPaymentModel extends Model
         return (float) ($row->paid ?? 0);
     }
 
+    public function paidTotalForReceipt(int $receiptId): float
+    {
+        $row = $this->selectSum('amount_paid', 'paid')
+            ->where('receipt_id', $receiptId)
+            ->where('status', 'completed')
+            ->first();
+
+        return (float) ($row->paid ?? 0);
+    }
+
     /**
      * Registra cobro y marca la orden pagada cuando el saldo queda en cero.
      */
@@ -64,8 +74,45 @@ class BillingPaymentModel extends Model
             return false;
         }
 
-        $paid = $this->paidTotal((int) $order->id);
-        $due  = (float) $order->total_amount;
+        $receiptId = (int) ($data['receipt_id'] ?? 0);
+        if ($receiptId > 0) {
+            $receipt = (new SalesReceiptModel())->find($receiptId);
+            if ($receipt) {
+                $paidR = $this->paidTotalForReceipt($receiptId);
+                $dueR  = (float) $receipt->total_amount;
+                $cStatus = 'pending';
+                if ($paidR + 0.009 >= $dueR && $dueR > 0) {
+                    $cStatus = 'paid';
+                } elseif ($paidR > 0) {
+                    $cStatus = 'partial';
+                } elseif (! empty($receipt->due_date) && $receipt->due_date < date('Y-m-d')) {
+                    $cStatus = 'overdue';
+                }
+                (new SalesReceiptModel())->update($receiptId, ['collection_status' => $cStatus]);
+                \App\Libraries\PluginSystem\PluginHookRegistry::doAction('sales.receipt.paid', $receiptId, $paidR);
+            }
+        }
+
+        $initialRows = (new SalesReceiptModel())
+            ->select('id')
+            ->where('order_id', (int) $order->id)
+            ->where('is_initial', 1)
+            ->where('status !=', 'void')
+            ->findAll();
+        $initialIds = array_map(static fn ($row) => (int) $row->id, $initialRows);
+        $payQuery = (new self())
+            ->selectSum('amount_paid', 'paid')
+            ->where('order_id', (int) $order->id)
+            ->where('status', 'completed');
+        if ($initialIds !== []) {
+            $payQuery->groupStart()
+                ->where('receipt_id', null)
+                ->orWhereIn('receipt_id', $initialIds)
+                ->groupEnd();
+        }
+        $initialPaid = $payQuery->first();
+        $paid   = (float) ($initialPaid->paid ?? 0);
+        $due    = (float) $order->total_amount;
         $status = 'pending';
         if ($paid + 0.009 >= $due && $due > 0) {
             $status = 'paid';

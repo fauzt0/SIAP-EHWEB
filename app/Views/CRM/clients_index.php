@@ -68,7 +68,7 @@
   </div>
 </main>
 
-<div class="offcanvas offcanvas-end" tabindex="-1" id="oc-client" style="width:480px">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="oc-client" style="width:560px">
   <div class="offcanvas-header bg-primary text-white">
     <div>
       <h5 class="offcanvas-title mb-0" id="oc-client-name">Cliente</h5>
@@ -82,6 +82,7 @@
       <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#oc-tab-fiscal" type="button"><i class="fas fa-file-invoice me-1"></i>Fiscal</button></li>
       <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#oc-tab-seg" type="button"><i class="fas fa-comments me-1"></i>Seguimiento</button></li>
       <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#oc-tab-ventas" type="button"><i class="fas fa-cash-register me-1"></i>Ventas</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#oc-tab-cob" type="button"><i class="fas fa-hand-holding-usd me-1"></i>Cobranza</button></li>
     </ul>
     <div class="tab-content">
       <div class="tab-pane fade show active" id="oc-tab-datos">
@@ -103,11 +104,22 @@
         <div id="oc-followup-tree"></div>
       </div>
       <div class="tab-pane fade" id="oc-tab-ventas">
+        <?php if (!empty($response['canQuote'])): ?>
+        <button class="btn btn-sm btn-outline-primary w-100 mb-2" id="btn-new-quote-crm"><i class="fas fa-file-signature me-1"></i>Nueva cotización</button>
+        <?php endif; ?>
         <h6>Cotizaciones</h6><div id="oc-quotes"></div>
         <h6 class="mt-3">Órdenes</h6><div id="oc-orders"></div>
-        <h6 class="mt-3">Servicios</h6><div id="oc-services"></div>
+        <h6 class="mt-3">Productos / servicios del cliente</h6><div id="oc-services"></div>
         <h6 class="mt-3">Recibos</h6><div id="oc-receipts"></div>
         <h6 class="mt-3">Comprobantes</h6><div id="oc-proofs"></div>
+      </div>
+      <div class="tab-pane fade" id="oc-tab-cob">
+        <div class="alert alert-light border small mb-2">
+          <strong>Próximo mes (aprox.)</strong>
+          <div id="oc-forecast">—</div>
+        </div>
+        <h6>Recibos por cobrar</h6>
+        <div id="oc-collections"></div>
       </div>
     </div>
   </div>
@@ -174,18 +186,34 @@
       <div class="modal-header"><h5 class="modal-title">Revisión de seguimiento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" name="parent_followup_id" id="fu-parent">
-        <div class="mb-2"><label class="form-label">Título *</label><input class="form-control" name="title" required></div>
-        <div class="mb-2"><label class="form-label">Tipo</label>
-          <select class="form-select" name="followup_type">
-            <option value="comment">Comentario</option>
-            <option value="call">Llamada</option>
-            <option value="meeting">Reunión</option>
-            <option value="email">Email</option>
-            <option value="status_change">Cambio de estatus</option>
-            <option value="service">Servicio</option>
-          </select>
+        <div class="mb-2"><label class="form-label">Incidencia / asunto *</label><input class="form-control" name="title" required></div>
+        <div class="mb-2"><label class="form-label">Contacto</label>
+          <select class="form-select" name="contact_id" id="fu-contact"><option value="">— Cliente (sin contacto) —</option></select>
         </div>
-        <div class="mb-2"><label class="form-label">Estatus del cliente</label>
+        <div class="row g-2">
+          <div class="col-md-6"><label class="form-label">Canal</label>
+            <select class="form-select" name="followup_type">
+              <option value="call">Llamada de venta</option>
+              <option value="support">Llamada de soporte</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="email">Email</option>
+              <option value="ticket">Ticket</option>
+              <option value="meeting">Reunión</option>
+              <option value="comment">Comentario</option>
+              <option value="status_change">Cambio de estatus</option>
+              <option value="service">Servicio</option>
+            </select>
+          </div>
+          <div class="col-md-6"><label class="form-label">Estatus del seguimiento</label>
+            <select class="form-select" name="followup_status">
+              <option value="open">Abierto</option>
+              <option value="in_progress">En proceso</option>
+              <option value="waiting">En espera</option>
+              <option value="closed">Cerrado</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-2 mt-2"><label class="form-label">Estatus del cliente (lead / prospecto / activo)</label>
           <select class="form-select" name="client_status" id="fu-status">
             <option value="lead">Lead</option>
             <option value="prospect">Prospecto</option>
@@ -194,11 +222,11 @@
             <option value="churned">Baja</option>
           </select>
         </div>
-        <div class="mb-2"><label class="form-label">Comentario</label><textarea class="form-control" name="comment" rows="3"></textarea></div>
-        <div class="mb-2"><label class="form-label">Servicios involucrados</label>
+        <div class="mb-2"><label class="form-label">Detalle</label><textarea class="form-control" name="comment" rows="3"></textarea></div>
+        <div class="mb-2"><label class="form-label">Producto o servicio relacionado</label>
           <select class="form-select" id="fu-products" multiple>
             <?php foreach ($response['products'] ?? [] as $p): ?>
-              <option value="<?= (int) $p->id ?>"><?= esc($p->commercial_name) ?></option>
+              <option value="<?= (int) $p->id ?>"><?= esc($p->commercial_name) ?> (<?= esc($p->product_type ?? '') ?>)</option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -206,6 +234,28 @@
       <div class="modal-footer"><button class="btn btn-primary" type="submit">Registrar revisión</button></div>
     </form>
   </div>
+</div>
+
+<div class="modal fade" id="modal-quote-crm" tabindex="-1">
+  <div class="modal-dialog modal-lg"><form class="modal-content" id="form-quote-crm">
+    <div class="modal-header"><h5 class="modal-title">Cotización desde CRM</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" name="client_id" id="quote-client-id">
+      <div class="row g-2 mb-2">
+        <div class="col-md-6"><label class="form-label">Vigencia</label><input type="date" class="form-control" name="valid_until"></div>
+        <div class="col-md-6"><label class="form-label">Estatus</label>
+          <select class="form-select" name="status"><option value="draft">Borrador</option><option value="sent">Enviada</option></select>
+        </div>
+      </div>
+      <table class="table table-sm" id="crm-quote-items">
+        <thead><tr><th>Producto</th><th>Ciclo</th><th>Precio</th><th>Cant.</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-cqitem">Renglón</button>
+      <textarea class="form-control mt-2" name="notes" placeholder="Notas"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Guardar cotización</button></div>
+  </form></div>
 </div>
 <?php $this->endSection(); ?>
 
@@ -217,6 +267,8 @@ function csrfHdr(h){ const n = h.get('<?= csrf_header() ?>'); if(n) document.get
 function ajaxHeaders(){ return { 'X-Requested-With':'XMLHttpRequest', '<?= csrf_header() ?>': csrfVal() }; }
 let currentClientId = 0;
 let followupCache = [];
+let currentContacts = [];
+const catalogProducts = <?= json_encode($response['products'] ?? []) ?>;
 
 if (!$.fn.dataTable.isDataTable('#tbl-clients')) {
 window.tblClients = $('#tbl-clients').DataTable({
@@ -370,15 +422,21 @@ function renderOffcanvas(d){
     <dt class="col-4">Web</dt><dd class="col-8">${c.website||'—'}</dd>
     <dt class="col-4">RFC</dt><dd class="col-8">${c.rfc_tax_id||'—'}</dd>
     <dt class="col-4">Origen</dt><dd class="col-8">${c.source||'—'}</dd>`;
-  document.getElementById('oc-contacts').innerHTML = (d.contacts||[]).map(x => `<div class="border rounded p-2 mb-1 small"><strong>${x.name}</strong> · ${x.contact_type}<br>${x.email||''} ${x.phone||''}</div>`).join('') || '<p class="text-muted small">Sin contactos</p>';
+  currentContacts = d.contacts || [];
+  const fuContact = document.getElementById('fu-contact');
+  fuContact.innerHTML = '<option value="">— Cliente (sin contacto) —</option>' + currentContacts.map(x => `<option value="${x.id}">${x.name} (${x.contact_type})</option>`).join('');
+  document.getElementById('oc-contacts').innerHTML = currentContacts.map(x => `<div class="border rounded p-2 mb-1 small"><strong>${x.name}</strong> · ${x.contact_type}<br>${x.email||''} ${x.phone||''}</div>`).join('') || '<p class="text-muted small">Sin contactos</p>';
   document.getElementById('oc-billing').innerHTML = (d.billing||[]).map(x => `<div class="border rounded p-2 mb-2 small"><strong>${x.legal_name}</strong><br>RFC ${x.rfc_tax_id} · ${x.tax_regime||''}<br>${x.address||''}</div>`).join('') || '<p class="text-muted">Sin perfiles fiscales</p>';
   followupCache = d.followups || [];
   renderFollowups(followupCache);
   document.getElementById('oc-quotes').innerHTML = (d.quotes||[]).map(x => `<div class="small">${x.quote_number} · ${x.status} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin cotizaciones</p>';
   document.getElementById('oc-orders').innerHTML = (d.orders||[]).map(x => `<div class="small">${x.order_number||('#'+x.id)} · ${x.status} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin órdenes</p>';
-  document.getElementById('oc-services').innerHTML = (d.services||[]).map(x => `<div class="small">${x.reference_name||'Servicio'} · ${x.billing_cycle} · ${x.activation_status||''} · vence ${x.next_due_date||'—'}</div>`).join('') || '<p class="text-muted small">Sin servicios</p>';
-  document.getElementById('oc-receipts').innerHTML = (d.receipts||[]).map(x => `<div class="small">${x.receipt_number} · $${x.total_amount} · ${x.status}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
+  document.getElementById('oc-services').innerHTML = (d.services||[]).map(x => `<div class="small">${x.reference_name||'Servicio'} · ${x.billing_cycle} · ${x.activation_status||''} · vence ${x.next_due_date||'—'}</div>`).join('') || '<p class="text-muted small">Sin productos asociados</p>';
+  document.getElementById('oc-receipts').innerHTML = (d.receipts||[]).map(x => `<div class="small">${x.receipt_number} · ${x.receipt_kind||''} · $${x.total_amount} · ${x.collection_status||x.status}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
   document.getElementById('oc-proofs').innerHTML = (d.proofs||[]).map(x => `<div class="small"><a href="<?= site_url('nat/sales/billing/proof') ?>/${x.id}">${x.original_name}</a></div>`).join('') || '<p class="text-muted small">Sin comprobantes</p>';
+  const fc = d.forecast_next || {};
+  document.getElementById('oc-forecast').innerHTML = `$${(Number(fc.total_estimated)||0).toFixed(2)} · ${fc.count||0} vencimiento(s)<br><span class="text-muted">${(fc.period&&fc.period.start)||''} → ${(fc.period&&fc.period.end)||''}</span>`;
+  document.getElementById('oc-collections').innerHTML = (d.collections||[]).map(x => `<div class="small border rounded p-2 mb-1">${x.receipt_number} · ${x.collection_status} · vence ${x.due_date||'—'} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin cobranza abierta</p>';
   const pluginHtml = (d.plugin_tabs||[]).map(t => `<div class="alert alert-light border small"><strong>${t.title||t.hook||'Plugin'}</strong><div>${t.html||''}</div></div>`).join('');
   document.getElementById('oc-plugin-tabs').innerHTML = pluginHtml;
 }
@@ -395,10 +453,12 @@ function renderFollowups(list){
   const html = filtered.map(f => {
     const svcs = (f.services||[]).map(s => s.product_name || ('#'+s.product_id)).join(', ');
     const vigente = f.status === 'active' ? '<span class="badge bg-success">Vigente</span>' : '';
+    const st = f.followup_status ? `<span class="badge bg-info">${f.followup_status}</span>` : '';
+    const who = f.contact_name ? ` · ${f.contact_name}` : '';
     return `<div class="fu-item">
       <span class="fu-dot"></span>
-      <div class="fw-semibold">${f.title||''} ${vigente}</div>
-      <div class="small text-muted">${f.followup_type} · v${f.version} · ${(f.created_at||'').slice(0,10)}</div>
+      <div class="fw-semibold">${f.incident||f.title||''} ${vigente} ${st}</div>
+      <div class="small text-muted">${f.followup_type}${who} · v${f.version} · ${(f.created_at||'').slice(0,10)}</div>
       <div class="small">${f.comment||''}</div>
       ${svcs ? `<div class="small"><i class="fas fa-cubes me-1"></i>${svcs}</div>` : ''}
       <button type="button" class="btn btn-sm btn-outline-primary mt-1 btn-fork" data-id="${f.id}"><i class="fas fa-code-branch me-1"></i>Revisión</button>
@@ -433,6 +493,44 @@ document.getElementById('form-followup').addEventListener('submit', async (ev) =
     tblClients.ajax.reload(null, false);
     notifyShow(j.message, 'success');
   } else notifyShow(j.message, 'danger');
+});
+
+function addCrmQItem(){
+  const opts = catalogProducts.map(p=>`<option value="${p.id}" data-name="${p.commercial_name}">${p.commercial_name}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><select class="form-select form-select-sm psel">${opts}</select></td>
+    <td><select class="form-select form-select-sm cyc"><option value="one_time">Única</option><option value="monthly">Mensual</option><option value="semiannual">Semestral</option><option value="annual">Anual</option></select></td>
+    <td><input type="number" step="0.01" class="form-control form-control-sm price" value="0"></td>
+    <td><input type="number" class="form-control form-control-sm qty" value="1"></td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger rm">&times;</button></td>`;
+  document.querySelector('#crm-quote-items tbody').appendChild(tr);
+  tr.querySelector('.rm').onclick=()=>tr.remove();
+}
+document.getElementById('btn-add-cqitem')?.addEventListener('click', addCrmQItem);
+document.getElementById('btn-new-quote-crm')?.addEventListener('click', ()=>{
+  if(!currentClientId) return;
+  document.getElementById('form-quote-crm').reset();
+  document.getElementById('quote-client-id').value = currentClientId;
+  document.querySelector('#crm-quote-items tbody').innerHTML='';
+  addCrmQItem();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-quote-crm')).show();
+});
+document.getElementById('form-quote-crm')?.addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const items = [...document.querySelectorAll('#crm-quote-items tbody tr')].map(tr=>{
+    const sel = tr.querySelector('.psel');
+    return { product_id: sel.value, item_name: sel.selectedOptions[0].dataset.name, billing_cycle: tr.querySelector('.cyc').value, unit_price: tr.querySelector('.price').value, quantity: tr.querySelector('.qty').value };
+  });
+  const fd = new FormData(ev.target);
+  fd.append('items_json', JSON.stringify(items));
+  const r = await fetch('<?= route_to('sales.quotes.store') ?>', {method:'POST', headers: ajaxHeaders(), body: fd});
+  csrfHdr(r.headers);
+  const j = await r.json();
+  notifyShow(j.message, j.success?'success':'danger');
+  if(j.success){
+    bootstrap.Modal.getInstance(document.getElementById('modal-quote-crm')).hide();
+    openClient(currentClientId);
+  }
 });
 </script>
 <?php $this->endSection(); ?>

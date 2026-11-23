@@ -20,7 +20,7 @@ class CustomerServiceModel extends Model
     protected $allowedFields    = [
         'user_id', 'client_id', 'order_id', 'product_id', 'plan_id', 'reference_name',
         'status', 'billing_cycle', 'auto_renew', 'amount', 'next_due_date',
-        'last_renewal_at', 'plugin_ref', 'activation_status',
+        'last_renewal_at', 'plugin_ref', 'activation_status', 'order_item_id',
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';

@@ -106,6 +106,25 @@ $orderId = (new SalesOrderModel())->createWithItems([
 ]);
 db_ok($orderId !== false, 'orden con servicio anual');
 
+$svcRow = (new \App\Models\Sales\CustomerServiceModel())->where('order_id', $orderId)->first();
+db_ok($svcRow !== null, 'servicio recurrente anual creado con la orden');
+$recRow = (new \App\Models\Sales\SalesReceiptModel())->where('order_id', $orderId)->first();
+db_ok($recRow !== null, 'recibo/prefactura inicial emitido al crear la orden');
+
+$dup = (new \App\Services\SalesReceiptScheduler())->issueInitialForOrder((int) $orderId);
+db_ok(($dup['renewals'] ?? []) === [] && empty($dup['one_time']), 'no duplica recibo del mismo periodo');
+
+$po = (new \App\Models\Sales\SalesCustomerPoModel())->where('order_id', $orderId)->first();
+db_ok($po !== null, 'OC del cliente generada con la orden');
+
+$cycle = \App\Services\SalesBillingCycle::periodLabel('monthly', '2026-11-15');
+db_ok($cycle === '2026-11', 'etiqueta periodo mensual');
+db_ok(\App\Services\SalesBillingCycle::isRecurring('semiannual'), 'semestral es recurrente');
+db_ok(! \App\Services\SalesBillingCycle::isRecurring('one_time'), 'one_time no es recurrente');
+
+$forecast = (new \App\Models\Sales\SalesReceiptModel())->forecastNextMonth((int) $clientId);
+db_ok(isset($forecast['total_estimated']), 'forecast cobranza siguiente mes');
+
 $tabs = (new ClientCommerceBridge())->collectClientTabs((int) $clientId);
 db_ok(is_array($tabs), 'collectClientTabs no rompe sin plugins');
 

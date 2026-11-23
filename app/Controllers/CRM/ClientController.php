@@ -34,8 +34,10 @@ class ClientController extends BaseCrmController
         $this->viewData['response'] = [
             'stats'    => $this->clientModel->getStats(),
             'products' => $products,
-            'canManage'=> auth()->user()->can('crm.manage') || auth()->user()->can('sales.customers'),
-            'canDelete'=> auth()->user()->can('crm.delete'),
+            'canManage' => auth()->user()->can('crm.manage') || auth()->user()->can('sales.customers'),
+            'canDelete' => auth()->user()->can('crm.delete'),
+            'canQuote'  => auth()->user()->can('sales.create') || auth()->user()->can('sales.quotes'),
+            'clients'   => $this->clientModel->getForSelect(),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'CRM/clients_index');
@@ -108,22 +110,26 @@ class ClientController extends BaseCrmController
             return $this->response->setJSON($this->outputData);
         }
 
-        $bridge = new ClientCommerceBridge();
-        $orders = (new SalesOrderModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20);
-        $receipts = (new \App\Models\Sales\SalesReceiptModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20);
-        $proofs = (new \App\Models\Sales\SalesPaymentProofModel())->where('client_id', $id)->findAll(20);
+        $bridge   = new ClientCommerceBridge();
+        $receiptM = new \App\Models\Sales\SalesReceiptModel();
+        $forecast = $receiptM->forecastNextMonth($id);
+        \App\Libraries\PluginSystem\PluginHookRegistry::doAction('sales.collections.forecast', $forecast, $id);
         $this->setOutputSuccess('Cliente cargado', [
             'client'   => $client,
             'contacts' => (new CrmClientContactModel())->where('client_id', $id)->findAll(),
             'billing'  => (new CrmBillingProfileModel())->where('client_id', $id)->findAll(),
             'followups'=> (new CrmFollowupModel())->getTree($id),
-            'orders'   => $orders,
-            'receipts' => $receipts,
-            'proofs'   => $proofs,
+            'orders'   => (new SalesOrderModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20),
+            'receipts' => (new \App\Models\Sales\SalesReceiptModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20),
+            'proofs'   => (new \App\Models\Sales\SalesPaymentProofModel())->where('client_id', $id)->findAll(20),
             'quotes'   => (new SalesQuoteModel())->where('client_id', $id)->orderBy('id', 'DESC')->findAll(20),
             'services' => (new CustomerServiceModel())->where('client_id', $id)->findAll(),
-            'plugin_tabs'  => $bridge->collectClientTabs($id),
-            'plugin_links' => $bridge->linksForClient($id),
+            'collections'      => $receiptM->openCollections($id, 30),
+            'forecast_next'    => $forecast,
+            'plugin_tabs'      => $bridge->collectClientTabs($id),
+            'plugin_links'     => $bridge->linksForClient($id),
+            'can_quote'        => auth()->user()->can('sales.create') || auth()->user()->can('sales.quotes'),
+            'can_collect'      => auth()->user()->can('sales.collections') || auth()->user()->can('sales.billing'),
         ]);
         $this->outputData['csrf'] = csrf_hash();
 

@@ -204,6 +204,11 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('orders/list_ajax', 'Sales\OrderController::list_ajax', ['as' => 'sales.orders.ajax']);
         $routes->get('orders/show_ajax/(:num)', 'Sales\OrderController::show_ajax/$1', ['as' => 'sales.orders.show_ajax']);
         $routes->post('orders/store', 'Sales\OrderController::store', ['as' => 'sales.orders.store', 'filter' => 'permission:sales.create']);
+        $routes->post('orders/(:num)/documents', 'Sales\OrderController::upload_document/$1', ['as' => 'sales.orders.documents.upload', 'filter' => 'permission:sales.create']);
+        $routes->get('orders/documents/(:num)', 'Sales\OrderController::download_document/$1', ['as' => 'sales.orders.documents.download']);
+        $routes->post('orders/(:num)/customer-po', 'Sales\OrderController::generate_customer_po/$1', ['as' => 'sales.orders.customer_po', 'filter' => 'permission:sales.create']);
+        $routes->get('customer-po/(:num)', 'Sales\OrderController::customer_po/$1', ['as' => 'sales.customer_po.print']);
+        $routes->post('orders/items/(:num)/fulfill', 'Sales\OrderController::fulfill_item/$1', ['as' => 'sales.orders.fulfill', 'filter' => 'permission:sales.activate']);
         $routes->get('quotes', 'Sales\QuoteController::index', ['as' => 'sales.quotes']);
         $routes->post('quotes/list_ajax', 'Sales\QuoteController::list_ajax', ['as' => 'sales.quotes.ajax']);
         $routes->get('quotes/show_ajax/(:num)', 'Sales\QuoteController::show_ajax/$1', ['as' => 'sales.quotes.show_ajax']);
@@ -220,6 +225,8 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->get('billing/proof/(:num)', 'Sales\BillingController::download_proof/$1', ['as' => 'sales.billing.proof.download', 'filter' => 'permission:sales.collections']);
         $routes->post('billing/activate-item/(:num)', 'Sales\BillingController::activate_item/$1', ['as' => 'sales.billing.activate_item', 'filter' => 'permission:sales.activate']);
         $routes->post('billing/activate-service/(:num)', 'Sales\BillingController::activate_service/$1', ['as' => 'sales.billing.activate_service', 'filter' => 'permission:sales.activate']);
+        $routes->post('billing/generate-renewals', 'Sales\BillingController::generate_renewals', ['as' => 'sales.billing.generate', 'filter' => 'permission:sales.billing']);
+        $routes->get('billing/forecast_ajax', 'Sales\BillingController::forecast_ajax', ['as' => 'sales.billing.forecast', 'filter' => 'permission:sales.billing']);
     });
 
     // ── Módulo de Organización (Perfil de Compañía y Sucursales) ──

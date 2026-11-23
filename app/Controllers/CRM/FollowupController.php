@@ -43,13 +43,18 @@ class FollowupController extends BaseCrmController
         if (! is_array($services)) {
             $services = [];
         }
+        $title = trim((string) $this->request->getPost('title'));
+        $incident = trim((string) $this->request->getPost('incident'));
 
         $model = new CrmFollowupModel();
         $newId = $model->createVersion([
             'client_id'              => $clientId,
+            'contact_id'             => $this->request->getPost('contact_id') ?: null,
             'parent_followup_id'     => $this->request->getPost('parent_followup_id') ?: null,
             'followup_type'          => $this->request->getPost('followup_type') ?: 'comment',
-            'title'                  => trim((string) $this->request->getPost('title')),
+            'followup_status'        => $this->request->getPost('followup_status') ?: 'open',
+            'title'                  => $title !== '' ? $title : ($incident !== '' ? $incident : 'Seguimiento'),
+            'incident'               => $incident !== '' ? $incident : $title,
             'comment'                => $this->request->getPost('comment'),
             'client_status_snapshot' => $newStatus,
             'created_by'             => auth()->id(),

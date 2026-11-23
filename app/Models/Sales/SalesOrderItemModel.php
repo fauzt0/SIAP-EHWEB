@@ -17,7 +17,8 @@ class SalesOrderItemModel extends Model
     protected $allowedFields    = [
         'order_id', 'product_id', 'plan_id', 'item_name', 'unit_price', 'quantity',
         'period_start', 'period_end', 'service_id', 'discount_amount', 'tax_amount',
-        'billing_cycle', 'activation_status',
+        'billing_cycle', 'activation_status', 'line_code', 'product_type',
+        'fulfillment_status', 'plugin_ref',
     ];
     protected $useTimestamps = false;
 }

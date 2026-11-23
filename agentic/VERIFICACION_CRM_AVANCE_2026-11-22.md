@@ -6,8 +6,8 @@ Rama auditada: `cursor/agente-nube-841d` (America/Mexico_City).
 
 | Alcance | Avance | Estatus |
 |---------|--------|---------|
-| **Módulo CRM Clientes** (núcleo operativo) | **~91%** | Listo para uso interno en VPS tras `migrate` |
-| **Ecosistema comercial** (CRM + ventas + cobros + SAT/POS) | **~76%** | Núcleo cerrado; facturación electrónica y POS pendientes |
+| **Módulo CRM Clientes** (núcleo operativo) | **~96%** | Cobranza, seguimiento por contacto y cotización en ficha (2026-11-23) |
+| **Ecosistema comercial** (CRM + ventas + cobros + SAT/POS) | **~84%** | Recibos por periodo y OC cliente listos; CFDI y POS pendientes |
 
 ## Verificación técnica (esta sesión)
 

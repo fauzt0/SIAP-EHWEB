@@ -17,12 +17,18 @@ Migraciones sobre `sales_orders`, `sales_order_items`, `customer_services` + tab
 
 Ciclos: `one_time`, `monthly`, `semiannual`, `annual`/`yearly`.
 
+- Venta única → un recibo + prefactura del periodo contratado.
+- Recurrente → un recibo por periodo (`SalesReceiptScheduler`, `php spark sales:generate-receipts`).
+- Cobranza en ficha CRM (aprox. del mes siguiente); reportes contables fuera del CRM.
+- OC del cliente (`sales_customer_pos`) con partidas individuales y documentos de orden.
+- Seguimiento por contacto: llamada/soporte/WhatsApp/ticket/email + producto + estatus.
+
 ## Permisos Shield
 
 `crm.access`, `crm.manage`, `crm.delete` (+ `sales.access` / `sales.create` / `sales.quotes`).
 
 ## Hooks cableados (sin implementar plugins)
 
-`crm.client.show.tabs`, `sales.order.show.tabs`, `sales.quote.show.tabs` — `PluginHookRegistry::wiredHooks()`.
+`crm.client.show.tabs`, `crm.followup.created`, `sales.order.show.tabs`, `sales.quote.show.tabs`, `sales.order.created`, `sales.order.item.prepare`, `sales.receipt.issued`, `sales.receipt.paid`, `sales.customer_po.created` — `PluginHookRegistry::wiredHooks()`.
 
 Puente: `App\Services\ClientCommerceBridge`.
