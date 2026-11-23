@@ -21,6 +21,7 @@ class SalesQuoteModel extends Model
         'quote_number', 'client_id', 'parent_quote_id', 'version', 'status',
         'valid_until', 'subtotal', 'tax_amount', 'total_amount', 'currency',
         'notes', 'converted_order_id', 'plugin_ref', 'created_by',
+        'branch_id', 'channel',
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
@@ -117,6 +118,52 @@ class SalesQuoteModel extends Model
         $this->db->transComplete();
 
         return $this->db->transStatus() ? (int) $id : false;
+    }
+
+    /**
+     * Actualiza encabezado y, si hay partidas, reemplaza renglones.
+     *
+     * @param list<array<string,mixed>>|null $items
+     */
+    public function updateWithItems(int $id, array $quote, ?array $items = null): bool
+    {
+        $existing = $this->find($id);
+        if (! $existing || $existing->status === 'converted') {
+            return false;
+        }
+
+        $this->db->transStart();
+
+        if ($items !== null) {
+            $totals = $this->sumItems($items);
+            $quote['subtotal']     = $totals['subtotal'];
+            $quote['tax_amount']   = $totals['tax'];
+            $quote['total_amount'] = $totals['total'];
+        }
+
+        if (! $this->update($id, $quote)) {
+            $this->db->transRollback();
+
+            return false;
+        }
+
+        if ($items !== null) {
+            $itemModel = new SalesQuoteItemModel();
+            $itemModel->where('quote_id', $id)->delete();
+            foreach ($items as $item) {
+                $item['quote_id']   = $id;
+                $item['line_total'] = round(((float) ($item['unit_price'] ?? 0)) * ((int) ($item['quantity'] ?? 1)), 2);
+                if (! $itemModel->insert($item)) {
+                    $this->db->transRollback();
+
+                    return false;
+                }
+            }
+        }
+
+        $this->db->transComplete();
+
+        return $this->db->transStatus();
     }
 
     /**

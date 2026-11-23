@@ -18,13 +18,23 @@
   <div class="modal-dialog modal-lg"><form class="modal-content" id="form-order">
     <div class="modal-header"><h5 class="modal-title">Orden de venta</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-      <div class="mb-2"><label class="form-label">Cliente</label>
-        <select class="form-select" name="client_id" required>
-          <option value="">—</option>
-          <?php foreach ($response['clients'] ?? [] as $c): ?>
-            <option value="<?= (int)$c->id ?>"><?= esc($c->company_name) ?></option>
-          <?php endforeach; ?>
-        </select>
+      <div class="row g-2 mb-2">
+        <div class="col-md-8"><label class="form-label">Cliente</label>
+          <select class="form-select" name="client_id" required>
+            <option value="">—</option>
+            <?php foreach ($response['clients'] ?? [] as $c): ?>
+              <option value="<?= (int)$c->id ?>"><?= esc($c->company_name) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-md-4"><label class="form-label">Sucursal</label>
+          <select class="form-select" name="branch_id">
+            <option value="">Matriz</option>
+            <?php foreach ($response['branches'] ?? [] as $b): ?>
+              <option value="<?= (int)$b->id ?>"><?= esc($b->name) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </div>
       <table class="table table-sm" id="order-items">
         <thead><tr><th>Producto</th><th>Ciclo</th><th>Precio</th><th>Cant.</th><th></th></tr></thead>
@@ -123,8 +133,10 @@ document.addEventListener('click', async e=>{
     </div>`).join('');
   const pos = (o.customer_pos||[]).map(p=>`<div class="small"><a href="<?= site_url('nat/sales/customer-po') ?>/${p.id}" target="_blank">${p.po_number}</a> · $${p.total_amount}</div>`).join('') || '<p class="text-muted small">Sin OC de cliente</p>';
   const docs = (o.documents||[]).map(d=>`<div class="small"><a href="<?= site_url('nat/sales/orders/documents') ?>/${d.id}">${d.original_name}</a></div>`).join('') || '<p class="text-muted small">Sin adjuntos</p>';
-  const recs = (o.receipts||[]).map(r=>`<div class="small">${r.receipt_number} · ${r.receipt_kind||''} · ${r.collection_status||r.status} · $${r.total_amount}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
+  const recs = (o.receipts||[]).map(r=>`<div class="small"><a target="_blank" href="<?= site_url('nat/sales/documents/receipt') ?>/${r.id}">${r.receipt_number}</a> · ${r.receipt_kind||''} · ${r.collection_status||r.status} · $${r.total_amount}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
+  const pdf = '<?= site_url('nat/sales/documents/order') ?>/' + o.id;
   document.getElementById('oc-order-body').innerHTML = `<p class="fw-bold">${o.order_number||('#'+o.id)}</p>
+    <div class="d-flex gap-2 mb-2"><a class="btn btn-sm btn-outline-secondary" target="_blank" href="${pdf}/html">Vista previa</a><a class="btn btn-sm btn-outline-danger" target="_blank" href="${pdf}">PDF</a><a class="btn btn-sm btn-outline-dark" target="_blank" href="${pdf}?action=download">Descargar</a></div>
     <h6>Partidas individuales</h6>${items}
     <h6 class="mt-3">OC del cliente</h6>${pos}
     <button class="btn btn-sm btn-outline-primary mb-2" id="btn-split-po">Generar OC (partidas)</button>

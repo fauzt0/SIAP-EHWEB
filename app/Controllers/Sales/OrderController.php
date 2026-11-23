@@ -24,6 +24,7 @@ class OrderController extends BaseSalesController
         ]);
         $this->viewData['response'] = [
             'clients'  => (new CrmClientModel())->getForSelect(),
+            'branches' => (new \App\Models\Organization\OrgBranchModel())->getActive(),
             'products' => (new \App\Models\Catalog\CatalogProductModel())
                 ->select('id, commercial_name, sku')
                 ->where('active', 1)
@@ -52,7 +53,8 @@ class OrderController extends BaseSalesController
                 esc($row->channel ?? '—'),
                 '$' . number_format((float) $row->total_amount, 2),
                 esc($row->created_at ?? ''),
-                '<button class="btn btn-outline-info btn-sm btn-show-order" data-id="' . (int) $row->id . '"><i class="fas fa-eye"></i></button>',
+                '<div class="d-flex gap-1 flex-wrap"><button class="btn btn-outline-info btn-sm btn-show-order" data-id="' . (int) $row->id . '"><i class="fas fa-eye"></i></button>'
+                    . $this->pdfButtons('order', (int) $row->id) . '</div>',
             ];
         }
 
@@ -103,6 +105,7 @@ class OrderController extends BaseSalesController
         $model = new SalesOrderModel();
         $id    = $model->createWithItems([
             'client_id'  => (int) $this->request->getPost('client_id'),
+            'branch_id'  => $this->request->getPost('branch_id') ?: null,
             'status'     => 'confirmed',
             'channel'    => 'backend',
             'order_type' => 'new',

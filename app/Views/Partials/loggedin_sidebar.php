@@ -98,6 +98,11 @@
             <li class="sidebar-item <?= url_is('nat/organization/branch*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('organization.branches') ?>">Sucursales</a>
             </li>
+            <?php if (auth()->user()->can('admin.sales-templates')): ?>
+            <li class="sidebar-item <?= url_is('nat/organization/sales-templates*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('organization.sales_templates') ?>">Plantillas PDF (ventas)</a>
+            </li>
+            <?php endif; ?>
           </ul>
         </li>
       <?php endif; ?>
@@ -163,6 +168,11 @@
           </a>
           <ul id="sales-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/sales*') ? 'show' : '' ?>"
             data-bs-parent="#sidebar">
+            <?php if (auth()->user()->can('sales.pos')): ?>
+            <li class="sidebar-item <?= url_is('nat/sales/pos*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.pos') ?>">POS de venta</a>
+            </li>
+            <?php endif; ?>
             <li class="sidebar-item <?= url_is('nat/sales/orders*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('sales.orders') ?>">Órdenes</a>
             </li>

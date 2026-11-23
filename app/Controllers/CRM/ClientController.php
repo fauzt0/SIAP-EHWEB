@@ -7,10 +7,12 @@ namespace App\Controllers\CRM;
 use App\Models\CRM\CrmBillingProfileModel;
 use App\Models\CRM\CrmClientContactModel;
 use App\Models\CRM\CrmFollowupModel;
+use App\Models\Organization\OrgBranchModel;
 use App\Models\Sales\CustomerServiceModel;
 use App\Models\Sales\SalesOrderModel;
 use App\Models\Sales\SalesQuoteModel;
 use App\Models\Users\UserActivityLogsModel;
+use App\Models\Users\UserModel;
 use App\Services\ClientCommerceBridge;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -38,6 +40,8 @@ class ClientController extends BaseCrmController
             'canDelete' => auth()->user()->can('crm.delete'),
             'canQuote'  => auth()->user()->can('sales.create') || auth()->user()->can('sales.quotes'),
             'clients'   => $this->clientModel->getForSelect(),
+            'users'     => (new UserModel())->getAssignableUsers(),
+            'branches'  => (new OrgBranchModel())->getActive(),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'CRM/clients_index');
@@ -75,12 +79,20 @@ class ClientController extends BaseCrmController
             }
             $actions .= '</div>';
 
+            $due = $row->next_followup_at ?? '';
+            $dueHtml = $due === '' || $due === null
+                ? '<span class="text-muted">—</span>'
+                : (strtotime((string) $due) < strtotime('today')
+                    ? '<span class="text-danger">' . esc($due) . '</span>'
+                    : esc($due));
             $data[] = [
                 '<span class="font-monospace small">' . esc($row->client_code) . '</span>',
                 '<div class="fw-semibold">' . esc($row->company_name) . '</div><small class="text-muted">' . esc($row->trade_name ?? '') . '</small>',
                 esc($row->rfc_tax_id ?? '—'),
                 '<span class="badge badge-subtle-' . $color . '">' . esc($label) . '</span>',
                 esc($row->email ?? '—'),
+                '$' . number_format((float) ($row->expected_value ?? 0), 2),
+                $dueHtml,
                 '<span class="badge bg-secondary">' . (int) ($row->contacts_count ?? 0) . '</span>',
                 ((int) $row->active === 1)
                     ? '<span class="badge badge-subtle-success">Sí</span>'
@@ -130,6 +142,9 @@ class ClientController extends BaseCrmController
             'plugin_links'     => $bridge->linksForClient($id),
             'can_quote'        => auth()->user()->can('sales.create') || auth()->user()->can('sales.quotes'),
             'can_collect'      => auth()->user()->can('sales.collections') || auth()->user()->can('sales.billing'),
+            'pdf_quote_base'   => site_url('nat/sales/documents/quote/'),
+            'pdf_order_base'   => site_url('nat/sales/documents/order/'),
+            'pdf_receipt_base' => site_url('nat/sales/documents/receipt/'),
         ]);
         $this->outputData['csrf'] = csrf_hash();
 
@@ -152,10 +167,25 @@ class ClientController extends BaseCrmController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
         }
 
+        $rfc = strtoupper(preg_replace('/\s+/', '', (string) $this->request->getPost('rfc_tax_id')) ?: '');
+        $dup = $this->clientModel->findDuplicateRfc($rfc !== '' ? $rfc : null, $id);
+        if ($dup && ! $this->request->getPost('allow_duplicate_rfc')) {
+            $this->setOutputError('Ya existe un cliente con el RFC ' . $dup->rfc_tax_id . ' (' . $dup->company_name . '). Confirme si desea duplicarlo.');
+            $this->outputData['duplicate_rfc'] = [
+                'id'   => (int) $dup->id,
+                'name' => $dup->company_name,
+                'code' => $dup->client_code,
+            ];
+            $this->outputData['csrf'] = csrf_hash();
+
+            return $this->response->setJSON($this->outputData);
+        }
+
+        $assigned = (int) $this->request->getPost('assigned_user_id');
         $client = [
             'company_name'     => trim((string) $this->request->getPost('company_name')),
             'trade_name'       => $this->request->getPost('trade_name') ?: null,
-            'rfc_tax_id'       => $this->request->getPost('rfc_tax_id') ?: null,
+            'rfc_tax_id'       => $rfc !== '' ? $rfc : null,
             'website'          => $this->request->getPost('website') ?: null,
             'email'            => $this->request->getPost('email') ?: null,
             'phone'            => $this->request->getPost('phone') ?: null,
@@ -163,7 +193,12 @@ class ClientController extends BaseCrmController
             'source'           => $this->request->getPost('source') ?: null,
             'notes'            => $this->request->getPost('notes') ?: null,
             'active'           => $this->request->getPost('active') ? 1 : 0,
-            'assigned_user_id' => auth()->id(),
+            'assigned_user_id' => $assigned > 0 ? $assigned : auth()->id(),
+            'branch_id'        => $this->request->getPost('branch_id') ?: null,
+            'expected_value'   => $this->request->getPost('expected_value') !== null && $this->request->getPost('expected_value') !== ''
+                ? (float) $this->request->getPost('expected_value')
+                : 0,
+            'next_followup_at' => $this->request->getPost('next_followup_at') ?: null,
         ];
 
         $contacts = $this->decodeRows((string) $this->request->getPost('contacts_json'));
@@ -213,6 +248,73 @@ class ClientController extends BaseCrmController
         $this->clientModel->delete($id);
         (new UserActivityLogsModel())->logActivity('crm_client_delete', 'Eliminó cliente ID ' . $id . ' ' . $client->company_name);
         $this->setOutputSuccess('Cliente eliminado');
+        $this->outputData['csrf'] = csrf_hash();
+
+        return $this->response->setJSON($this->outputData);
+    }
+
+    public function rfc_check(): ResponseInterface
+    {
+        $rfc = strtoupper(trim(preg_replace('/\s+/', '', (string) $this->request->getGet('rfc')) ?? ''));
+        $except = (int) $this->request->getGet('except_id');
+        $dup = $this->clientModel->findDuplicateRfc($rfc !== '' ? $rfc : null, $except > 0 ? $except : null);
+        $this->setOutputSuccess('RFC', [
+            'duplicate' => $dup !== null,
+            'client'    => $dup ? ['id' => (int) $dup->id, 'name' => $dup->company_name, 'code' => $dup->client_code] : null,
+        ]);
+
+        return $this->response->setJSON($this->outputData);
+    }
+
+    public function pipeline_ajax(): ResponseInterface
+    {
+        if (! $this->request->isAJAX()) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
+        }
+
+        $this->setOutputSuccess('Pipeline', [
+            'columns' => $this->clientModel->getPipeline(),
+            'stats'   => $this->clientModel->getStats(),
+        ]);
+
+        return $this->response->setJSON($this->outputData);
+    }
+
+    public function pipeline_move(int $id): ResponseInterface
+    {
+        if (! $this->request->isAJAX() || strtolower($this->request->getMethod()) !== 'post') {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
+        }
+
+        $status = (string) $this->request->getPost('status');
+        if (! in_array($status, ['lead', 'prospect', 'active', 'inactive', 'churned'], true)) {
+            $this->setOutputError('Estatus de pipeline no válido.');
+            $this->outputData['csrf'] = csrf_hash();
+
+            return $this->response->setJSON($this->outputData);
+        }
+
+        $client = $this->clientModel->find($id);
+        if (! $client) {
+            $this->setOutputError('Cliente no encontrado.');
+            $this->outputData['csrf'] = csrf_hash();
+
+            return $this->response->setJSON($this->outputData);
+        }
+
+        $this->clientModel->update($id, ['status' => $status]);
+        (new CrmFollowupModel())->createVersion([
+            'client_id'              => $id,
+            'followup_type'          => 'status_change',
+            'title'                  => 'Pipeline: ' . $client->status . ' → ' . $status,
+            'comment'                => 'Movimiento de pipeline CRM',
+            'created_by'             => auth()->id(),
+            'change_source'          => 'manual',
+            'followup_status'        => 'closed',
+            'client_status_snapshot' => $status,
+        ]);
+        (new UserActivityLogsModel())->logActivity('crm_pipeline_move', 'Cliente ID ' . $id . ' ' . $client->status . ' → ' . $status);
+        $this->setOutputSuccess('Pipeline actualizado', ['id' => $id, 'status' => $status]);
         $this->outputData['csrf'] = csrf_hash();
 
         return $this->response->setJSON($this->outputData);

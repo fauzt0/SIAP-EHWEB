@@ -21,8 +21,9 @@
 | Archivo | Módulo | Estado |
 |---------|--------|--------|
 | [002_hr_advanced_incidents.md](002_hr_advanced_incidents.md) | RRHH — incidencias avanzadas, justificaciones, pre-nómina | Pendiente |
-| [004_crm_clients.md](004_crm_clients.md) | CRM / clientes + enlace a ventas | Implementado 2026-11-20; cobranza 2026-11-23 |
+| [004_crm_clients.md](004_crm_clients.md) | CRM / clientes + enlace a ventas | Implementado 2026-11-20; POS/PDF 2026-11-23 |
 | [VERIFICACION_CRM_COBRANZA_2026-11-23.md](VERIFICACION_CRM_COBRANZA_2026-11-23.md) | Recibos recurrentes, OC cliente, seguimiento por contacto | Verificado 2026-11-23 |
+| [VERIFICACION_CRM_POS_PDF_2026-11-23.md](VERIFICACION_CRM_POS_PDF_2026-11-23.md) | Pipeline CRM, POS, PDF con logo y plantillas admin | Verificado 2026-11-23 |
 
 ---
 

@@ -25,10 +25,14 @@ Ciclos: `one_time`, `monthly`, `semiannual`, `annual`/`yearly`.
 
 ## Permisos Shield
 
-`crm.access`, `crm.manage`, `crm.delete` (+ `sales.access` / `sales.create` / `sales.quotes`).
+`crm.access`, `crm.manage`, `crm.delete` (+ `sales.access` / `sales.create` / `sales.quotes` / `sales.pos` / `sales.documents`).
+
+Plantillas PDF: `admin.sales-templates` (Organización → Plantillas PDF). Logos: sucursal (`org_branches.logo_path`) o empresa (`org_company_profile.logo_path`). Marcas de catálogo: `catalog_brands`.
 
 ## Hooks cableados (sin implementar plugins)
 
-`crm.client.show.tabs`, `crm.followup.created`, `sales.order.show.tabs`, `sales.quote.show.tabs`, `sales.order.created`, `sales.order.item.prepare`, `sales.receipt.issued`, `sales.receipt.paid`, `sales.customer_po.created` — `PluginHookRegistry::wiredHooks()`.
+`crm.client.show.tabs`, `crm.followup.created`, `sales.order.show.tabs`, `sales.quote.show.tabs`, `sales.order.created`, `sales.order.item.prepare`, `sales.receipt.issued`, `sales.receipt.paid`, `sales.customer_po.created`, `sales.document.html` — `PluginHookRegistry::wiredHooks()`.
+
+POS (`nat/sales/pos`): venta directa o cotización (estatus borrador/enviada, actualizar, convertir a venta). PDF cotización/orden/recibo con vista previa y descarga.
 
 Puente: `App\Services\ClientCommerceBridge`.

@@ -66,7 +66,8 @@ class BillingController extends BaseSalesController
                 '$' . number_format((float) $row->total_amount, 2),
                 '<span class="badge badge-subtle-primary">' . esc($coll) . '</span>',
                 esc($row->due_date ?? ''),
-                '<button class="btn btn-outline-info btn-sm btn-show-receipt" data-id="' . (int) $row->id . '"><i class="fas fa-eye"></i></button>',
+                '<div class="d-flex gap-1 flex-wrap"><button class="btn btn-outline-info btn-sm btn-show-receipt" data-id="' . (int) $row->id . '"><i class="fas fa-eye"></i></button>'
+                    . $this->pdfButtons('receipt', (int) $row->id) . '</div>',
             ];
         }
 

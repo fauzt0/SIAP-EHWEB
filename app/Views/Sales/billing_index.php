@@ -156,7 +156,10 @@ document.addEventListener('click', async e=>{
     <h6>Partidas</h6>${items}
     <h6 class="mt-3">Cobros</h6>${pays}
     <h6 class="mt-3">Comprobantes</h6>${proofs}
-    <div class="d-flex gap-2 mt-3">
+    <div class="d-flex gap-2 mt-3 flex-wrap">
+      <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= site_url('nat/sales/documents/receipt') ?>/${rec.id}/html">Vista previa</a>
+      <a class="btn btn-sm btn-outline-danger" target="_blank" href="<?= site_url('nat/sales/documents/receipt') ?>/${rec.id}">PDF</a>
+      <a class="btn btn-sm btn-outline-dark" target="_blank" href="<?= site_url('nat/sales/documents/receipt') ?>/${rec.id}?action=download">Descargar</a>
       <?php if (auth()->user()->can('sales.collections')): ?>
       <button class="btn btn-sm btn-success" id="btn-open-pay">Cobro</button>
       <button class="btn btn-sm btn-outline-primary" id="btn-open-proof">Comprobante</button>

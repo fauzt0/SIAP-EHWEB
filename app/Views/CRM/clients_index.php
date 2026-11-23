@@ -24,14 +24,15 @@
         ['label' => 'Leads', 'key' => 'leads', 'icon' => 'fa-user-plus', 'color' => 'info'],
         ['label' => 'Prospectos', 'key' => 'prospects', 'icon' => 'fa-filter', 'color' => 'warning'],
         ['label' => 'Activos', 'key' => 'active', 'icon' => 'fa-handshake', 'color' => 'success'],
+        ['label' => 'Pipeline $', 'key' => 'pipeline_value', 'icon' => 'fa-funnel-dollar', 'color' => 'secondary', 'money' => true],
       ];
       foreach ($cards as $card): ?>
-      <div class="col-12 col-sm-6 col-md-3 mb-3">
+      <div class="col-12 col-sm-6 col-md mb-3">
         <div class="card">
           <div class="card-body">
             <div class="float-end"><i class="fas <?= $card['icon'] ?> fa-2x text-<?= $card['color'] ?>"></i></div>
             <h5 class="card-title mb-0"><?= $card['label'] ?></h5>
-            <h3 class="mt-2 mb-0"><?= (int) ($response['stats'][$card['key']] ?? 0) ?></h3>
+            <h3 class="mt-2 mb-0"><?= !empty($card['money']) ? '$' . number_format((float) ($response['stats'][$card['key']] ?? 0), 2) : (int) ($response['stats'][$card['key']] ?? 0) ?></h3>
           </div>
         </div>
       </div>
@@ -41,7 +42,8 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Directorio</h5>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-outline-primary btn-sm" id="btn-toggle-pipeline">Pipeline</button>
           <select id="filter-status" class="form-select form-select-sm" style="width:auto">
             <option value="">Todos los estatus</option>
             <option value="lead">Lead</option>
@@ -49,6 +51,18 @@
             <option value="active">Activo</option>
             <option value="inactive">Inactivo</option>
             <option value="churned">Baja</option>
+          </select>
+          <select id="filter-assigned" class="form-select form-select-sm" style="width:auto">
+            <option value="">Todos los dueños</option>
+            <?php foreach ($response['users'] ?? [] as $u): ?>
+              <option value="<?= (int)$u->id ?>"><?= esc(trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?: $u->username) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <select id="filter-branch" class="form-select form-select-sm" style="width:auto">
+            <option value="">Todas las sucursales</option>
+            <?php foreach ($response['branches'] ?? [] as $b): ?>
+              <option value="<?= (int)$b->id ?>"><?= esc($b->name) ?></option>
+            <?php endforeach; ?>
           </select>
           <?php if (!empty($response['canManage'])): ?>
           <button class="btn btn-primary btn-sm" id="btn-new-client"><i class="fas fa-plus me-1"></i>Alta</button>
@@ -59,10 +73,16 @@
         <table id="tbl-clients" class="table table-striped w-100">
           <thead>
             <tr>
-              <th>Código</th><th>Empresa</th><th>RFC</th><th>Estatus</th><th>Email</th><th>Contactos</th><th>Activo</th><th></th>
+              <th>Código</th><th>Empresa</th><th>RFC</th><th>Estatus</th><th>Email</th><th>Valor</th><th>Próx. seg.</th><th>Contactos</th><th>Activo</th><th></th>
             </tr>
           </thead>
         </table>
+      </div>
+    </div>
+    <div class="card mt-3 d-none" id="crm-pipeline">
+      <div class="card-header"><h5 class="card-title mb-0">Pipeline comercial</h5></div>
+      <div class="card-body overflow-auto">
+        <div class="d-flex gap-3" id="pipeline-board" style="min-height:280px"></div>
       </div>
     </div>
   </div>
@@ -158,6 +178,24 @@
               <div class="col-md-6"><label class="form-label">Teléfono</label><input class="form-control" name="phone"></div>
               <div class="col-md-6"><label class="form-label">Sitio web</label><input class="form-control" name="website"></div>
               <div class="col-md-6"><label class="form-label">Origen</label><input class="form-control" name="source"></div>
+              <div class="col-md-6"><label class="form-label">Dueño</label>
+                <select class="form-select" name="assigned_user_id">
+                  <option value="">Yo</option>
+                  <?php foreach ($response['users'] ?? [] as $u): ?>
+                    <option value="<?= (int)$u->id ?>"><?= esc(trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? '')) ?: $u->username) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-md-6"><label class="form-label">Sucursal</label>
+                <select class="form-select" name="branch_id">
+                  <option value="">—</option>
+                  <?php foreach ($response['branches'] ?? [] as $b): ?>
+                    <option value="<?= (int)$b->id ?>"><?= esc($b->name) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <div class="col-md-4"><label class="form-label">Valor esperado</label><input class="form-control" type="number" step="0.01" name="expected_value" value="0"></div>
+              <div class="col-md-4"><label class="form-label">Próximo seguimiento</label><input class="form-control" type="date" name="next_followup_at"></div>
               <div class="col-12"><label class="form-label">Notas</label><textarea class="form-control" name="notes" rows="2"></textarea></div>
               <div class="col-12"><div class="form-check"><input class="form-check-input" type="checkbox" name="active" id="client-active" checked><label class="form-check-label" for="client-active">Activo</label></div></div>
             </div>
@@ -279,12 +317,14 @@ window.tblClients = $('#tbl-clients').DataTable({
     data: function(d){
       d[csrfName] = csrfVal();
       d.filter_status = document.getElementById('filter-status').value;
+      d.filter_assigned = document.getElementById('filter-assigned').value;
+      d.filter_branch = document.getElementById('filter-branch').value;
     }
   }
 });
 $('#tbl-clients').on('xhr.dt', function(e,s,j,xhr){ if(xhr) csrfHdr(xhr); });
 }
-document.getElementById('filter-status').addEventListener('change', () => tblClients.ajax.reload());
+['filter-status','filter-assigned','filter-branch'].forEach(id => document.getElementById(id).addEventListener('change', () => tblClients.ajax.reload()));
 
 document.getElementById('btn-new-client')?.addEventListener('click', () => {
   document.getElementById('form-client').reset();
@@ -379,6 +419,10 @@ document.addEventListener('click', async (e) => {
     f.website.value = c.website || '';
     f.status.value = c.status;
     f.source.value = c.source || '';
+    if (f.assigned_user_id) f.assigned_user_id.value = c.assigned_user_id || '';
+    if (f.branch_id) f.branch_id.value = c.branch_id || '';
+    if (f.expected_value) f.expected_value.value = c.expected_value || 0;
+    if (f.next_followup_at) f.next_followup_at.value = c.next_followup_at || '';
     f.notes.value = c.notes || '';
     document.getElementById('client-active').checked = Number(c.active) === 1;
     document.getElementById('contacts-rows').innerHTML = '';
@@ -421,7 +465,9 @@ function renderOffcanvas(d){
     <dt class="col-4">Teléfono</dt><dd class="col-8">${c.phone||'—'}</dd>
     <dt class="col-4">Web</dt><dd class="col-8">${c.website||'—'}</dd>
     <dt class="col-4">RFC</dt><dd class="col-8">${c.rfc_tax_id||'—'}</dd>
-    <dt class="col-4">Origen</dt><dd class="col-8">${c.source||'—'}</dd>`;
+    <dt class="col-4">Origen</dt><dd class="col-8">${c.source||'—'}</dd>
+    <dt class="col-4">Valor</dt><dd class="col-8">$${(Number(c.expected_value)||0).toFixed(2)}</dd>
+    <dt class="col-4">Próx. seg.</dt><dd class="col-8">${c.next_followup_at||'—'}</dd>`;
   currentContacts = d.contacts || [];
   const fuContact = document.getElementById('fu-contact');
   fuContact.innerHTML = '<option value="">— Cliente (sin contacto) —</option>' + currentContacts.map(x => `<option value="${x.id}">${x.name} (${x.contact_type})</option>`).join('');
@@ -429,10 +475,13 @@ function renderOffcanvas(d){
   document.getElementById('oc-billing').innerHTML = (d.billing||[]).map(x => `<div class="border rounded p-2 mb-2 small"><strong>${x.legal_name}</strong><br>RFC ${x.rfc_tax_id} · ${x.tax_regime||''}<br>${x.address||''}</div>`).join('') || '<p class="text-muted">Sin perfiles fiscales</p>';
   followupCache = d.followups || [];
   renderFollowups(followupCache);
-  document.getElementById('oc-quotes').innerHTML = (d.quotes||[]).map(x => `<div class="small">${x.quote_number} · ${x.status} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin cotizaciones</p>';
-  document.getElementById('oc-orders').innerHTML = (d.orders||[]).map(x => `<div class="small">${x.order_number||('#'+x.id)} · ${x.status} · $${x.total_amount}</div>`).join('') || '<p class="text-muted small">Sin órdenes</p>';
+  const qBase = d.pdf_quote_base || '<?= site_url('nat/sales/documents/quote') ?>/';
+  const oBase = d.pdf_order_base || '<?= site_url('nat/sales/documents/order') ?>/';
+  const rBase = d.pdf_receipt_base || '<?= site_url('nat/sales/documents/receipt') ?>/';
+  document.getElementById('oc-quotes').innerHTML = (d.quotes||[]).map(x => `<div class="small d-flex justify-content-between"><span>${x.quote_number} · ${x.status} · $${x.total_amount}</span><a target="_blank" href="${qBase}${x.id}">PDF</a></div>`).join('') || '<p class="text-muted small">Sin cotizaciones</p>';
+  document.getElementById('oc-orders').innerHTML = (d.orders||[]).map(x => `<div class="small d-flex justify-content-between"><span>${x.order_number||('#'+x.id)} · ${x.status} · $${x.total_amount}</span><a target="_blank" href="${oBase}${x.id}">PDF</a></div>`).join('') || '<p class="text-muted small">Sin órdenes</p>';
   document.getElementById('oc-services').innerHTML = (d.services||[]).map(x => `<div class="small">${x.reference_name||'Servicio'} · ${x.billing_cycle} · ${x.activation_status||''} · vence ${x.next_due_date||'—'}</div>`).join('') || '<p class="text-muted small">Sin productos asociados</p>';
-  document.getElementById('oc-receipts').innerHTML = (d.receipts||[]).map(x => `<div class="small">${x.receipt_number} · ${x.receipt_kind||''} · $${x.total_amount} · ${x.collection_status||x.status}</div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
+  document.getElementById('oc-receipts').innerHTML = (d.receipts||[]).map(x => `<div class="small d-flex justify-content-between"><span>${x.receipt_number} · ${x.receipt_kind||''} · $${x.total_amount} · ${x.collection_status||x.status}</span><a target="_blank" href="${rBase}${x.id}">PDF</a></div>`).join('') || '<p class="text-muted small">Sin recibos</p>';
   document.getElementById('oc-proofs').innerHTML = (d.proofs||[]).map(x => `<div class="small"><a href="<?= site_url('nat/sales/billing/proof') ?>/${x.id}">${x.original_name}</a></div>`).join('') || '<p class="text-muted small">Sin comprobantes</p>';
   const fc = d.forecast_next || {};
   document.getElementById('oc-forecast').innerHTML = `$${(Number(fc.total_estimated)||0).toFixed(2)} · ${fc.count||0} vencimiento(s)<br><span class="text-muted">${(fc.period&&fc.period.start)||''} → ${(fc.period&&fc.period.end)||''}</span>`;
@@ -531,6 +580,44 @@ document.getElementById('form-quote-crm')?.addEventListener('submit', async ev=>
     bootstrap.Modal.getInstance(document.getElementById('modal-quote-crm')).hide();
     openClient(currentClientId);
   }
+});
+
+const canManagePipeline = <?= !empty($response['canManage']) ? 'true' : 'false' ?>;
+const pipeLabels = {lead:'Lead', prospect:'Prospecto', active:'Activo', inactive:'Inactivo', churned:'Baja'};
+async function loadPipeline(){
+  const r = await fetch('<?= route_to('crm.pipeline.ajax') ?>', {headers:{'X-Requested-With':'XMLHttpRequest'}});
+  const j = await r.json();
+  if(!j.success) return;
+  const cols = j.response.columns || {};
+  document.getElementById('pipeline-board').innerHTML = Object.keys(pipeLabels).map(st=>{
+    const cards = (cols[st]||[]).map(c=>`<div class="border rounded p-2 mb-2 bg-white pipe-card" data-id="${c.id}">
+      <div class="fw-semibold small">${c.company_name}</div>
+      <div class="text-muted small">${c.client_code||''} · $${Number(c.expected_value||0).toFixed(2)}</div>
+      <div class="small">${c.next_followup_at||'sin fecha'}</div>
+      ${canManagePipeline ? `<select class="form-select form-select-sm mt-1 pipe-move" data-id="${c.id}">
+        ${Object.keys(pipeLabels).map(s=>`<option value="${s}" ${s===st?'selected':''}>${pipeLabels[s]}</option>`).join('')}
+      </select>` : ''}
+    </div>`).join('') || '<p class="text-muted small">Vacío</p>';
+    return `<div class="flex-fill" style="min-width:180px"><div class="fw-bold mb-2">${pipeLabels[st]} <span class="badge bg-secondary">${(cols[st]||[]).length}</span></div>${cards}</div>`;
+  }).join('');
+}
+document.getElementById('btn-toggle-pipeline').addEventListener('click', ()=>{
+  const el = document.getElementById('crm-pipeline');
+  el.classList.toggle('d-none');
+  if(!el.classList.contains('d-none')) loadPipeline();
+});
+document.getElementById('pipeline-board').addEventListener('change', async e=>{
+  const sel = e.target.closest('.pipe-move'); if(!sel) return;
+  const fd = new FormData(); fd.append('status', sel.value); fd.append(csrfName, csrfVal());
+  const r = await fetch('<?= site_url('nat/crm/pipeline/move') ?>/' + sel.dataset.id, {method:'POST', headers: ajaxHeaders(), body: fd});
+  csrfHdr(r.headers);
+  const j = await r.json();
+  notifyShow(j.message, j.success?'success':'danger');
+  if(j.success){ loadPipeline(); tblClients.ajax.reload(null,false); }
+});
+document.getElementById('pipeline-board').addEventListener('click', e=>{
+  const card = e.target.closest('.pipe-card');
+  if(card && !e.target.closest('.pipe-move')) openClient(card.dataset.id);
 });
 </script>
 <?php $this->endSection(); ?>

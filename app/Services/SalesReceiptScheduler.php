@@ -48,6 +48,7 @@ final class SalesReceiptScheduler
             $id    = $recs->issue([
                 'client_id'    => (int) $order->client_id,
                 'order_id'     => $orderId,
+                'branch_id'    => $order->branch_id ?? null,
                 'receipt_kind' => 'one_time',
                 'is_initial'   => 1,
                 'period_label' => 'ONE-' . $orderId,
@@ -147,9 +148,11 @@ final class SalesReceiptScheduler
         $itemId   = $item !== null ? (int) $item->id : null;
         $itemName = $svc->reference_name ?: ($item !== null ? (string) $item->item_name : 'Renovación');
         $itemRef  = $svc->plugin_ref ?? ($item !== null ? ($item->plugin_ref ?? null) : null);
+        $orderBranch = $this->dbBranchForOrder((int) $svc->order_id);
         $id       = $recs->issue([
             'client_id'     => (int) $svc->client_id,
             'order_id'      => (int) $svc->order_id,
+            'branch_id'     => $orderBranch,
             'service_id'    => (int) $svc->id,
             'order_item_id' => $itemId,
             'receipt_kind'  => 'renewal',
@@ -183,6 +186,13 @@ final class SalesReceiptScheduler
         (new CustomerServiceModel())->update((int) $svc->id, $payload);
 
         return $id;
+    }
+
+    private function dbBranchForOrder(int $orderId): ?int
+    {
+        $row = db_connect()->table('sales_orders')->select('branch_id')->where('id', $orderId)->get()->getRow();
+
+        return $row && $row->branch_id ? (int) $row->branch_id : null;
     }
 
     /**

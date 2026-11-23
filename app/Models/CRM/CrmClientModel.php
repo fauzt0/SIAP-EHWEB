@@ -20,7 +20,7 @@ class CrmClientModel extends Model
     protected $allowedFields    = [
         'client_code', 'company_name', 'trade_name', 'rfc_tax_id', 'website',
         'email', 'phone', 'status', 'source', 'assigned_user_id', 'branch_id',
-        'notes', 'plugin_ref', 'active',
+        'expected_value', 'next_followup_at', 'notes', 'plugin_ref', 'active',
     ];
 
     protected $useTimestamps = true;
@@ -43,6 +43,8 @@ class CrmClientModel extends Model
             'crm_clients.rfc_tax_id',
             'crm_clients.status',
             'crm_clients.email',
+            'crm_clients.expected_value',
+            'crm_clients.next_followup_at',
             null,
             'crm_clients.active',
             null,
@@ -66,6 +68,12 @@ class CrmClientModel extends Model
 
         if (! empty($postData['filter_status'])) {
             $this->builder()->where('crm_clients.status', $postData['filter_status']);
+        }
+        if (! empty($postData['filter_assigned'])) {
+            $this->builder()->where('crm_clients.assigned_user_id', (int) $postData['filter_assigned']);
+        }
+        if (! empty($postData['filter_branch'])) {
+            $this->builder()->where('crm_clients.branch_id', (int) $postData['filter_branch']);
         }
         if (isset($postData['filter_active']) && $postData['filter_active'] !== '') {
             $this->builder()->where('crm_clients.active', (int) $postData['filter_active']);
@@ -186,16 +194,61 @@ class CrmClientModel extends Model
             ->select('SUM(CASE WHEN status = "lead" THEN 1 ELSE 0 END) AS leads', false)
             ->select('SUM(CASE WHEN status = "prospect" THEN 1 ELSE 0 END) AS prospects', false)
             ->select('SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) AS active_clients', false)
+            ->select('SUM(CASE WHEN status IN ("lead","prospect") THEN expected_value ELSE 0 END) AS pipeline_value', false)
             ->where('deleted_at', null)
             ->get()
             ->getRowArray();
 
         return [
-            'total'     => (int) ($row['total'] ?? 0),
-            'leads'     => (int) ($row['leads'] ?? 0),
-            'prospects' => (int) ($row['prospects'] ?? 0),
-            'active'    => (int) ($row['active_clients'] ?? 0),
+            'total'          => (int) ($row['total'] ?? 0),
+            'leads'          => (int) ($row['leads'] ?? 0),
+            'prospects'      => (int) ($row['prospects'] ?? 0),
+            'active'         => (int) ($row['active_clients'] ?? 0),
+            'pipeline_value' => (float) ($row['pipeline_value'] ?? 0),
         ];
+    }
+
+    /**
+     * @return array<string,list<object>>
+     */
+    public function getPipeline(): array
+    {
+        $rows = $this->select('crm_clients.*, users.username, users.first_name, users.last_name, org_branches.name AS branch_name')
+            ->join('users', 'users.id = crm_clients.assigned_user_id', 'left')
+            ->join('org_branches', 'org_branches.id = crm_clients.branch_id', 'left')
+            ->orderBy('crm_clients.next_followup_at', 'ASC')
+            ->findAll(500);
+
+        $cols = [
+            'lead'     => [],
+            'prospect' => [],
+            'active'   => [],
+            'inactive' => [],
+            'churned'  => [],
+        ];
+        foreach ($rows as $row) {
+            $key = $row->status ?? 'lead';
+            if (! isset($cols[$key])) {
+                $cols[$key] = [];
+            }
+            $cols[$key][] = $row;
+        }
+
+        return $cols;
+    }
+
+    public function findDuplicateRfc(?string $rfc, ?int $exceptId = null): ?object
+    {
+        $rfc = strtoupper(preg_replace('/\s+/', '', (string) $rfc) ?? '');
+        if ($rfc === '') {
+            return null;
+        }
+        $builder = $this->where('rfc_tax_id', $rfc);
+        if ($exceptId) {
+            $builder->where('id !=', $exceptId);
+        }
+
+        return $builder->first();
     }
 
     public function getForSelect(): array

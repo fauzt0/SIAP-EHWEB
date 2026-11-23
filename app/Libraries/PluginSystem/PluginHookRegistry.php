@@ -126,6 +126,7 @@ class PluginHookRegistry
             'sales.customer_po.created',
             'sales.order.documents',
             'sales.collections.forecast',
+            'sales.document.html',
         ];
     }
 }

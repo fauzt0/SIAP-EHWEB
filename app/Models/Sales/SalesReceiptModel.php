@@ -21,7 +21,7 @@ class SalesReceiptModel extends Model
         'customer_po_id', 'invoice_id', 'status', 'receipt_kind', 'is_initial',
         'period_label', 'period_start', 'period_end', 'due_date', 'collection_status',
         'subtotal', 'tax_amount', 'total_amount', 'currency', 'notes', 'plugin_ref',
-        'issued_at', 'created_by',
+        'issued_at', 'created_by', 'branch_id',
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
@@ -96,10 +96,17 @@ class SalesReceiptModel extends Model
 
         $this->db->transBegin();
 
+        $branchId = $header['branch_id'] ?? null;
+        if (! $branchId) {
+            $orderRow = $this->db->table('sales_orders')->select('branch_id')->where('id', (int) $header['order_id'])->get()->getRow();
+            $branchId = $orderRow->branch_id ?? null;
+        }
+
         $receiptId = $this->insert([
             'receipt_number'    => $header['receipt_number'] ?? $this->nextNumber(),
             'client_id'         => (int) $header['client_id'],
             'order_id'          => (int) $header['order_id'],
+            'branch_id'         => $branchId ?: null,
             'service_id'        => $header['service_id'] ?? null,
             'order_item_id'     => $header['order_item_id'] ?? null,
             'customer_po_id'    => $header['customer_po_id'] ?? null,

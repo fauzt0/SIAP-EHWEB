@@ -195,6 +195,9 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('clients/store', 'CRM\ClientController::store', ['as' => 'crm.clients.store', 'filter' => 'permission:crm.manage']);
         $routes->post('clients/update/(:num)', 'CRM\ClientController::update/$1', ['as' => 'crm.clients.update', 'filter' => 'permission:crm.manage']);
         $routes->post('clients/delete/(:num)', 'CRM\ClientController::delete/$1', ['as' => 'crm.clients.delete', 'filter' => 'permission:crm.delete']);
+        $routes->get('clients/rfc_check', 'CRM\ClientController::rfc_check', ['as' => 'crm.clients.rfc_check']);
+        $routes->get('pipeline_ajax', 'CRM\ClientController::pipeline_ajax', ['as' => 'crm.pipeline.ajax']);
+        $routes->post('pipeline/move/(:num)', 'CRM\ClientController::pipeline_move/$1', ['as' => 'crm.pipeline.move', 'filter' => 'permission:crm.manage']);
         $routes->get('clients/(:num)/followups', 'CRM\FollowupController::history_ajax/$1', ['as' => 'crm.followups.history']);
         $routes->post('clients/(:num)/followups', 'CRM\FollowupController::store/$1', ['as' => 'crm.followups.store', 'filter' => 'permission:crm.manage']);
     });
@@ -213,7 +216,17 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('quotes/list_ajax', 'Sales\QuoteController::list_ajax', ['as' => 'sales.quotes.ajax']);
         $routes->get('quotes/show_ajax/(:num)', 'Sales\QuoteController::show_ajax/$1', ['as' => 'sales.quotes.show_ajax']);
         $routes->post('quotes/store', 'Sales\QuoteController::store', ['as' => 'sales.quotes.store', 'filter' => 'permission:sales.create']);
+        $routes->post('quotes/update/(:num)', 'Sales\QuoteController::update/$1', ['as' => 'sales.quotes.update', 'filter' => 'permission:sales.create']);
         $routes->post('quotes/convert/(:num)', 'Sales\QuoteController::convert/$1', ['as' => 'sales.quotes.convert', 'filter' => 'permission:sales.create']);
+        $routes->get('pos', 'Sales\PosController::index', ['as' => 'sales.pos', 'filter' => 'permission:sales.pos']);
+        $routes->get('pos/products_ajax', 'Sales\PosController::products_ajax', ['as' => 'sales.pos.products', 'filter' => 'permission:sales.pos']);
+        $routes->post('pos/checkout', 'Sales\PosController::checkout', ['as' => 'sales.pos.checkout', 'filter' => 'permission:sales.create']);
+        $routes->get('documents/quote/(:num)', 'Sales\DocumentController::quote/$1', ['as' => 'sales.documents.quote', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/order/(:num)', 'Sales\DocumentController::order/$1', ['as' => 'sales.documents.order', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/receipt/(:num)', 'Sales\DocumentController::receipt/$1', ['as' => 'sales.documents.receipt', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/quote/(:num)/html', 'Sales\DocumentController::previewQuote/$1', ['as' => 'sales.documents.quote.html', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/order/(:num)/html', 'Sales\DocumentController::previewOrder/$1', ['as' => 'sales.documents.order.html', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/receipt/(:num)/html', 'Sales\DocumentController::previewReceipt/$1', ['as' => 'sales.documents.receipt.html', 'filter' => 'permission:sales.documents']);
         $routes->get('services', 'Sales\OrderController::services', ['as' => 'sales.services']);
         $routes->post('services/list_ajax', 'Sales\OrderController::services_ajax', ['as' => 'sales.services.ajax']);
         $routes->get('billing', 'Sales\BillingController::index', ['as' => 'sales.billing', 'filter' => 'permission:sales.billing']);
@@ -242,6 +255,8 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('branch/save', 'Organization\OrganizationController::saveBranch', ['as' => 'organization.branch.save']);
         $routes->post('branch/toggle_status/(:num)', 'Organization\OrganizationController::toggleBranchStatus/$1', ['as' => 'organization.branch.toggle_status']);
         $routes->post('branch/delete/(:num)', 'Organization\OrganizationController::deleteBranch/$1', ['as' => 'organization.branch.delete']);
+        $routes->get('sales-templates', 'Organization\SalesDocumentTemplateController::index', ['as' => 'organization.sales_templates', 'filter' => 'permission:admin.sales-templates']);
+        $routes->post('sales-templates/update/(:num)', 'Organization\SalesDocumentTemplateController::update/$1', ['as' => 'organization.sales_templates.update', 'filter' => 'permission:admin.sales-templates']);
     });
 
         // ── Módulo de Gestión de Proveedores ───────────────────────────

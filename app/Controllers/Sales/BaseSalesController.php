@@ -24,4 +24,17 @@ class BaseSalesController extends BaseController
         ]);
         $this->setPageTittleAhead('Ventas', 'Cotizaciones y órdenes');
     }
+
+    protected function pdfButtons(string $kind, int $id): string
+    {
+        if (! auth()->user()->can('sales.documents')) {
+            return '';
+        }
+        $pdf  = site_url('nat/sales/documents/' . $kind . '/' . $id);
+        $html = site_url('nat/sales/documents/' . $kind . '/' . $id . '/html');
+
+        return '<a class="btn btn-outline-secondary btn-sm" href="' . $html . '" target="_blank" title="Vista previa"><i class="fas fa-eye"></i></a>'
+            . '<a class="btn btn-outline-danger btn-sm" href="' . $pdf . '" target="_blank" title="PDF"><i class="fas fa-file-pdf"></i></a>'
+            . '<a class="btn btn-outline-dark btn-sm" href="' . $pdf . '?action=download" title="Descargar"><i class="fas fa-download"></i></a>';
+    }
 }

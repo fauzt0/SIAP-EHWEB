@@ -23,7 +23,7 @@ class SalesOrderModel extends Model
     protected $allowedFields    = [
         'order_number', 'user_id', 'client_id', 'quote_id', 'status', 'channel',
         'order_type', 'subtotal', 'tax_amount', 'discount_amount', 'total_amount',
-        'currency', 'discount_code', 'notes', 'created_by', 'plugin_ref',
+        'currency', 'discount_code', 'notes', 'created_by', 'plugin_ref', 'branch_id',
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';

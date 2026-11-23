@@ -6,6 +6,7 @@ namespace App\Controllers\Sales;
 
 use App\Models\CRM\CrmClientModel;
 use App\Models\CRM\CrmFollowupModel;
+use App\Models\Organization\OrgBranchModel;
 use App\Models\Sales\SalesOrderModel;
 use App\Models\Sales\SalesQuoteModel;
 use App\Models\Users\UserActivityLogsModel;
@@ -26,6 +27,8 @@ class QuoteController extends BaseSalesController
         $this->viewData['response'] = [
             'clients'  => (new CrmClientModel())->getForSelect(),
             'products' => $this->catalogProducts(),
+            'branches' => (new OrgBranchModel())->getActive(),
+            'canEdit'  => auth()->user()->can('sales.edit') || auth()->user()->can('sales.create'),
         ];
 
         return $this->renderLayout('Layouts/user_loggedin_layout', 'Sales/quotes_index');
@@ -41,17 +44,22 @@ class QuoteController extends BaseSalesController
         $post  = $this->request->getPost();
         $list  = $model->get_datatables($post);
         $data  = [];
+        $canConvert = auth()->user()->can('sales.create');
+        $canEdit    = auth()->user()->can('sales.edit') || auth()->user()->can('sales.create');
         foreach ($list as $row) {
-            $actions = '<div class="d-flex gap-1">'
+            $actions = '<div class="d-flex gap-1 flex-wrap">'
                 . '<button class="btn btn-outline-info btn-sm btn-show-quote" data-id="' . (int) $row->id . '"><i class="fas fa-eye"></i></button>';
-            if (auth()->user()->can('sales.create') && $row->status !== 'converted') {
-                $actions .= '<button class="btn btn-outline-success btn-sm btn-convert-quote" data-id="' . (int) $row->id . '"><i class="fas fa-file-invoice-dollar"></i></button>';
+            if ($canEdit && $row->status !== 'converted') {
+                $actions .= '<button class="btn btn-outline-warning btn-sm btn-edit-quote" data-id="' . (int) $row->id . '"><i class="fas fa-edit"></i></button>';
             }
-            $actions .= '</div>';
+            if ($canConvert && ! in_array($row->status, ['converted', 'rejected'], true)) {
+                $actions .= '<button class="btn btn-outline-success btn-sm btn-convert-quote" data-id="' . (int) $row->id . '" title="Convertir a venta"><i class="fas fa-file-invoice-dollar"></i></button>';
+            }
+            $actions .= $this->pdfButtons('quote', (int) $row->id) . '</div>';
             $data[] = [
                 '<span class="font-monospace">' . esc($row->quote_number) . '</span>',
                 esc($row->company_name ?? '—'),
-                '<span class="badge badge-subtle-primary">' . esc($row->status) . '</span>',
+                '<span class="badge badge-subtle-primary">' . esc($this->statusLabel($row->status)) . '</span>',
                 '$' . number_format((float) $row->total_amount, 2),
                 esc($row->valid_until ?? '—'),
                 $actions,
@@ -82,6 +90,8 @@ class QuoteController extends BaseSalesController
         $this->setOutputSuccess('Cotización', [
             'quote'       => $quote,
             'plugin_tabs' => (new ClientCommerceBridge())->collectQuoteTabs($id),
+            'pdf'         => site_url('nat/sales/documents/quote/' . $id),
+            'pdf_html'    => site_url('nat/sales/documents/quote/' . $id . '/html'),
         ]);
         $this->outputData['csrf'] = csrf_hash();
 
@@ -90,47 +100,90 @@ class QuoteController extends BaseSalesController
 
     public function store(): ResponseInterface
     {
+        return $this->persist(null);
+    }
+
+    public function update(int $id): ResponseInterface
+    {
+        return $this->persist($id);
+    }
+
+    private function persist(?int $id): ResponseInterface
+    {
         if (! $this->request->isAJAX() || strtolower($this->request->getMethod()) !== 'post') {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
         }
 
-        $items = json_decode((string) $this->request->getPost('items_json'), true);
-        if (! is_array($items) || $items === []) {
+        $rawItems = $this->request->getPost('items_json');
+        $items    = $rawItems === null || $rawItems === '' ? null : json_decode((string) $rawItems, true);
+        if ($id === null && (! is_array($items) || $items === [])) {
+            $this->setOutputError('Agregue al menos un renglón.');
+            $this->outputData['csrf'] = csrf_hash();
+
+            return $this->response->setJSON($this->outputData);
+        }
+        if (is_array($items) && $items === []) {
             $this->setOutputError('Agregue al menos un renglón.');
             $this->outputData['csrf'] = csrf_hash();
 
             return $this->response->setJSON($this->outputData);
         }
 
-        $model = new SalesQuoteModel();
-        $id    = $model->createWithItems([
-            'client_id'   => (int) $this->request->getPost('client_id'),
-            'status'      => $this->request->getPost('status') ?: 'draft',
-            'valid_until' => $this->request->getPost('valid_until') ?: null,
-            'notes'       => $this->request->getPost('notes'),
-            'created_by'  => auth()->id(),
-        ], $items);
-
-        if (! $id) {
-            $this->setOutputError('No se pudo guardar la cotización.', $model->errors());
-            $this->outputData['csrf'] = csrf_hash();
-
-            return $this->response->setJSON($this->outputData);
+        $status = $this->request->getPost('status') ?: 'draft';
+        if (! in_array($status, ['draft', 'sent', 'approved', 'rejected', 'expired'], true)) {
+            $status = 'draft';
         }
 
-        $quote = $model->find($id);
-        (new CrmFollowupModel())->createVersion([
-            'client_id'         => (int) $quote->client_id,
-            'followup_type'     => 'quote',
-            'title'             => 'Cotización ' . $quote->quote_number,
-            'comment'           => 'Alta de cotización',
-            'sales_quote_id'    => $id,
-            'created_by'        => auth()->id(),
-            'change_source'     => 'auto',
-            'followup_status'   => 'closed',
-        ]);
-        (new UserActivityLogsModel())->logActivity('sales_quote_create', 'Cotización ID ' . $id . ' ' . $quote->quote_number);
-        $this->setOutputSuccess('Cotización creada', ['id' => $id]);
+        $payload = [
+            'client_id'   => (int) $this->request->getPost('client_id'),
+            'branch_id'   => $this->request->getPost('branch_id') ?: null,
+            'channel'     => $this->request->getPost('channel') ?: 'backend',
+            'status'      => $status,
+            'valid_until' => $this->request->getPost('valid_until') ?: null,
+            'notes'       => $this->request->getPost('notes'),
+        ];
+
+        $model = new SalesQuoteModel();
+        if ($id === null) {
+            $payload['created_by'] = auth()->id();
+            $newId = $model->createWithItems($payload, $items ?? []);
+            if (! $newId) {
+                $this->setOutputError('No se pudo guardar la cotización.', $model->errors());
+                $this->outputData['csrf'] = csrf_hash();
+
+                return $this->response->setJSON($this->outputData);
+            }
+            $quote = $model->find($newId);
+            (new CrmFollowupModel())->createVersion([
+                'client_id'       => (int) $quote->client_id,
+                'followup_type'   => 'quote',
+                'title'           => 'Cotización ' . $quote->quote_number,
+                'comment'         => 'Alta de cotización',
+                'sales_quote_id'  => $newId,
+                'created_by'      => auth()->id(),
+                'change_source'   => 'auto',
+                'followup_status' => 'closed',
+            ]);
+            (new UserActivityLogsModel())->logActivity('sales_quote_create', 'Cotización ID ' . $newId . ' ' . $quote->quote_number);
+            $this->setOutputSuccess('Cotización creada', [
+                'id'  => $newId,
+                'pdf' => site_url('nat/sales/documents/quote/' . $newId),
+            ]);
+        } else {
+            $ok = $model->updateWithItems($id, $payload, is_array($items) ? $items : null);
+            if (! $ok) {
+                $this->setOutputError('No se pudo actualizar (¿ya convertida?).', $model->errors());
+                $this->outputData['csrf'] = csrf_hash();
+
+                return $this->response->setJSON($this->outputData);
+            }
+            (new UserActivityLogsModel())->logActivity('sales_quote_update', 'Cotización ID ' . $id . ' estatus ' . $status);
+            $this->setOutputSuccess('Cotización actualizada', [
+                'id'  => $id,
+                'pdf' => site_url('nat/sales/documents/quote/' . $id),
+            ]);
+        }
+
         $this->outputData['csrf'] = csrf_hash();
 
         return $this->response->setJSON($this->outputData);
@@ -144,7 +197,7 @@ class QuoteController extends BaseSalesController
 
         $quoteModel = new SalesQuoteModel();
         $quote      = $quoteModel->getWithItems($id);
-        if (! $quote || $quote->status === 'converted') {
+        if (! $quote || in_array($quote->status, ['converted', 'rejected'], true)) {
             $this->setOutputError('No se puede convertir esta cotización.');
             $this->outputData['csrf'] = csrf_hash();
 
@@ -160,14 +213,16 @@ class QuoteController extends BaseSalesController
                 'unit_price'    => $item->unit_price,
                 'quantity'      => $item->quantity,
                 'billing_cycle' => $item->billing_cycle,
+                'period_start'  => date('Y-m-d'),
             ];
         }
 
         $orderId = (new SalesOrderModel())->createWithItems([
             'client_id'  => $quote->client_id,
             'quote_id'   => $id,
+            'branch_id'  => $quote->branch_id ?? null,
             'status'     => 'confirmed',
-            'channel'    => 'backend',
+            'channel'    => $quote->channel ?: 'backend',
             'order_type' => 'new',
             'created_by' => auth()->id(),
             'notes'      => 'Convertida de ' . $quote->quote_number,
@@ -181,8 +236,22 @@ class QuoteController extends BaseSalesController
         }
 
         $quoteModel->update($id, ['status' => 'converted', 'converted_order_id' => $orderId]);
+        (new CrmFollowupModel())->createVersion([
+            'client_id'       => (int) $quote->client_id,
+            'followup_type'   => 'order',
+            'title'           => 'Cotización ' . $quote->quote_number . ' convertida a venta',
+            'comment'         => 'Orden #' . $orderId,
+            'sales_quote_id'  => $id,
+            'sales_order_id'  => $orderId,
+            'created_by'      => auth()->id(),
+            'change_source'   => 'auto',
+            'followup_status' => 'closed',
+        ]);
         (new UserActivityLogsModel())->logActivity('sales_quote_convert', 'Cotización ID ' . $id . ' → orden ' . $orderId);
-        $this->setOutputSuccess('Convertida a orden', ['order_id' => $orderId]);
+        $this->setOutputSuccess('Convertida a venta', [
+            'order_id' => $orderId,
+            'pdf'      => site_url('nat/sales/documents/order/' . $orderId),
+        ]);
         $this->outputData['csrf'] = csrf_hash();
 
         return $this->response->setJSON($this->outputData);
@@ -198,5 +267,18 @@ class QuoteController extends BaseSalesController
             ->where('active', 1)
             ->orderBy('commercial_name', 'ASC')
             ->findAll();
+    }
+
+    private function statusLabel(?string $status): string
+    {
+        return match ($status) {
+            'draft'     => 'Borrador',
+            'sent'      => 'Enviada',
+            'approved'  => 'Aprobada',
+            'rejected'  => 'Rechazada',
+            'expired'   => 'Vencida',
+            'converted' => 'Convertida',
+            default     => (string) $status,
+        };
     }
 }

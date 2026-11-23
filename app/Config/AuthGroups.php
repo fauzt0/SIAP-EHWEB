@@ -136,6 +136,8 @@ class AuthGroups extends ShieldAuthGroups
         'admin.access'        => 'Can access the admin dashboard',
         'admin.settings'      => 'Can access the main ERP settings',
         'admin.manage-users'  => 'Can manage users',
+        'admin.manage-organization' => 'Perfil de empresa, sucursales y logos',
+        'admin.sales-templates' => 'Editar plantillas PDF de cotización, venta y recibo',
         'admin.audit-log'     => 'Ver bitácora global del sistema',
         'admin.manage-plugins' => 'Instalar, desinstalar y configurar plugins del sistema',
         
@@ -167,6 +169,8 @@ class AuthGroups extends ShieldAuthGroups
         'sales.billing'       => 'Emitir recibos y preparar facturas',
         'sales.collections'   => 'Registrar cobros y comprobantes de pago',
         'sales.activate'      => 'Activar productos o servicios vendidos',
+        'sales.pos'           => 'Punto de venta: ventas directas y cotizaciones de mostrador',
+        'sales.documents'     => 'Previsualizar y exportar PDF de cotización, venta y recibo',
 
         // CRM
         'crm.access'          => 'Ver clientes, leads y seguimiento',

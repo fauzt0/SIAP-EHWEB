@@ -292,6 +292,7 @@ class AlertController extends BaseController
         if ($user->can('crm.access')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleLeads'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectOpenFollowups'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueCrmFollowups'));
         }
 
         if ($user->can('sales.access')) {
@@ -884,6 +885,32 @@ class AlertController extends BaseController
         }
 
         return $alerts;
+    }
+
+    private function _detectDueCrmFollowups(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('crm_clients') || ! $db->fieldExists('next_followup_at', 'crm_clients')) {
+            return [];
+        }
+        $count = $db->table('crm_clients')
+            ->where('next_followup_at <=', date('Y-m-d'))
+            ->where('next_followup_at IS NOT NULL', null, false)
+            ->whereIn('status', ['lead', 'prospect', 'active'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-calendar-check',
+            'title'      => 'Seguimientos CRM vencidos',
+            'message'    => $count . ' cliente(s) con próximo seguimiento vencido o para hoy',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.clients'),
+        ])];
     }
 
     private function _detectStaleLeads(): array
