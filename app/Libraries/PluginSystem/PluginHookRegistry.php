@@ -127,6 +127,7 @@ class PluginHookRegistry
             'sales.order.documents',
             'sales.collections.forecast',
             'sales.document.html',
+            'accounting.ledger.posted',
         ];
     }
 }

@@ -28,7 +28,7 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
     //rutas de administracion de usuarios
     $routes->group('user', function ($routes) {//agrupamos todas las rutas de administracion de usuarios en un solo grupo
       $routes->get('/', 'Users\UserController::index', ['as' => 'users.list', 'filter' => 'permission:admin.manage-users']); //acceso principal            
-      $routes->get('list', 'Users\UserController::index', ['filter' => 'permission:admin.manage-users']); //acceso principal      
+      $routes->get('list', 'Users\UserController::index', ['as' => 'users.list.page', 'filter' => 'permission:admin.manage-users']); //acceso principal      
       $routes->post('list_ajax', 'Users\UserController::list_ajax', ['as' => 'users.list_ajax', 'filter' => 'permission:admin.manage-users']); //acceso principal 
 
       $routes->post('create', 'Users\UserController::create', ['as' => 'user.create', 'filter' => 'permission:users.create']); //crear nuevo usuario (peticion de form o ajax)
@@ -427,6 +427,35 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
                 'as' => 'alerts.history_ajax',
             ]);
         });
+
+    // ── Contabilidad / tesorería ──────────────────────────────────────────
+    $routes->group('accounting', ['filter' => 'permission:finance.access'], function ($routes) {
+      $routes->get('/', 'Accounting\DashboardController::index', ['as' => 'accounting.dashboard']);
+      $routes->post('ledger_ajax', 'Accounting\DashboardController::ledger_ajax', ['as' => 'accounting.ledger_ajax']);
+
+      $routes->get('funds', 'Accounting\FundRequestController::index', ['as' => 'accounting.funds']);
+      $routes->post('funds/list_ajax', 'Accounting\FundRequestController::list_ajax', ['as' => 'accounting.funds.ajax']);
+      $routes->post('funds/store', 'Accounting\FundRequestController::store', ['as' => 'accounting.funds.store', 'filter' => 'permission:finance.transactions']);
+      $routes->post('funds/approve/(:num)', 'Accounting\FundRequestController::approve/$1', ['as' => 'accounting.funds.approve', 'filter' => 'permission:finance.transactions']);
+      $routes->post('funds/reject/(:num)', 'Accounting\FundRequestController::reject/$1', ['as' => 'accounting.funds.reject', 'filter' => 'permission:finance.transactions']);
+      $routes->post('funds/execute/(:num)', 'Accounting\FundRequestController::execute/$1', ['as' => 'accounting.funds.execute', 'filter' => 'permission:finance.transactions']);
+
+      $routes->get('expenses', 'Accounting\ExpenseController::index', ['as' => 'accounting.expenses']);
+      $routes->post('expenses/list_ajax', 'Accounting\ExpenseController::list_ajax', ['as' => 'accounting.expenses.ajax']);
+      $routes->post('expenses/store', 'Accounting\ExpenseController::store', ['as' => 'accounting.expenses.store', 'filter' => 'permission:finance.transactions']);
+      $routes->post('expenses/mark_paid/(:num)', 'Accounting\ExpenseController::mark_paid/$1', ['as' => 'accounting.expenses.pay', 'filter' => 'permission:finance.transactions']);
+
+      $routes->get('invoices', 'Accounting\InvoiceController::index', ['as' => 'accounting.invoices']);
+      $routes->post('invoices/supplier_ajax', 'Accounting\InvoiceController::supplier_list_ajax', ['as' => 'accounting.invoices.supplier_ajax']);
+      $routes->post('invoices/sales_ajax', 'Accounting\InvoiceController::sales_list_ajax', ['as' => 'accounting.invoices.sales_ajax']);
+      $routes->post('invoices/supplier/store', 'Accounting\InvoiceController::store_supplier', ['as' => 'accounting.invoices.supplier.store', 'filter' => 'permission:finance.transactions']);
+      $routes->post('invoices/supplier/pay/(:num)', 'Accounting\InvoiceController::pay_supplier/$1', ['as' => 'accounting.invoices.supplier.pay', 'filter' => 'permission:finance.transactions']);
+      $routes->post('invoices/sales/issue/(:num)', 'Accounting\InvoiceController::issue_sales/$1', ['as' => 'accounting.invoices.sales.issue', 'filter' => 'permission:finance.transactions']);
+
+      $routes->get('accounts', 'Accounting\AccountController::index', ['as' => 'accounting.accounts', 'filter' => 'permission:finance.settings']);
+      $routes->post('accounts/list_ajax', 'Accounting\AccountController::list_ajax', ['as' => 'accounting.accounts.ajax', 'filter' => 'permission:finance.settings']);
+      $routes->post('accounts/store', 'Accounting\AccountController::store', ['as' => 'accounting.accounts.store', 'filter' => 'permission:finance.settings']);
+    });
 
   });//fin del grupo protegido por sesion
 

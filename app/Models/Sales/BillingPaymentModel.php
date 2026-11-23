@@ -90,6 +90,14 @@ class BillingPaymentModel extends Model
                 }
                 (new SalesReceiptModel())->update($receiptId, ['collection_status' => $cStatus]);
                 \App\Libraries\PluginSystem\PluginHookRegistry::doAction('sales.receipt.paid', $receiptId, $paidR);
+                try {
+                    (new \App\Services\AccountingPostingService())->fromSalesPayment(
+                        (int) $id,
+                        (float) ($data['amount_paid'] ?? 0)
+                    );
+                } catch (\Throwable $e) {
+                    log_message('error', 'Contabilización de cobro falló: {msg}', ['msg' => $e->getMessage()]);
+                }
             }
         }
 

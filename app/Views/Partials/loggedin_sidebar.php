@@ -191,6 +191,35 @@
         </li>
       <?php endif; ?>
 
+      <?php if (auth()->user()->can('finance.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/accounting*') ? 'active' : '' ?>">
+          <a data-bs-target="#accounting-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/accounting*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-balance-scale align-middle me-1"></i> <span class="align-middle">Contabilidad</span>
+          </a>
+          <ul id="accounting-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/accounting*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/accounting') && !url_is('nat/accounting/*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.dashboard') ?>">Resumen y mayor</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/accounting/funds*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.funds') ?>">Solicitud de fondos</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/accounting/expenses*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.expenses') ?>">Gastos fijos y variables</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/accounting/invoices*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.invoices') ?>">Facturas</a>
+            </li>
+            <?php if (auth()->user()->can('finance.settings')): ?>
+            <li class="sidebar-item <?= url_is('nat/accounting/accounts*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.accounts') ?>">Cuentas de tesorería</a>
+            </li>
+            <?php endif; ?>
+          </ul>
+        </li>
+      <?php endif; ?>
+
       <?= \App\Libraries\PluginSystem\PluginManager::renderSidebar(auth()->user()) ?>
 
       <li class="sidebar-header">

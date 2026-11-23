@@ -152,6 +152,9 @@ class AuthGroups extends ShieldAuthGroups
         'finance.transactions' => 'Can manage financial transactions',
         'finance.reports'     => 'Can generate financial reports',
         'finance.settings'    => 'Can configure finance settings',
+        'finance.folios'      => 'Crear y gestionar solicitudes de fondos',
+        'finance.ledger'      => 'Consultar el libro mayor',
+        'finance.invoices'    => 'Facturas de proveedor y emisión de facturas de venta',
         
         // Inventory module
         'inventory.access'    => 'Can access inventory module',

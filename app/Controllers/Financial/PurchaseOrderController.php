@@ -328,6 +328,14 @@ class PurchaseOrderController extends BaseFinancialController
                 . ' | ' . $order->status . ' → ' . $newStatus
         );
 
+        if ($newStatus === 'completed') {
+            try {
+                (new \App\Services\AccountingPostingService())->fromPurchaseOrder($id);
+            } catch (\Throwable $e) {
+                log_message('error', 'Contabilización de OC falló: {msg}', ['msg' => $e->getMessage()]);
+            }
+        }
+
         $this->setOutputSuccess('Estado de la orden actualizado a: ' . ucfirst($newStatus) . '.');
         $this->outputData['csrf'] = csrf_hash();
 

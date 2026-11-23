@@ -416,6 +416,12 @@ class PayrollController extends BaseHrController
             'Marcó todas las entradas del período ID: ' . $periodId
         );
 
+        try {
+            (new \App\Services\AccountingPostingService())->fromPayrollPeriod($periodId);
+        } catch (\Throwable $e) {
+            log_message('error', 'Contabilización de nómina falló: {msg}', ['msg' => $e->getMessage()]);
+        }
+
         $this->setOutputSuccess('Todas las entradas del periodo se marcaron como pagadas.');
 
         return $this->jsonWithCsrf($this->outputData);

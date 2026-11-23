@@ -239,6 +239,12 @@ class RecurringExpenseController extends BaseFinancialController
             'Marcó pago vencimiento ID: ' . $id . ' | monto: ' . $paidAmount
         );
 
+        try {
+            (new \App\Services\AccountingPostingService())->fromExpensePayment($id);
+        } catch (\Throwable $e) {
+            log_message('error', 'Contabilización de gasto recurrente falló: {msg}', ['msg' => $e->getMessage()]);
+        }
+
         $this->setOutputSuccess('Pago registrado correctamente.');
         $this->outputData['response'] = ['stats' => $this->expenseModel->getDashboardStats()];
         $this->outputData['csrf'] = csrf_hash();
