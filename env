@@ -159,3 +159,6 @@
 #   php spark financial:generate-recurring
 #   php spark financial:send-supplier-reminders
 # Sin SMTPHost el canal email queda en queued_until_smtp (listo para activar).
+#
+# CRM webhook de leads (POST /crm/leads/ingest, header X-CRM-Token):
+# crm.leadWebhookToken = cambiar-en-cada-entorno

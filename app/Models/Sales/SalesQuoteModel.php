@@ -21,7 +21,7 @@ class SalesQuoteModel extends Model
         'quote_number', 'client_id', 'parent_quote_id', 'version', 'status',
         'valid_until', 'subtotal', 'tax_amount', 'total_amount', 'currency',
         'notes', 'converted_order_id', 'plugin_ref', 'created_by',
-        'branch_id', 'channel',
+        'branch_id', 'channel', 'approve_token', 'approved_at', 'opportunity_id',
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
@@ -90,6 +90,9 @@ class SalesQuoteModel extends Model
 
         if (empty($quote['quote_number'])) {
             $quote['quote_number'] = $this->nextNumber();
+        }
+        if (empty($quote['approve_token'])) {
+            $quote['approve_token'] = bin2hex(random_bytes(16));
         }
 
         $totals = $this->sumItems($items);

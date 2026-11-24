@@ -65,6 +65,8 @@
             <?php endforeach; ?>
           </select>
           <?php if (!empty($response['canManage'])): ?>
+          <button class="btn btn-outline-secondary btn-sm" id="btn-import-csv">CSV</button>
+          <input type="file" id="csv-file" accept=".csv" class="d-none">
           <button class="btn btn-primary btn-sm" id="btn-new-client"><i class="fas fa-plus me-1"></i>Alta</button>
           <?php endif; ?>
         </div>
@@ -162,7 +164,13 @@
         <div class="tab-content">
           <div class="tab-pane fade show active" id="f-gen">
             <div class="row g-2">
-              <div class="col-md-8"><label class="form-label">Empresa *</label><input class="form-control" name="company_name" required></div>
+              <div class="col-md-8"><label class="form-label">Empresa / nombre *</label><input class="form-control" name="company_name" required></div>
+              <div class="col-md-4"><label class="form-label">Tipo</label>
+                <select class="form-select" name="person_type">
+                  <option value="company">Empresa</option>
+                  <option value="person">Persona física</option>
+                </select>
+              </div>
               <div class="col-md-4"><label class="form-label">Estatus</label>
                 <select class="form-select" name="status">
                   <option value="lead">Lead</option>
@@ -178,6 +186,7 @@
               <div class="col-md-6"><label class="form-label">Teléfono</label><input class="form-control" name="phone"></div>
               <div class="col-md-6"><label class="form-label">Sitio web</label><input class="form-control" name="website"></div>
               <div class="col-md-6"><label class="form-label">Origen</label><input class="form-control" name="source"></div>
+              <div class="col-md-6"><label class="form-label">Etiquetas</label><input class="form-control" name="tags" placeholder="vip, hosting, pymes"></div>
               <div class="col-md-6"><label class="form-label">Dueño</label>
                 <select class="form-select" name="assigned_user_id">
                   <option value="">Yo</option>
@@ -618,6 +627,20 @@ document.getElementById('pipeline-board').addEventListener('change', async e=>{
 document.getElementById('pipeline-board').addEventListener('click', e=>{
   const card = e.target.closest('.pipe-card');
   if(card && !e.target.closest('.pipe-move')) openClient(card.dataset.id);
+});
+document.getElementById('btn-import-csv')?.addEventListener('click', ()=>document.getElementById('csv-file').click());
+document.getElementById('csv-file')?.addEventListener('change', async ev=>{
+  const file = ev.target.files[0];
+  if(!file) return;
+  const fd = new FormData();
+  fd.append(csrfName, csrfVal());
+  fd.append('csv_file', file);
+  const r = await fetch('<?= route_to('crm.leads.import') ?>', {method:'POST', headers: ajaxHeaders(), body: fd});
+  csrfHdr(r.headers);
+  const j = await r.json();
+  notifyShow(j.message, j.success?'success':'danger');
+  if(j.success) tblClients.ajax.reload();
+  ev.target.value='';
 });
 </script>
 <?php $this->endSection(); ?>

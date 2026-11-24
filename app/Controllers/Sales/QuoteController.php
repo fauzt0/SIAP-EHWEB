@@ -92,6 +92,7 @@ class QuoteController extends BaseSalesController
             'plugin_tabs' => (new ClientCommerceBridge())->collectQuoteTabs($id),
             'pdf'         => site_url('nat/sales/documents/quote/' . $id),
             'pdf_html'    => site_url('nat/sales/documents/quote/' . $id . '/html'),
+            'approve_url' => ! empty($quote->approve_token) ? site_url('p/quote/' . $quote->approve_token) : null,
         ]);
         $this->outputData['csrf'] = csrf_hash();
 
@@ -166,8 +167,9 @@ class QuoteController extends BaseSalesController
             ]);
             (new UserActivityLogsModel())->logActivity('sales_quote_create', 'Cotización ID ' . $newId . ' ' . $quote->quote_number);
             $this->setOutputSuccess('Cotización creada', [
-                'id'  => $newId,
-                'pdf' => site_url('nat/sales/documents/quote/' . $newId),
+                'id'          => $newId,
+                'pdf'         => site_url('nat/sales/documents/quote/' . $newId),
+                'approve_url' => site_url('p/quote/' . ($quote->approve_token ?? '')),
             ]);
         } else {
             $ok = $model->updateWithItems($id, $payload, is_array($items) ? $items : null);
@@ -236,6 +238,11 @@ class QuoteController extends BaseSalesController
         }
 
         $quoteModel->update($id, ['status' => 'converted', 'converted_order_id' => $orderId]);
+        try {
+            (new \App\Services\ProjectDeliveryService())->fromQuote($id, $orderId, $quote->opportunity_id ? (int) $quote->opportunity_id : null);
+        } catch (\Throwable $e) {
+            log_message('error', 'Proyecto desde cotización: {msg}', ['msg' => $e->getMessage()]);
+        }
         (new CrmFollowupModel())->createVersion([
             'client_id'       => (int) $quote->client_id,
             'followup_type'   => 'order',
@@ -249,8 +256,9 @@ class QuoteController extends BaseSalesController
         ]);
         (new UserActivityLogsModel())->logActivity('sales_quote_convert', 'Cotización ID ' . $id . ' → orden ' . $orderId);
         $this->setOutputSuccess('Convertida a venta', [
-            'order_id' => $orderId,
-            'pdf'      => site_url('nat/sales/documents/order/' . $orderId),
+            'order_id'      => $orderId,
+            'pdf'           => site_url('nat/sales/documents/order/' . $orderId),
+            'approve_link'  => site_url('p/quote/' . ($quote->approve_token ?? '')),
         ]);
         $this->outputData['csrf'] = csrf_hash();
 

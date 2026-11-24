@@ -41,7 +41,11 @@ class Filters extends BaseConfig
         'before' => [
             // 'honeypot',
             'csrf' => [
-                'except' => ['nat/user/updater/*'], //excluimos la ruta nat/user/update/* del filtro CSRF en entorno de desarrollo
+                'except' => [
+                    'nat/user/updater/*',
+                    'p/quote/*/approve',
+                    'crm/leads/ingest',
+                ],
             ],
             // 'invalidchars',
         ],

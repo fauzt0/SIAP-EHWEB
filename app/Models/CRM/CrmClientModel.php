@@ -18,9 +18,10 @@ class CrmClientModel extends Model
     protected $useSoftDeletes   = true;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'client_code', 'company_name', 'trade_name', 'rfc_tax_id', 'website',
-        'email', 'phone', 'status', 'source', 'assigned_user_id', 'branch_id',
-        'expected_value', 'next_followup_at', 'notes', 'plugin_ref', 'active',
+        'client_code', 'company_name', 'person_type', 'trade_name', 'rfc_tax_id', 'website',
+        'email', 'phone', 'status', 'source', 'tags', 'assigned_user_id', 'branch_id',
+        'expected_value', 'next_followup_at', 'notes', 'custom_fields', 'lost_reason_id',
+        'plugin_ref', 'active',
     ];
 
     protected $useTimestamps = true;
@@ -239,11 +240,31 @@ class CrmClientModel extends Model
 
     public function findDuplicateRfc(?string $rfc, ?int $exceptId = null): ?object
     {
-        $rfc = strtoupper(preg_replace('/\s+/', '', (string) $rfc) ?? '');
-        if ($rfc === '') {
+        return $this->findDuplicateContact(null, null, $rfc, $exceptId);
+    }
+
+    public function findDuplicateContact(?string $email, ?string $phone, ?string $rfc, ?int $exceptId = null): ?object
+    {
+        $email = strtolower(trim((string) $email));
+        $phone = preg_replace('/\D+/', '', (string) $phone) ?? '';
+        $rfc   = strtoupper(preg_replace('/\s+/', '', (string) $rfc) ?? '');
+        if ($email === '' && $phone === '' && $rfc === '') {
             return null;
         }
-        $builder = $this->where('rfc_tax_id', $rfc);
+        $builder = $this->groupStart();
+        $started = false;
+        if ($email !== '') {
+            $builder->where('email', $email);
+            $started = true;
+        }
+        if ($phone !== '') {
+            $started ? $builder->orWhere('phone', $phone) : $builder->where('phone', $phone);
+            $started = true;
+        }
+        if ($rfc !== '') {
+            $started ? $builder->orWhere('rfc_tax_id', $rfc) : $builder->where('rfc_tax_id', $rfc);
+        }
+        $builder->groupEnd();
         if ($exceptId) {
             $builder->where('id !=', $exceptId);
         }

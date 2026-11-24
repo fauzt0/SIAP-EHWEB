@@ -154,8 +154,26 @@
 
       <?php if (auth()->user()->can('crm.access')): ?>
         <li class="sidebar-item <?= url_is('nat/crm*') ? 'active' : '' ?>">
-          <a class="sidebar-link" href="<?= route_to('crm.clients') ?>">
+          <a data-bs-target="#crm-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/crm*') ? '' : 'collapsed' ?>">
             <i class="fas fa-fw fa-address-book align-middle me-1"></i> <span class="align-middle">CRM</span>
+          </a>
+          <ul id="crm-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/crm*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/crm') || url_is('nat/crm/clients*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('crm.clients') ?>">Clientes y leads</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/crm/opportunities*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('crm.opportunities') ?>">Oportunidades</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('projects.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/projects*') ? 'active' : '' ?>">
+          <a class="sidebar-link" href="<?= route_to('projects.index') ?>">
+            <i class="fas fa-fw fa-tasks align-middle me-1"></i> <span class="align-middle">Proyectos</span>
           </a>
         </li>
       <?php endif; ?>

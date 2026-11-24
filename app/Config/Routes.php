@@ -5,7 +5,11 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', 'Home::index'); //acceso principal  
+$routes->get('/', 'Home::index'); //acceso principal
+
+$routes->get('p/quote/(:segment)', 'PublicPages\QuoteApproveController::show/$1', ['as' => 'public.quote.show']);
+$routes->post('p/quote/(:segment)/approve', 'PublicPages\QuoteApproveController::approve/$1', ['as' => 'public.quote.approve']);
+$routes->post('crm/leads/ingest', 'CRM\LeadImportController::webhook', ['as' => 'crm.leads.webhook']);  
 
 //verificamos la variable de entorno, en caso de ser produccion, no mostramos la ruta de ejemplo
 if (ENVIRONMENT !== 'production') {
@@ -196,10 +200,26 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('clients/update/(:num)', 'CRM\ClientController::update/$1', ['as' => 'crm.clients.update', 'filter' => 'permission:crm.manage']);
         $routes->post('clients/delete/(:num)', 'CRM\ClientController::delete/$1', ['as' => 'crm.clients.delete', 'filter' => 'permission:crm.delete']);
         $routes->get('clients/rfc_check', 'CRM\ClientController::rfc_check', ['as' => 'crm.clients.rfc_check']);
+        $routes->post('clients/import_csv', 'CRM\LeadImportController::import_csv', ['as' => 'crm.leads.import', 'filter' => 'permission:crm.manage']);
         $routes->get('pipeline_ajax', 'CRM\ClientController::pipeline_ajax', ['as' => 'crm.pipeline.ajax']);
         $routes->post('pipeline/move/(:num)', 'CRM\ClientController::pipeline_move/$1', ['as' => 'crm.pipeline.move', 'filter' => 'permission:crm.manage']);
         $routes->get('clients/(:num)/followups', 'CRM\FollowupController::history_ajax/$1', ['as' => 'crm.followups.history']);
         $routes->post('clients/(:num)/followups', 'CRM\FollowupController::store/$1', ['as' => 'crm.followups.store', 'filter' => 'permission:crm.manage']);
+
+        $routes->get('opportunities', 'CRM\OpportunityController::index', ['as' => 'crm.opportunities']);
+        $routes->post('opportunities/list_ajax', 'CRM\OpportunityController::list_ajax', ['as' => 'crm.opportunities.ajax']);
+        $routes->get('opportunities/board_ajax', 'CRM\OpportunityController::board_ajax', ['as' => 'crm.opportunities.board']);
+        $routes->post('opportunities/store', 'CRM\OpportunityController::store', ['as' => 'crm.opportunities.store', 'filter' => 'permission:crm.manage']);
+        $routes->post('opportunities/move/(:num)', 'CRM\OpportunityController::move/$1', ['as' => 'crm.opportunities.move', 'filter' => 'permission:crm.manage']);
+    });
+
+    $routes->group('projects', ['filter' => 'permission:projects.access'], function ($routes) {
+        $routes->get('/', 'Projects\ProjectController::index', ['as' => 'projects.index']);
+        $routes->post('list_ajax', 'Projects\ProjectController::list_ajax', ['as' => 'projects.ajax']);
+        $routes->get('show_ajax/(:num)', 'Projects\ProjectController::show_ajax/$1', ['as' => 'projects.show_ajax']);
+        $routes->post('store', 'Projects\ProjectController::store', ['as' => 'projects.store', 'filter' => 'permission:projects.manage']);
+        $routes->post('status/(:num)', 'Projects\ProjectController::update_status/$1', ['as' => 'projects.status', 'filter' => 'permission:projects.manage']);
+        $routes->post('(:num)/milestones', 'Projects\ProjectController::add_milestone/$1', ['as' => 'projects.milestones', 'filter' => 'permission:projects.manage']);
     });
 
     $routes->group('sales', ['filter' => 'permission:sales.access'], function ($routes) {

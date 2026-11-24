@@ -54,6 +54,9 @@ class ClientController extends BaseCrmController
         }
 
         $post = $this->request->getPost();
+        if (! auth()->user()->can('crm.view-all')) {
+            $post['filter_assigned'] = (int) auth()->id();
+        }
         $list = $this->clientModel->get_datatables($post);
         $data = [];
         $canManage = auth()->user()->can('crm.manage') || auth()->user()->can('sales.customers');
@@ -167,10 +170,17 @@ class ClientController extends BaseCrmController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Endpoint exclusivo para peticiones AJAX.');
         }
 
-        $rfc = strtoupper(preg_replace('/\s+/', '', (string) $this->request->getPost('rfc_tax_id')) ?: '');
-        $dup = $this->clientModel->findDuplicateRfc($rfc !== '' ? $rfc : null, $id);
+        $rfc   = strtoupper(preg_replace('/\s+/', '', (string) $this->request->getPost('rfc_tax_id')) ?: '');
+        $email = strtolower(trim((string) $this->request->getPost('email')));
+        $phone = trim((string) $this->request->getPost('phone'));
+        $dup   = $this->clientModel->findDuplicateContact(
+            $email !== '' ? $email : null,
+            $phone !== '' ? $phone : null,
+            $rfc !== '' ? $rfc : null,
+            $id
+        );
         if ($dup && ! $this->request->getPost('allow_duplicate_rfc')) {
-            $this->setOutputError('Ya existe un cliente con el RFC ' . $dup->rfc_tax_id . ' (' . $dup->company_name . '). Confirme si desea duplicarlo.');
+            $this->setOutputError('Posible duplicado: ' . $dup->company_name . ' (' . $dup->client_code . '). Confirme si desea registrarlo igual.');
             $this->outputData['duplicate_rfc'] = [
                 'id'   => (int) $dup->id,
                 'name' => $dup->company_name,
@@ -182,15 +192,20 @@ class ClientController extends BaseCrmController
         }
 
         $assigned = (int) $this->request->getPost('assigned_user_id');
+        if ($assigned < 1 && $id === null) {
+            $assigned = (int) ((new \App\Services\CrmRoundRobinService())->nextUserId() ?? auth()->id());
+        }
         $client = [
             'company_name'     => trim((string) $this->request->getPost('company_name')),
+            'person_type'      => $this->request->getPost('person_type') === 'person' ? 'person' : 'company',
             'trade_name'       => $this->request->getPost('trade_name') ?: null,
             'rfc_tax_id'       => $rfc !== '' ? $rfc : null,
             'website'          => $this->request->getPost('website') ?: null,
-            'email'            => $this->request->getPost('email') ?: null,
-            'phone'            => $this->request->getPost('phone') ?: null,
+            'email'            => $email !== '' ? $email : null,
+            'phone'            => $phone !== '' ? $phone : null,
             'status'           => $this->request->getPost('status') ?: 'lead',
             'source'           => $this->request->getPost('source') ?: null,
+            'tags'             => $this->request->getPost('tags') ?: null,
             'notes'            => $this->request->getPost('notes') ?: null,
             'active'           => $this->request->getPost('active') ? 1 : 0,
             'assigned_user_id' => $assigned > 0 ? $assigned : auth()->id(),

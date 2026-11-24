@@ -293,6 +293,11 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleLeads'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectOpenFollowups'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectDueCrmFollowups'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleOpportunities'));
+        }
+
+        if ($user->can('projects.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueProjects'));
         }
 
         if ($user->can('sales.access')) {
@@ -1141,6 +1146,62 @@ class AlertController extends BaseController
             'message'    => $count . ' incidencia(s) o contacto(s) sin cerrar en 5 días',
             'module'     => 'CRM',
             'target_url' => route_to('crm.clients'),
+        ])];
+    }
+
+    private function _detectStaleOpportunities(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('crm_opportunities')) {
+            return [];
+        }
+        $count = $db->table('crm_opportunities o')
+            ->join('crm_pipeline_stages s', 's.id = o.stage_id', 'left')
+            ->where('o.deleted_at', null)
+            ->where('s.is_won', 0)
+            ->where('s.is_lost', 0)
+            ->groupStart()
+                ->where('o.next_followup_at <', date('Y-m-d H:i:s'))
+                ->orWhere('o.updated_at <', date('Y-m-d H:i:s', strtotime('-7 days')))
+            ->groupEnd()
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-hourglass-half',
+            'title'      => 'Oportunidades sin actividad',
+            'message'    => $count . ' trato(s) abiertos sin seguimiento reciente',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.opportunities'),
+        ])];
+    }
+
+    private function _detectOverdueProjects(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('prm_projects')) {
+            return [];
+        }
+        $count = $db->table('prm_projects')
+            ->where('deleted_at', null)
+            ->whereIn('status', ['quoting', 'in_progress', 'delivery'])
+            ->where('due_date <', date('Y-m-d'))
+            ->where('due_date IS NOT NULL', null, false)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-tasks',
+            'title'      => 'Proyectos con entrega vencida',
+            'message'    => $count . ' proyecto(s) con fecha de entrega retrasada',
+            'module'     => 'Proyectos',
+            'target_url' => route_to('projects.index'),
         ])];
     }
 
