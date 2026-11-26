@@ -84,5 +84,13 @@ class UserModel extends ShieldUserModel
 
     }
 
-
+    /**
+     * @return list<object>
+     */
+    public function getAssignableUsers(): array
+    {
+        return $this->select('id, username, first_name, last_name')
+            ->orderBy('first_name', 'ASC')
+            ->findAll(200);
+    }
 }

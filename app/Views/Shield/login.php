@@ -38,7 +38,7 @@
 <?= $this->endSection() ?>
 
 
-<? $this->section('main') ?>
+<?= $this->section('main') ?>
 
 	<div class="container-fluid p-0">
 		<div class="row g-0">

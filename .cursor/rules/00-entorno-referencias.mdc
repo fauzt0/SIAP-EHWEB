@@ -5,6 +5,10 @@ alwaysApply: true
 
 # Entorno y referencias
 
+## Restricción de agente (prioridad máxima)
+
+- **Custodia de cuota:** ver `AGENTS.md` y `.cursor/rules/04-agente-modelos-y-subagentes.mdc` + `05-solo-usuario-modelos-premium.mdc`. Sin pedido explícito del usuario en el mensaje: **prohibido** `Task`/subagentes y modelos pesados.
+
 ## Stack objetivo
 
 - **PHP:** 8.3+ en VPS y desarrollo local (tipado estricto, `declare(strict_types=1);` en código nuevo cuando el archivo lo permita).
@@ -20,6 +24,10 @@ alwaysApply: true
 | `DOCUMENTACION_TECNICA.md` | Estándares §1–§21 (AJAX, CSRF, rutas, MVC, DataTables, Shield, bitácora, alertas, etc.) |
 | `agentic/AUDITORIA_ARQUITECTURA.md` | Checklist de auditoría y **dos mandatos** (permisos + bitácora) |
 | `agentic/ARQUITECTURA_PLUGIN_SYSTEM.md` | Plugins bajo `plugins/{Slug}/`; código vigente en `agentic/plugin_000_plugin_system_core.md` |
+
+## Cloud Agent (VM Cursor)
+
+- Entorno reproducible: `.cursor/environment.json` + guía `.cursor/ENVIRONMENT.md` (PHP/MariaDB/composer + HTTP local sin subagentes).
 
 ## Comandos habituales
 

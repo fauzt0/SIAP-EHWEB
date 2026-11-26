@@ -32,6 +32,10 @@ class FinExpenseModel extends Model
         'period_label',
         'notes',
         'invoice_url',
+        'source_type',
+        'source_id',
+        'payroll_period_id',
+        'supplier_invoice_id',
     ];
 
     protected $useTimestamps = true;

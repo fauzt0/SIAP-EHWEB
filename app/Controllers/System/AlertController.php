@@ -253,12 +253,19 @@ class AlertController extends BaseController
             return $alerts;
         }
 
-        // ── RH ────────────────────────────────────────────────────────────────
-        if ($user->can('hr.access')) {
+        // ── RH (expediente: quien puede ver/editar trabajadores) ───────────────
+        if ($user->can('hr.view') || $user->can('hr.edit') || $user->can('hr.employees')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingNss'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingRfc'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingCurp'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingBankData'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingLaborData'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersMissingDocuments'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersWithoutActiveContract'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectWorkersWithoutSchedule'));
+        }
+
+        if ($user->can('hr.edit')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingVacationRequests'));
         }
 
@@ -266,8 +273,8 @@ class AlertController extends BaseController
             $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingPayrolls'));
         }
 
-        // ── Proveedores (acceso al módulo) ───────────────────────────────────
-        if ($user->can('catalog.access') || $user->can('catalog.manage-suppliers') || $user->can('purchasing.suppliers')) {
+        // ── Proveedores / compras (no mezclar con solo lectura de catálogo) ───
+        if ($user->can('catalog.manage-suppliers') || $user->can('purchasing.suppliers')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersInactive'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectSuppliersMissingTaxId'));
             $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueRecurringExpenses'));
@@ -278,8 +285,35 @@ class AlertController extends BaseController
         }
 
         // ── Catálogo / Inventario ─────────────────────────────────────────────
-        if ($user->can('catalog.access')) {
+        if ($user->can('catalog.manage') || $user->can('catalog.access')) {
             $alerts = array_merge($alerts, $this->_safeDetect('_detectLowStockProducts'));
+        }
+
+        if ($user->can('crm.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleLeads'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOpenFollowups'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueCrmFollowups'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectStaleOpportunities'));
+        }
+
+        if ($user->can('projects.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueProjects'));
+        }
+
+        if ($user->can('sales.access')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectExpiringQuotes'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectDueCustomerServices'));
+        }
+
+        if ($user->can('sales.collections') || $user->can('sales.billing')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectUnpaidOrders'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectUnpaidReceipts'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectOverdueReceipts'));
+        }
+
+        if ($user->can('sales.activate')) {
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectPendingActivations'));
+            $alerts = array_merge($alerts, $this->_safeDetect('_detectUnprocessedItems'));
         }
 
         try {
@@ -443,6 +477,142 @@ class AlertController extends BaseController
                 'target_url' => route_to('hr.worker.edit', $row->id),
             ]);
         }
+        return $alerts;
+    }
+
+    /**
+     * Trabajadores activos sin fila en hr_employment_data (datos laborales).
+     */
+    private function _detectWorkersMissingLaborData(): array
+    {
+        $db   = db_connect();
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name
+            FROM hr_profiles hp
+            LEFT JOIN hr_employment_data hed ON hed.profile_id = hp.id
+            WHERE hp.deleted_at IS NULL AND hed.profile_id IS NULL
+            LIMIT 10
+        ")->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'warning',
+                'icon'       => 'fa-briefcase',
+                'title'      => 'Sin datos laborales',
+                'message'    => $name . ' — Falta registrar puesto, salario y alta laboral',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.worker.edit', $row->id),
+            ]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Expediente: tipos de documento del catálogo sin archivo cargado (trabajadores activos).
+     */
+    private function _detectWorkersMissingDocuments(): array
+    {
+        $db   = db_connect();
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name, COUNT(dt.id) AS missing_types
+            FROM hr_profiles hp
+            INNER JOIN hr_employment_data hed ON hed.profile_id = hp.id AND hed.status = 'active'
+            CROSS JOIN hr_cat_document_types dt
+            LEFT JOIN hr_documents hd ON hd.profile_id = hp.id
+                AND hd.document_type_id = dt.id
+                AND hd.deleted_at IS NULL
+            WHERE hp.deleted_at IS NULL
+              AND dt.deleted_at IS NULL
+              AND hd.id IS NULL
+            GROUP BY hp.id, hp.first_name, hp.last_name
+            HAVING missing_types > 0
+            ORDER BY missing_types DESC
+            LIMIT 10
+        ")->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'danger',
+                'icon'       => 'fa-folder-open',
+                'title'      => 'Expediente incompleto',
+                'message'    => $name . ' — Faltan ' . (int) $row->missing_types . ' tipo(s) de documento',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.worker.edit', $row->id),
+            ]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Trabajadores activos sin contrato digital con estatus active.
+     */
+    private function _detectWorkersWithoutActiveContract(): array
+    {
+        $db   = db_connect();
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name
+            FROM hr_profiles hp
+            INNER JOIN hr_employment_data hed ON hed.profile_id = hp.id AND hed.status = 'active'
+            LEFT JOIN hr_contracts hc ON hc.profile_id = hp.id
+                AND hc.status = 'active'
+                AND hc.deleted_at IS NULL
+            WHERE hp.deleted_at IS NULL AND hc.id IS NULL
+            LIMIT 10
+        ")->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'warning',
+                'icon'       => 'fa-file-signature',
+                'title'      => 'Sin contrato vigente',
+                'message'    => $name . ' — Generar o activar contrato digital',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.contracts.generate', $row->id),
+            ]);
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Trabajadores activos sin horario asignado vigente.
+     */
+    private function _detectWorkersWithoutSchedule(): array
+    {
+        $db   = db_connect();
+        $today = date('Y-m-d');
+        $rows = $db->query("
+            SELECT hp.id, hp.first_name, hp.last_name
+            FROM hr_profiles hp
+            INNER JOIN hr_employment_data hed ON hed.profile_id = hp.id AND hed.status = 'active'
+            LEFT JOIN hr_worker_schedules hws ON hws.profile_id = hp.id
+                AND hws.deleted_at IS NULL
+                AND (hws.end_date IS NULL OR hws.end_date >= ?)
+            WHERE hp.deleted_at IS NULL AND hws.id IS NULL
+            LIMIT 10
+        ", [$today])->getResult();
+
+        $alerts = [];
+        foreach ($rows as $row) {
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->last_name ?? ''));
+            $alerts[] = $this->_buildAutoAlert([
+                'type'       => 'info',
+                'icon'       => 'fa-clock',
+                'title'      => 'Sin horario vigente',
+                'message'    => $name . ' — Asignar turno en expediente',
+                'module'     => 'RH',
+                'target_url' => route_to('hr.worker.edit', $row->id),
+            ]);
+        }
+
         return $alerts;
     }
 
@@ -720,6 +890,319 @@ class AlertController extends BaseController
         }
 
         return $alerts;
+    }
+
+    private function _detectDueCrmFollowups(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('crm_clients') || ! $db->fieldExists('next_followup_at', 'crm_clients')) {
+            return [];
+        }
+        $count = $db->table('crm_clients')
+            ->where('next_followup_at <=', date('Y-m-d'))
+            ->where('next_followup_at IS NOT NULL', null, false)
+            ->whereIn('status', ['lead', 'prospect', 'active'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-calendar-check',
+            'title'      => 'Seguimientos CRM vencidos',
+            'message'    => $count . ' cliente(s) con próximo seguimiento vencido o para hoy',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.clients'),
+        ])];
+    }
+
+    private function _detectStaleLeads(): array
+    {
+        $db    = db_connect();
+        if (! $db->tableExists('crm_clients')) {
+            return [];
+        }
+        $count = $db->table('crm_clients')
+            ->whereIn('status', ['lead', 'prospect'])
+            ->where('deleted_at', null)
+            ->where('updated_at <', date('Y-m-d H:i:s', strtotime('-7 days')))
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-user-clock',
+            'title'      => 'Leads sin seguimiento',
+            'message'    => $count . ' lead/prospecto(s) sin actualización en 7 días',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.clients'),
+        ])];
+    }
+
+    private function _detectExpiringQuotes(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_quotes')) {
+            return [];
+        }
+        $count = $db->table('sales_quotes')
+            ->whereIn('status', ['draft', 'sent'])
+            ->where('valid_until <=', date('Y-m-d', strtotime('+5 days')))
+            ->where('valid_until >=', date('Y-m-d'))
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'info',
+            'icon'       => 'fa-file-signature',
+            'title'      => 'Cotizaciones por vencer',
+            'message'    => $count . ' cotización(es) vencen en 5 días o menos',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.quotes'),
+        ])];
+    }
+
+    private function _detectDueCustomerServices(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('customer_services')) {
+            return [];
+        }
+        $count = $db->table('customer_services')
+            ->where('status', 'active')
+            ->where('next_due_date <=', date('Y-m-d', strtotime('+7 days')))
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-sync',
+            'title'      => 'Servicios por renovar',
+            'message'    => $count . ' servicio(s) con cobro en los próximos 7 días',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.services'),
+        ])];
+    }
+
+    private function _detectUnpaidOrders(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_orders')) {
+            return [];
+        }
+        $count = $db->table('sales_orders')
+            ->whereIn('status', ['confirmed', 'pending', 'partial', 'draft'])
+            ->where('total_amount >', 0)
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-file-invoice-dollar',
+            'title'      => 'Cobros pendientes',
+            'message'    => $count . ' orden(es) sin liquidar',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.billing'),
+        ])];
+    }
+
+    private function _detectPendingActivations(): array
+    {
+        $db = db_connect();
+        $count = 0;
+        if ($db->tableExists('customer_services') && $db->fieldExists('activation_status', 'customer_services')) {
+            $count += $db->table('customer_services')
+                ->where('activation_status', 'pending')
+                ->where('deleted_at', null)
+                ->countAllResults();
+        }
+        if ($db->tableExists('sales_order_items') && $db->fieldExists('activation_status', 'sales_order_items')) {
+            $count += $db->table('sales_order_items')
+                ->where('activation_status', 'pending')
+                ->where('deleted_at', null)
+                ->countAllResults();
+        }
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-toggle-off',
+            'title'      => 'Productos o servicios sin activar',
+            'message'    => $count . ' partida(s) vendida(s) pendientes de activación',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.services'),
+        ])];
+    }
+
+    private function _detectUnpaidReceipts(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_receipts') || ! $db->fieldExists('collection_status', 'sales_receipts')) {
+            return [];
+        }
+        $count = $db->table('sales_receipts')
+            ->whereIn('collection_status', ['pending', 'partial'])
+            ->where('status !=', 'void')
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-hand-holding-usd',
+            'title'      => 'Cobranza: recibos sin liquidar',
+            'message'    => $count . ' prefactura(s) pendiente(s) o parcial(es)',
+            'module'     => 'CRM',
+            'target_url' => route_to('sales.billing'),
+        ])];
+    }
+
+    private function _detectOverdueReceipts(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_receipts') || ! $db->fieldExists('collection_status', 'sales_receipts')) {
+            return [];
+        }
+        $count = $db->table('sales_receipts')
+            ->where('collection_status', 'overdue')
+            ->where('status !=', 'void')
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-exclamation-circle',
+            'title'      => 'Recibos vencidos',
+            'message'    => $count . ' recibo(s) de renovación o venta vencido(s)',
+            'module'     => 'CRM',
+            'target_url' => route_to('sales.billing'),
+        ])];
+    }
+
+    private function _detectUnprocessedItems(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('sales_order_items') || ! $db->fieldExists('fulfillment_status', 'sales_order_items')) {
+            return [];
+        }
+        $count = $db->table('sales_order_items')
+            ->whereIn('fulfillment_status', ['pending', 'processing'])
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-truck',
+            'title'      => 'Productos sin procesar o enviar',
+            'message'    => $count . ' partida(s) pendientes de gestión (físico, digital o servicio)',
+            'module'     => 'Ventas',
+            'target_url' => route_to('sales.orders'),
+        ])];
+    }
+
+    private function _detectOpenFollowups(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('crm_followups') || ! $db->fieldExists('followup_status', 'crm_followups')) {
+            return [];
+        }
+        $count = $db->table('crm_followups')
+            ->whereIn('followup_status', ['open', 'in_progress', 'waiting'])
+            ->where('status', 'active')
+            ->where('updated_at <', date('Y-m-d H:i:s', strtotime('-5 days')))
+            ->where('deleted_at', null)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'info',
+            'icon'       => 'fa-headset',
+            'title'      => 'Seguimientos CRM abiertos',
+            'message'    => $count . ' incidencia(s) o contacto(s) sin cerrar en 5 días',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.clients'),
+        ])];
+    }
+
+    private function _detectStaleOpportunities(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('crm_opportunities')) {
+            return [];
+        }
+        $count = $db->table('crm_opportunities o')
+            ->join('crm_pipeline_stages s', 's.id = o.stage_id', 'left')
+            ->where('o.deleted_at', null)
+            ->where('s.is_won', 0)
+            ->where('s.is_lost', 0)
+            ->groupStart()
+                ->where('o.next_followup_at <', date('Y-m-d H:i:s'))
+                ->orWhere('o.updated_at <', date('Y-m-d H:i:s', strtotime('-7 days')))
+            ->groupEnd()
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'warning',
+            'icon'       => 'fa-hourglass-half',
+            'title'      => 'Oportunidades sin actividad',
+            'message'    => $count . ' trato(s) abiertos sin seguimiento reciente',
+            'module'     => 'CRM',
+            'target_url' => route_to('crm.opportunities'),
+        ])];
+    }
+
+    private function _detectOverdueProjects(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('prm_projects')) {
+            return [];
+        }
+        $count = $db->table('prm_projects')
+            ->where('deleted_at', null)
+            ->whereIn('status', ['quoting', 'in_progress', 'delivery'])
+            ->where('due_date <', date('Y-m-d'))
+            ->where('due_date IS NOT NULL', null, false)
+            ->countAllResults();
+        if ($count === 0) {
+            return [];
+        }
+
+        return [$this->_buildAutoAlert([
+            'type'       => 'danger',
+            'icon'       => 'fa-tasks',
+            'title'      => 'Proyectos con entrega vencida',
+            'message'    => $count . ' proyecto(s) con fecha de entrega retrasada',
+            'module'     => 'Proyectos',
+            'target_url' => route_to('projects.index'),
+        ])];
     }
 
     // ──────────────────────────────────────────────────────────────────────

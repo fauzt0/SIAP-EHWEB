@@ -136,6 +136,8 @@ class AuthGroups extends ShieldAuthGroups
         'admin.access'        => 'Can access the admin dashboard',
         'admin.settings'      => 'Can access the main ERP settings',
         'admin.manage-users'  => 'Can manage users',
+        'admin.manage-organization' => 'Perfil de empresa, sucursales y logos',
+        'admin.sales-templates' => 'Editar plantillas PDF de cotización, venta y recibo',
         'admin.audit-log'     => 'Ver bitácora global del sistema',
         'admin.manage-plugins' => 'Instalar, desinstalar y configurar plugins del sistema',
         
@@ -150,6 +152,9 @@ class AuthGroups extends ShieldAuthGroups
         'finance.transactions' => 'Can manage financial transactions',
         'finance.reports'     => 'Can generate financial reports',
         'finance.settings'    => 'Can configure finance settings',
+        'finance.folios'      => 'Crear y gestionar solicitudes de fondos',
+        'finance.ledger'      => 'Consultar el libro mayor',
+        'finance.invoices'    => 'Facturas de proveedor y emisión de facturas de venta',
         
         // Inventory module
         'inventory.access'    => 'Can access inventory module',
@@ -163,6 +168,20 @@ class AuthGroups extends ShieldAuthGroups
         'sales.edit'          => 'Can edit sales orders',
         'sales.reports'       => 'Can generate sales reports',
         'sales.customers'     => 'Can manage customers',
+        'sales.quotes'        => 'Crear y convertir cotizaciones',
+        'sales.billing'       => 'Emitir recibos y preparar facturas',
+        'sales.collections'   => 'Registrar cobros y comprobantes de pago',
+        'sales.activate'      => 'Activar productos o servicios vendidos',
+        'sales.pos'           => 'Punto de venta: ventas directas y cotizaciones de mostrador',
+        'sales.documents'     => 'Previsualizar y exportar PDF de cotización, venta y recibo',
+
+        // CRM
+        'crm.access'          => 'Ver clientes, leads y seguimiento',
+        'crm.manage'          => 'Alta y edición de clientes y bitácora',
+        'crm.delete'          => 'Eliminar clientes (soft delete)',
+        'crm.view-all'        => 'Ver prospectos y oportunidades de todo el equipo',
+        'projects.access'     => 'Ver proyectos de entrega',
+        'projects.manage'     => 'Crear y actualizar proyectos e hitos',
         
         // Purchasing module
         'purchasing.access'   => 'Can access purchasing module',
@@ -210,6 +229,8 @@ class AuthGroups extends ShieldAuthGroups
             'purchasing.*',
             'hr.*',
             'catalog.*',
+            'crm.*',
+            'projects.*',
         ],
         'admin' => [
             'admin.*',
@@ -220,6 +241,8 @@ class AuthGroups extends ShieldAuthGroups
             'purchasing.*',
             'hr.*',
             'catalog.*',
+            'crm.*',
+            'projects.*',
         ],
         'editor' => [
             'admin.access',
@@ -228,6 +251,11 @@ class AuthGroups extends ShieldAuthGroups
         'seller' => [
             'admin.access',
             'sales.*',
+            'crm.access',
+            'crm.manage',
+            'projects.access',
+            'projects.manage',
+            'catalog.access',
             'users.view',
         ],
         'customer' => [
@@ -262,6 +290,8 @@ class AuthGroups extends ShieldAuthGroups
         'sales' => [
             'admin.access',
             'sales.*',
+            'crm.*',
+            'catalog.access',
             'users.view',
         ],
         'purchasing' => [

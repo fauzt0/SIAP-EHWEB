@@ -40,9 +40,8 @@ Seguimiento de pendientes y próximos hitos.
 
 ## 🔥 Prioridad actual
 
-1. **CRM / clientes** — spec viva: `agentic/004_crm_clients.md`
-2. **RRHH incidencias avanzadas** — spec viva: `agentic/002_hr_advanced_incidents.md`
-3. **Roadmap:** ventas/POS y contabilidad (dependen de clientes + catálogo estable)
+1. **RRHH incidencias avanzadas** — spec viva: `agentic/002_hr_advanced_incidents.md`
+2. **Roadmap:** POS físico / pasarelas y contabilidad (CRM + ventas núcleo listos)
 
 ---
 
@@ -61,8 +60,8 @@ Seguimiento de pendientes y próximos hitos.
 
 Orden sugerido:
 
-- [ ] **[CLIENTES / CRM]** `agentic/004_crm_clients.md`
-- [ ] **[VENTAS / POS]** Órdenes de venta, renovaciones (proveedores + clientes)
+- [x] **[CLIENTES / CRM]** `agentic/004_crm_clients.md` (2026-11-20; cobranza/seguimiento 2026-11-23)
+- [x] **[VENTAS]** Cotizaciones, órdenes one-shot/recurrentes, recibos por periodo, OC cliente — POS físico pendiente
 - [ ] **[CONTABILIDAD]** Ingresos vs egresos
 - [ ] Módulo de reportes base
 - [ ] Vista **Stock crítico** por sucursal y marca (`PLAN_ORGANIZACION_CATALOGO.md` §4)

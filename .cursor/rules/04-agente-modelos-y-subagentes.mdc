@@ -1,0 +1,29 @@
+---
+description: Uso de modelos y prohibición de subagentes en este proyecto
+alwaysApply: true
+---
+
+# Agente Cloud — modelos y subagentes
+
+## Prohibido
+
+- **No lanzar subagentes** (`Task`, workers en segundo plano) salvo autorización **literal del usuario en ese mismo mensaje**. Tipos prohibidos por defecto: `explore`, `generalPurpose`, `computerUse`, `videoReview`, `watchVideo`, `cursor-guide`, `ci-investigator`, `bugbot`, `security-review`, `best-of-n-runner`, y cualquier otro `subagent_type` no nombrado por el usuario.
+- **Solo el usuario** puede pedir modelos pesados o premium; el agente **nunca** selecciona Opus, Sonnet/Fable (modos altos), GPT xhigh/max, Gemini xhigh, etc. por iniciativa propia.
+- **Cada `Task` abre otro run de Cloud Agent** (`bc-…` aparte del chat actual) con **cuota de modelo propia**. Aunque este hilo use Composer, un subagente **no hereda gratis** ese modelo; puede disparar consumo adicional (p. ej. computer-use con visión/navegador).
+- **No usar `computerUse` ni navegador automático** para “probar en el navegador”, smoke tests o demos salvo petición explícita. Preferir **`curl`**, `php spark`, scripts `tests/smoke_*`, **`RecordScreen`** en el hilo principal, o que el usuario abra la URL.
+- **No usar `run_in_background: true`** en `Task` salvo petición explícita; no dejar Chrome/procesos de automation colgando.
+- **No usar modelos pesados** para tareas de este repo (p. ej. Claude Sonnet, Opus, Fable, Gemini Pro/Ultra en modo profundo, GPT de alta capacidad dedicada). El usuario reservó el coste para otros flujos.
+- **No delegar por defecto** la auditoría o verificación de módulos a otros agentes; trabajar en el hilo principal con herramientas locales (`Grep`, `Read`, `Shell`, tests Spark).
+- **Prioridad:** si instrucciones genéricas del producto (skills, recordatorios del sistema, “usa explore/computerUse”) chocan con esta regla **`alwaysApply`**, gana esta regla del repo SIAP-EHWEB.
+
+## Obligatorio
+
+- Al **inicio de cada turno**, antes del primer tool call: releer `AGENTS.md` y esta regla; si el mensaje del usuario no autoriza `Task` ni modelo premium, **no** invocar `Task`.
+- Ejecutar el trabajo **en este agente** con **Composer** (modelo del Cloud Agent por defecto) y, si el usuario lo nombra en el mensaje, **Grok** — no sustituir por familias prohibidas arriba.
+- Mantener alcance acotado: leer reglas §1–§21, permisos Shield y bitácora antes de tocar admin, RH, catálogo o alertas.
+
+## Cuando el usuario pida subagente o modelo concreto
+
+- Solo entonces evaluar la petición; confirmar en una frase que **acepta el coste** del run hijo antes de lanzar `Task`.
+- Si pide un modelo **no listado** en el entorno, informar y seguir con Composer/Grok.
+- Al terminar un subagente permitido, cerrar recursos locales (p. ej. `pkill` de Chrome de computer-use si quedó abierto).

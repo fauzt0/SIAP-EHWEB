@@ -5,7 +5,11 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', 'Home::index'); //acceso principal  
+$routes->get('/', 'Home::index'); //acceso principal
+
+$routes->get('p/quote/(:segment)', 'PublicPages\QuoteApproveController::show/$1', ['as' => 'public.quote.show']);
+$routes->post('p/quote/(:segment)/approve', 'PublicPages\QuoteApproveController::approve/$1', ['as' => 'public.quote.approve']);
+$routes->post('crm/leads/ingest', 'CRM\LeadImportController::webhook', ['as' => 'crm.leads.webhook']);  
 
 //verificamos la variable de entorno, en caso de ser produccion, no mostramos la ruta de ejemplo
 if (ENVIRONMENT !== 'production') {
@@ -28,7 +32,7 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
     //rutas de administracion de usuarios
     $routes->group('user', function ($routes) {//agrupamos todas las rutas de administracion de usuarios en un solo grupo
       $routes->get('/', 'Users\UserController::index', ['as' => 'users.list', 'filter' => 'permission:admin.manage-users']); //acceso principal            
-      $routes->get('list', 'Users\UserController::index', ['filter' => 'permission:admin.manage-users']); //acceso principal      
+      $routes->get('list', 'Users\UserController::index', ['as' => 'users.list.page', 'filter' => 'permission:admin.manage-users']); //acceso principal      
       $routes->post('list_ajax', 'Users\UserController::list_ajax', ['as' => 'users.list_ajax', 'filter' => 'permission:admin.manage-users']); //acceso principal 
 
       $routes->post('create', 'Users\UserController::create', ['as' => 'user.create', 'filter' => 'permission:users.create']); //crear nuevo usuario (peticion de form o ajax)
@@ -187,6 +191,77 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
 
     }); // fin del grupo hr
 
+    $routes->group('crm', ['filter' => 'permission:crm.access'], function ($routes) {
+        $routes->get('/', 'CRM\ClientController::index', ['as' => 'crm.clients']);
+        $routes->get('clients', 'CRM\ClientController::index', ['as' => 'crm.clients.index']);
+        $routes->post('clients/list_ajax', 'CRM\ClientController::list_ajax', ['as' => 'crm.clients.ajax']);
+        $routes->get('clients/show_ajax/(:num)', 'CRM\ClientController::show_ajax/$1', ['as' => 'crm.clients.show_ajax']);
+        $routes->post('clients/store', 'CRM\ClientController::store', ['as' => 'crm.clients.store', 'filter' => 'permission:crm.manage']);
+        $routes->post('clients/update/(:num)', 'CRM\ClientController::update/$1', ['as' => 'crm.clients.update', 'filter' => 'permission:crm.manage']);
+        $routes->post('clients/delete/(:num)', 'CRM\ClientController::delete/$1', ['as' => 'crm.clients.delete', 'filter' => 'permission:crm.delete']);
+        $routes->get('clients/rfc_check', 'CRM\ClientController::rfc_check', ['as' => 'crm.clients.rfc_check']);
+        $routes->post('clients/import_csv', 'CRM\LeadImportController::import_csv', ['as' => 'crm.leads.import', 'filter' => 'permission:crm.manage']);
+        $routes->get('pipeline_ajax', 'CRM\ClientController::pipeline_ajax', ['as' => 'crm.pipeline.ajax']);
+        $routes->post('pipeline/move/(:num)', 'CRM\ClientController::pipeline_move/$1', ['as' => 'crm.pipeline.move', 'filter' => 'permission:crm.manage']);
+        $routes->get('clients/(:num)/followups', 'CRM\FollowupController::history_ajax/$1', ['as' => 'crm.followups.history']);
+        $routes->post('clients/(:num)/followups', 'CRM\FollowupController::store/$1', ['as' => 'crm.followups.store', 'filter' => 'permission:crm.manage']);
+
+        $routes->get('opportunities', 'CRM\OpportunityController::index', ['as' => 'crm.opportunities']);
+        $routes->post('opportunities/list_ajax', 'CRM\OpportunityController::list_ajax', ['as' => 'crm.opportunities.ajax']);
+        $routes->get('opportunities/board_ajax', 'CRM\OpportunityController::board_ajax', ['as' => 'crm.opportunities.board']);
+        $routes->post('opportunities/store', 'CRM\OpportunityController::store', ['as' => 'crm.opportunities.store', 'filter' => 'permission:crm.manage']);
+        $routes->post('opportunities/move/(:num)', 'CRM\OpportunityController::move/$1', ['as' => 'crm.opportunities.move', 'filter' => 'permission:crm.manage']);
+    });
+
+    $routes->group('projects', ['filter' => 'permission:projects.access'], function ($routes) {
+        $routes->get('/', 'Projects\ProjectController::index', ['as' => 'projects.index']);
+        $routes->post('list_ajax', 'Projects\ProjectController::list_ajax', ['as' => 'projects.ajax']);
+        $routes->get('show_ajax/(:num)', 'Projects\ProjectController::show_ajax/$1', ['as' => 'projects.show_ajax']);
+        $routes->post('store', 'Projects\ProjectController::store', ['as' => 'projects.store', 'filter' => 'permission:projects.manage']);
+        $routes->post('status/(:num)', 'Projects\ProjectController::update_status/$1', ['as' => 'projects.status', 'filter' => 'permission:projects.manage']);
+        $routes->post('(:num)/milestones', 'Projects\ProjectController::add_milestone/$1', ['as' => 'projects.milestones', 'filter' => 'permission:projects.manage']);
+    });
+
+    $routes->group('sales', ['filter' => 'permission:sales.access'], function ($routes) {
+        $routes->get('orders', 'Sales\OrderController::index', ['as' => 'sales.orders']);
+        $routes->post('orders/list_ajax', 'Sales\OrderController::list_ajax', ['as' => 'sales.orders.ajax']);
+        $routes->get('orders/show_ajax/(:num)', 'Sales\OrderController::show_ajax/$1', ['as' => 'sales.orders.show_ajax']);
+        $routes->post('orders/store', 'Sales\OrderController::store', ['as' => 'sales.orders.store', 'filter' => 'permission:sales.create']);
+        $routes->post('orders/(:num)/documents', 'Sales\OrderController::upload_document/$1', ['as' => 'sales.orders.documents.upload', 'filter' => 'permission:sales.create']);
+        $routes->get('orders/documents/(:num)', 'Sales\OrderController::download_document/$1', ['as' => 'sales.orders.documents.download']);
+        $routes->post('orders/(:num)/customer-po', 'Sales\OrderController::generate_customer_po/$1', ['as' => 'sales.orders.customer_po', 'filter' => 'permission:sales.create']);
+        $routes->get('customer-po/(:num)', 'Sales\OrderController::customer_po/$1', ['as' => 'sales.customer_po.print']);
+        $routes->post('orders/items/(:num)/fulfill', 'Sales\OrderController::fulfill_item/$1', ['as' => 'sales.orders.fulfill', 'filter' => 'permission:sales.activate']);
+        $routes->get('quotes', 'Sales\QuoteController::index', ['as' => 'sales.quotes']);
+        $routes->post('quotes/list_ajax', 'Sales\QuoteController::list_ajax', ['as' => 'sales.quotes.ajax']);
+        $routes->get('quotes/show_ajax/(:num)', 'Sales\QuoteController::show_ajax/$1', ['as' => 'sales.quotes.show_ajax']);
+        $routes->post('quotes/store', 'Sales\QuoteController::store', ['as' => 'sales.quotes.store', 'filter' => 'permission:sales.create']);
+        $routes->post('quotes/update/(:num)', 'Sales\QuoteController::update/$1', ['as' => 'sales.quotes.update', 'filter' => 'permission:sales.create']);
+        $routes->post('quotes/convert/(:num)', 'Sales\QuoteController::convert/$1', ['as' => 'sales.quotes.convert', 'filter' => 'permission:sales.create']);
+        $routes->get('pos', 'Sales\PosController::index', ['as' => 'sales.pos', 'filter' => 'permission:sales.pos']);
+        $routes->get('pos/products_ajax', 'Sales\PosController::products_ajax', ['as' => 'sales.pos.products', 'filter' => 'permission:sales.pos']);
+        $routes->post('pos/checkout', 'Sales\PosController::checkout', ['as' => 'sales.pos.checkout', 'filter' => 'permission:sales.create']);
+        $routes->get('documents/quote/(:num)', 'Sales\DocumentController::quote/$1', ['as' => 'sales.documents.quote', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/order/(:num)', 'Sales\DocumentController::order/$1', ['as' => 'sales.documents.order', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/receipt/(:num)', 'Sales\DocumentController::receipt/$1', ['as' => 'sales.documents.receipt', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/quote/(:num)/html', 'Sales\DocumentController::previewQuote/$1', ['as' => 'sales.documents.quote.html', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/order/(:num)/html', 'Sales\DocumentController::previewOrder/$1', ['as' => 'sales.documents.order.html', 'filter' => 'permission:sales.documents']);
+        $routes->get('documents/receipt/(:num)/html', 'Sales\DocumentController::previewReceipt/$1', ['as' => 'sales.documents.receipt.html', 'filter' => 'permission:sales.documents']);
+        $routes->get('services', 'Sales\OrderController::services', ['as' => 'sales.services']);
+        $routes->post('services/list_ajax', 'Sales\OrderController::services_ajax', ['as' => 'sales.services.ajax']);
+        $routes->get('billing', 'Sales\BillingController::index', ['as' => 'sales.billing', 'filter' => 'permission:sales.billing']);
+        $routes->post('billing/list_ajax', 'Sales\BillingController::list_ajax', ['as' => 'sales.billing.ajax', 'filter' => 'permission:sales.billing']);
+        $routes->get('billing/show_ajax/(:num)', 'Sales\BillingController::show_ajax/$1', ['as' => 'sales.billing.show', 'filter' => 'permission:sales.billing']);
+        $routes->post('billing/issue', 'Sales\BillingController::issue', ['as' => 'sales.billing.issue', 'filter' => 'permission:sales.billing']);
+        $routes->post('billing/pay', 'Sales\BillingController::pay', ['as' => 'sales.billing.pay', 'filter' => 'permission:sales.collections']);
+        $routes->post('billing/proof', 'Sales\BillingController::upload_proof', ['as' => 'sales.billing.proof', 'filter' => 'permission:sales.collections']);
+        $routes->get('billing/proof/(:num)', 'Sales\BillingController::download_proof/$1', ['as' => 'sales.billing.proof.download', 'filter' => 'permission:sales.collections']);
+        $routes->post('billing/activate-item/(:num)', 'Sales\BillingController::activate_item/$1', ['as' => 'sales.billing.activate_item', 'filter' => 'permission:sales.activate']);
+        $routes->post('billing/activate-service/(:num)', 'Sales\BillingController::activate_service/$1', ['as' => 'sales.billing.activate_service', 'filter' => 'permission:sales.activate']);
+        $routes->post('billing/generate-renewals', 'Sales\BillingController::generate_renewals', ['as' => 'sales.billing.generate', 'filter' => 'permission:sales.billing']);
+        $routes->get('billing/forecast_ajax', 'Sales\BillingController::forecast_ajax', ['as' => 'sales.billing.forecast', 'filter' => 'permission:sales.billing']);
+    });
+
     // ── Módulo de Organización (Perfil de Compañía y Sucursales) ──
     $routes->group('organization', ['filter' => 'permission:admin.manage-organization'], function ($routes) {
         $routes->get('profile', 'Organization\OrganizationController::profile', ['as' => 'organization.profile']);
@@ -200,6 +275,8 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
         $routes->post('branch/save', 'Organization\OrganizationController::saveBranch', ['as' => 'organization.branch.save']);
         $routes->post('branch/toggle_status/(:num)', 'Organization\OrganizationController::toggleBranchStatus/$1', ['as' => 'organization.branch.toggle_status']);
         $routes->post('branch/delete/(:num)', 'Organization\OrganizationController::deleteBranch/$1', ['as' => 'organization.branch.delete']);
+        $routes->get('sales-templates', 'Organization\SalesDocumentTemplateController::index', ['as' => 'organization.sales_templates', 'filter' => 'permission:admin.sales-templates']);
+        $routes->post('sales-templates/update/(:num)', 'Organization\SalesDocumentTemplateController::update/$1', ['as' => 'organization.sales_templates.update', 'filter' => 'permission:admin.sales-templates']);
     });
 
         // ── Módulo de Gestión de Proveedores ───────────────────────────
@@ -370,6 +447,35 @@ $routes->group('nat', function ($routes) { //equivalente a /admin o /erp
                 'as' => 'alerts.history_ajax',
             ]);
         });
+
+    // ── Contabilidad / tesorería ──────────────────────────────────────────
+    $routes->group('accounting', ['filter' => 'permission:finance.access'], function ($routes) {
+      $routes->get('/', 'Accounting\DashboardController::index', ['as' => 'accounting.dashboard']);
+      $routes->post('ledger_ajax', 'Accounting\DashboardController::ledger_ajax', ['as' => 'accounting.ledger_ajax']);
+
+      $routes->get('funds', 'Accounting\FundRequestController::index', ['as' => 'accounting.funds']);
+      $routes->post('funds/list_ajax', 'Accounting\FundRequestController::list_ajax', ['as' => 'accounting.funds.ajax']);
+      $routes->post('funds/store', 'Accounting\FundRequestController::store', ['as' => 'accounting.funds.store', 'filter' => 'permission:finance.transactions']);
+      $routes->post('funds/approve/(:num)', 'Accounting\FundRequestController::approve/$1', ['as' => 'accounting.funds.approve', 'filter' => 'permission:finance.transactions']);
+      $routes->post('funds/reject/(:num)', 'Accounting\FundRequestController::reject/$1', ['as' => 'accounting.funds.reject', 'filter' => 'permission:finance.transactions']);
+      $routes->post('funds/execute/(:num)', 'Accounting\FundRequestController::execute/$1', ['as' => 'accounting.funds.execute', 'filter' => 'permission:finance.transactions']);
+
+      $routes->get('expenses', 'Accounting\ExpenseController::index', ['as' => 'accounting.expenses']);
+      $routes->post('expenses/list_ajax', 'Accounting\ExpenseController::list_ajax', ['as' => 'accounting.expenses.ajax']);
+      $routes->post('expenses/store', 'Accounting\ExpenseController::store', ['as' => 'accounting.expenses.store', 'filter' => 'permission:finance.transactions']);
+      $routes->post('expenses/mark_paid/(:num)', 'Accounting\ExpenseController::mark_paid/$1', ['as' => 'accounting.expenses.pay', 'filter' => 'permission:finance.transactions']);
+
+      $routes->get('invoices', 'Accounting\InvoiceController::index', ['as' => 'accounting.invoices']);
+      $routes->post('invoices/supplier_ajax', 'Accounting\InvoiceController::supplier_list_ajax', ['as' => 'accounting.invoices.supplier_ajax']);
+      $routes->post('invoices/sales_ajax', 'Accounting\InvoiceController::sales_list_ajax', ['as' => 'accounting.invoices.sales_ajax']);
+      $routes->post('invoices/supplier/store', 'Accounting\InvoiceController::store_supplier', ['as' => 'accounting.invoices.supplier.store', 'filter' => 'permission:finance.transactions']);
+      $routes->post('invoices/supplier/pay/(:num)', 'Accounting\InvoiceController::pay_supplier/$1', ['as' => 'accounting.invoices.supplier.pay', 'filter' => 'permission:finance.transactions']);
+      $routes->post('invoices/sales/issue/(:num)', 'Accounting\InvoiceController::issue_sales/$1', ['as' => 'accounting.invoices.sales.issue', 'filter' => 'permission:finance.transactions']);
+
+      $routes->get('accounts', 'Accounting\AccountController::index', ['as' => 'accounting.accounts', 'filter' => 'permission:finance.settings']);
+      $routes->post('accounts/list_ajax', 'Accounting\AccountController::list_ajax', ['as' => 'accounting.accounts.ajax', 'filter' => 'permission:finance.settings']);
+      $routes->post('accounts/store', 'Accounting\AccountController::store', ['as' => 'accounting.accounts.store', 'filter' => 'permission:finance.settings']);
+    });
 
   });//fin del grupo protegido por sesion
 

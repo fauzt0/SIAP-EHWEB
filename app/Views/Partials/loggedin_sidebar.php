@@ -98,6 +98,11 @@
             <li class="sidebar-item <?= url_is('nat/organization/branch*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('organization.branches') ?>">Sucursales</a>
             </li>
+            <?php if (auth()->user()->can('admin.sales-templates')): ?>
+            <li class="sidebar-item <?= url_is('nat/organization/sales-templates*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('organization.sales_templates') ?>">Plantillas PDF (ventas)</a>
+            </li>
+            <?php endif; ?>
           </ul>
         </li>
       <?php endif; ?>
@@ -143,6 +148,92 @@
             <li class="sidebar-item <?= url_is('nat/suppliers/reports*') ? 'active' : '' ?>">
               <a class="sidebar-link" href="<?= route_to('suppliers.reports.index') ?>">Reportes</a>
             </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('crm.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/crm*') ? 'active' : '' ?>">
+          <a data-bs-target="#crm-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/crm*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-address-book align-middle me-1"></i> <span class="align-middle">CRM</span>
+          </a>
+          <ul id="crm-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/crm*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/crm') || url_is('nat/crm/clients*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('crm.clients') ?>">Clientes y leads</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/crm/opportunities*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('crm.opportunities') ?>">Oportunidades</a>
+            </li>
+          </ul>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('projects.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/projects*') ? 'active' : '' ?>">
+          <a class="sidebar-link" href="<?= route_to('projects.index') ?>">
+            <i class="fas fa-fw fa-tasks align-middle me-1"></i> <span class="align-middle">Proyectos</span>
+          </a>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('sales.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/sales*') ? 'active' : '' ?>">
+          <a data-bs-target="#sales-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/sales*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-cash-register align-middle me-1"></i> <span class="align-middle">Ventas</span>
+          </a>
+          <ul id="sales-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/sales*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <?php if (auth()->user()->can('sales.pos')): ?>
+            <li class="sidebar-item <?= url_is('nat/sales/pos*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.pos') ?>">POS de venta</a>
+            </li>
+            <?php endif; ?>
+            <li class="sidebar-item <?= url_is('nat/sales/orders*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.orders') ?>">Órdenes</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/sales/quotes*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.quotes') ?>">Cotizaciones</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/sales/services*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.services') ?>">Servicios recurrentes</a>
+            </li>
+            <?php if (auth()->user()->can('sales.billing')): ?>
+            <li class="sidebar-item <?= url_is('nat/sales/billing*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('sales.billing') ?>">Recibos y cobros</a>
+            </li>
+            <?php endif; ?>
+          </ul>
+        </li>
+      <?php endif; ?>
+
+      <?php if (auth()->user()->can('finance.access')): ?>
+        <li class="sidebar-item <?= url_is('nat/accounting*') ? 'active' : '' ?>">
+          <a data-bs-target="#accounting-nav" data-bs-toggle="collapse"
+            class="sidebar-link <?= url_is('nat/accounting*') ? '' : 'collapsed' ?>">
+            <i class="fas fa-fw fa-balance-scale align-middle me-1"></i> <span class="align-middle">Contabilidad</span>
+          </a>
+          <ul id="accounting-nav" class="sidebar-dropdown list-unstyled collapse <?= url_is('nat/accounting*') ? 'show' : '' ?>"
+            data-bs-parent="#sidebar">
+            <li class="sidebar-item <?= url_is('nat/accounting') && !url_is('nat/accounting/*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.dashboard') ?>">Resumen y mayor</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/accounting/funds*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.funds') ?>">Solicitud de fondos</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/accounting/expenses*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.expenses') ?>">Gastos fijos y variables</a>
+            </li>
+            <li class="sidebar-item <?= url_is('nat/accounting/invoices*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.invoices') ?>">Facturas</a>
+            </li>
+            <?php if (auth()->user()->can('finance.settings')): ?>
+            <li class="sidebar-item <?= url_is('nat/accounting/accounts*') ? 'active' : '' ?>">
+              <a class="sidebar-link" href="<?= route_to('accounting.accounts') ?>">Cuentas de tesorería</a>
+            </li>
+            <?php endif; ?>
           </ul>
         </li>
       <?php endif; ?>

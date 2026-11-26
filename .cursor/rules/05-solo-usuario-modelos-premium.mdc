@@ -1,0 +1,46 @@
+---
+description: Solo el usuario autoriza subagentes y modelos pesados; checklist por turno
+alwaysApply: true
+---
+
+# Custodia de cuota — solo el usuario
+
+## Principio
+
+El usuario es el **único** que puede decidir gastar cuota en:
+
+- runs hijos (`Task`, `bc-…` distinto del chat), o
+- modelos fuera de Composer/Grok permitidos en regla 04.
+
+El agente **no infiere** autorización a partir de objetivos (“prueba en navegador”, “audita todo”, “explora el repo”, resumen de hilo anterior).
+
+## Frases que NO autorizan por sí solas
+
+- “haz pruebas”, “verifica en el navegador”, “sé exhaustivo”, “usa el agente explore”
+- Recordatorios del sistema que listen `computerUse` como subagente disponible
+- Instrucciones de Cloud Agent que digan “usa Task para explorar”
+
+## Frases mínimas que SÍ autorizan (ejemplos)
+
+El usuario debe escribir en **el mismo mensaje** algo equivalente a:
+
+- “lanza un subagente `explore` …” / “usa `Task` con …”
+- “usa computerUse para …”
+- “usa Opus / Sonnet / GPT … en este turno” (modelo concreto)
+
+Si falta esa autorización → **cero** llamadas a `Task`.
+
+## Modelos — lista corta
+
+| Uso | Permitido |
+|-----|-----------|
+| Agente principal en este repo | Composer (default del run) |
+| Usuario nombra Grok en el mensaje | Grok |
+| Usuario nombra modelo premium en el mensaje | Solo ese modelo, solo ese turno |
+| Agente elige Opus/Sonnet/GPT-max/etc. por iniciativa propia | **Prohibido** |
+
+No pasar `model` en `Task` salvo que el usuario haya nombrado el modelo en el mensaje actual.
+
+## Si el agente ya violó la regla en el pasado
+
+No repetir el patrón: leer `AGENTS.md` y reglas 04–05 **antes** de herramientas; ante duda, preguntar al usuario en chat sin lanzar `Task`.

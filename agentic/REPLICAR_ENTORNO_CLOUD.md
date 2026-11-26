@@ -9,6 +9,19 @@ el responsable del hosting por canal seguro.
 
 ---
 
+## A0. Cloud Agent (Cursor) — `environment.json`
+
+Para VMs de agente en la nube (sin subagente solo para instalar PHP):
+
+| Archivo | Uso |
+|---------|-----|
+| `.cursor/environment.json` | `install` + `start` referenciados por la pestaña **Environment** |
+| `.cursor/ENVIRONMENT.md` | Pasos para pegar JSON, disparar build y URLs de prueba |
+| `.cursor/scripts/cloud-install.sh` | APT + `composer install` (idempotente) |
+| `.cursor/scripts/cloud-start.sh` | MariaDB, `.env` demo, migrate, seed, HTTP `:8080` |
+
+---
+
 ## A. Qué incluye el “entorno completo”
 
 | Capa | Contenido |

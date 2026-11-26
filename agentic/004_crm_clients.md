@@ -1,56 +1,38 @@
-# Task 004: CRM & Clients Module
+# Task 004: CRM & Clients Module — implementado (2026-11-20)
 
-## Objective
-Implement the CRM/Clients module to manage buyers, multiple contact profiles (technical, administrative, etc.), and billing configurations.
+Módulo núcleo ERP (no es plugin). Compatible con el motor de plugins vía hooks y `ClientCommerceBridge`.
 
----
+## Tablas
 
-## Recommended Model
-- **Model:** `Composer 2.5` (For visual interface development and tabbed configuration layout).
-- **Reason:** Best suited for generating highly functional, multi-section user interfaces (e.g. Clients, Contacts tab, Billing tab) and linking complex models.
+- `crm_clients` — alta de clientes, estatus lead/prospect/active/inactive/churned, `plugin_ref`
+- `crm_client_contacts` — buyer / technical / billing / admin
+- `crm_billing_profiles` — razón social, RFC, régimen, CFDI
+- `crm_followups` — bitácora versionada (árbol `parent_followup_id`, `version`, vigente/archivada)
+- `crm_followup_services` — productos/servicios involucrados en cada revisión
+- `crm_plugin_links` — enlace futuro plugin (servidores, etc.) ↔ cliente / orden / servicio
 
----
+## Ventas (enlace)
 
-## Technical Specifications
+Migraciones sobre `sales_orders`, `sales_order_items`, `customer_services` + tablas `sales_quotes` / `sales_quote_items`.
 
-### 1. Database Migrations
-Create three tables:
-- **`crm_clients`**
-  - `id` (INT AI PK)
-  - `company_name` (VARCHAR 255)
-  - `rfc_tax_id` (VARCHAR 20, NULL)
-  - `website` (VARCHAR 255, NULL)
-  - `active` (TINYINT, default 1)
-  - `created_at` / `updated_at` / `deleted_at` (Soft Delete support)
-- **`crm_client_contacts`** (One Client has many Contacts)
-  - `id` (INT AI PK)
-  - `client_id` (INT FK to `crm_clients.id`)
-  - `contact_type` (Enum/Varchar: 'buyer', 'technical', 'billing', 'admin')
-  - `name` (VARCHAR 100)
-  - `email` (VARCHAR 100)
-  - `phone` (VARCHAR 20, NULL)
-- **`crm_billing_profiles`** (One Client can have multiple Billing Profiles)
-  - `id` (INT AI PK)
-  - `client_id` (INT FK to `crm_clients.id`)
-  - `legal_name` (VARCHAR 255) (Razón Social)
-  - `rfc_tax_id` (VARCHAR 20)
-  - `tax_regime` (VARCHAR 10) (Régimen Fiscal)
-  - `postal_code` (VARCHAR 10)
-  - `address` (TEXT, NULL)
-  - `cfdi_use` (VARCHAR 5) (Uso de CFDI)
+Ciclos: `one_time`, `monthly`, `semiannual`, `annual`/`yearly`.
 
-### 2. CRM Clients CRUD
-- **Controller:** `app/Controllers/CRM/ClientController.php`.
-- **List Page:** Server-side DataTables using `DataTableTrait`.
-- **Form:** A tabbed layout or single form containing:
-  - Tab 1: General Info (Client basic details).
-  - Tab 2: Contacts (Dynamic list: add/edit/delete contacts on the fly or as a repeater).
-  - Tab 3: Billing Profiles (Multiple billing entities per client).
-- **Permissions:** Guard routes with `crm.manage` or similar.
+- Venta única → un recibo + prefactura del periodo contratado.
+- Recurrente → un recibo por periodo (`SalesReceiptScheduler`, `php spark sales:generate-receipts`).
+- Cobranza en ficha CRM (aprox. del mes siguiente); reportes contables fuera del CRM.
+- OC del cliente (`sales_customer_pos`) con partidas individuales y documentos de orden.
+- Seguimiento por contacto: llamada/soporte/WhatsApp/ticket/email + producto + estatus.
 
----
+## Permisos Shield
 
-## Architectural Compliance
-- **MVC & Transactions:** Saving a client with their nested contacts or billing profiles must use a single transaction block inside the `CrmClientModel` (§9 of `DOCUMENTACION_TECNICA.md`).
-- **AJAX & CSRF:** Ensure forms post through Fetch and handle CSRF header rotation (§2).
-- **Icons:** Use solid/regular FontAwesome icons (§12).
+`crm.access`, `crm.manage`, `crm.delete` (+ `sales.access` / `sales.create` / `sales.quotes` / `sales.pos` / `sales.documents`).
+
+Plantillas PDF: `admin.sales-templates` (Organización → Plantillas PDF). Logos: sucursal (`org_branches.logo_path`) o empresa (`org_company_profile.logo_path`). Marcas de catálogo: `catalog_brands`.
+
+## Hooks cableados (sin implementar plugins)
+
+`crm.client.show.tabs`, `crm.followup.created`, `sales.order.show.tabs`, `sales.quote.show.tabs`, `sales.order.created`, `sales.order.item.prepare`, `sales.receipt.issued`, `sales.receipt.paid`, `sales.customer_po.created`, `sales.document.html` — `PluginHookRegistry::wiredHooks()`.
+
+POS (`nat/sales/pos`): venta directa o cotización (estatus borrador/enviada, actualizar, convertir a venta). PDF cotización/orden/recibo con vista previa y descarga.
+
+Puente: `App\Services\ClientCommerceBridge`.
