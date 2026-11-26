@@ -5,6 +5,10 @@ alwaysApply: true
 
 # Entorno y referencias
 
+## Restricción de agente (prioridad máxima)
+
+- **Custodia de cuota:** ver `AGENTS.md` y `.cursor/rules/04-agente-modelos-y-subagentes.mdc` + `05-solo-usuario-modelos-premium.mdc`. Sin pedido explícito del usuario en el mensaje: **prohibido** `Task`/subagentes y modelos pesados.
+
 ## Stack objetivo
 
 - **PHP:** 8.3+ en VPS y desarrollo local (tipado estricto, `declare(strict_types=1);` en código nuevo cuando el archivo lo permita).
