@@ -149,6 +149,10 @@ private_html/
 .cursor/*
 !.cursor/skills/
 !.cursor/rules/
+!.cursor/environment.json
+!.cursor/ENVIRONMENT.md
+!.cursor/scripts/
+!.cursor/scripts/**
 .cursorignore
 
 
